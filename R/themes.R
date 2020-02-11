@@ -6,13 +6,18 @@
 #'   grids.
 #' @param col.grid The color for the grid lines
 #' @param color.background The color for the panel background.
+#' @param alpha An alpha value for transparency (0 < alpha < 1).
+#' @param color A color name.
 #'
-#' @rdname themes
+#' @name themes
 #' @description
 #' * \code{theme_metan()}: Theme with a gray background and major grids.
 #' * \code{theme_metan_minimal()}: A minimalistic theme with half-open frame, white
 #'   background, and no grid. For more details see \code{\link[ggplot2]{theme}}.
-#' * \code{transparent_color()}: A helper function to return a transparent color with Hex value o\code{}\code{}\code{}\strong{}f "#000000FF"
+#' * \code{transparent_color()}: A helper function to return a transparent color
+#' with Hex value of "#000000FF"
+#' * \code{alpha_color()}: Return a semi-transparent color based on a color name
+#' and an alpha value. For more details see \code{\link[grDevices]{colors}}.
 #' @md
 #' @export
 #' @author Tiago Olivoto \email{tiagoolivoto@@gmail.com}
@@ -55,7 +60,7 @@ theme_metan = function (grid = "none", col.grid = "white", color.background = "g
           strip.background = element_rect(color = "black", fill = NA))
 }
 
-#' @rdname themes
+#' @name themes
 #' @export
 #'
 theme_metan_minimal = function () {
@@ -79,8 +84,22 @@ theme_metan_minimal = function () {
           strip.background = element_blank())
 }
 
-#' @rdname themes
+#' @name themes
 #' @export
 transparent_color <- function() {
-  return("#000000FF")
+  return("#FFFFFF00")
+}
+
+#' @name themes
+#' @importFrom grDevices col2rgb rgb
+#' @export
+alpha_color <- function(color, alpha = 50) {
+  rgb_v <- col2rgb(color)
+  return(
+    rgb(rgb_v[1],
+        rgb_v[2],
+        rgb_v[3],
+        maxColorValue = 255,
+        alpha = (100 - alpha) * 255 / 100)
+  )
 }

@@ -4,21 +4,25 @@
 \alias{get_model_data}
 \title{Get data from a model easily}
 \usage{
-get_model_data(x, what = NULL, type = "GEN")
+get_model_data(x, what = NULL, type = "GEN", verbose = TRUE)
 }
 \arguments{
 \item{x}{An object created with the functions \code{\link{AMMI_indexes}},
+\code{\link{anova_ind}}, \code{\link{anova_joint}},
 \code{\link{ecovalence}},  \code{\link{Fox}}, \code{\link{gai}},
-\code{\link{gamem}}, \code{\link{ge_means}}, \code{\link{ge_reg}},
-\code{\link{performs_ammi}}, \code{\link{Resende_indexes}},
-\code{\link{Shukla}}, \code{\link{superiority}}, \code{\link{waas}} or
-\code{\link{waasb}}.}
+\code{\link{gamem}},\code{\link{gafem}}, \code{\link{ge_means}},
+\code{\link{ge_reg}}, \code{\link{performs_ammi}},
+\code{\link{Resende_indexes}}, \code{\link{Shukla}},
+\code{\link{superiority}}, \code{\link{waas}} or \code{\link{waasb}}.}
 
 \item{what}{What should be captured from the model. See more in section
 \strong{Details}.}
 
 \item{type}{Chose if the statistics must be show by genotype (\code{type =
 "GEN"}, default) or environment (\code{type = "ENV"}), when possible.}
+
+\item{verbose}{Logical argument. If \code{verbose = FALSE} the code will run
+silently.}
 }
 \value{
 A tibble showing the values of the variable chosen in argument
@@ -42,6 +46,36 @@ on the class of the object
 \item \code{"WAAS"} Weighted average of absolute scores (default).
 \item \code{"ZA"} Absolute value of the relative contribution of IPCAs to the
 interaction.
+}
+
+\strong{Objects of class \code{anova_ind}:}
+\itemize{
+\item \code{"MEAN"}The mean value of the variable
+\item \code{"MSG", "FCG", "PFG"} The mean square, F-calculated and P-values for
+genotype effect, respectively.
+\item \code{"MSB", "FCB", "PFB"} The mean square, F-calculated and P-values for
+block effect (in randomized complete block design) or complete replicate (in
+alpha lattice design), respectively.
+\item \code{"MSIB_R", "FCIB_R", "PFIB_R"} The mean square, F-calculated and
+P-values for incomplete blocks within complete replicates, respectively (for
+alpha lattice design only).
+\item \code{"MSE"} The mean square of error.
+\item \code{"CV"} The coefficient of variation.
+\item \code{"h2"} The broad-sence heritability
+\item \code{"MSE"} The accucary of selection (square root of h2).
+}
+
+\strong{Objects of class \code{anova_joint} or \code{gafem}:}
+\itemize{
+\item \code{"Sum Sq"} Sum of squares.
+\item \code{"Mean Sq"} Mean Squares.
+\item \code{"F value"} F-values.
+\item \code{"Pr(>F)"} P-values.
+\item \code{".fitted"} Fitted values (default).
+\item \code{".resid"} Residuals.
+\item \code{".stdresid"} Standardized residuals.
+\item \code{".se.fit"} Standard errors of the fitted values.
+\item \code{"details"} Details.
 }
 
 \strong{Objects of class \code{Annicchiarico} and \code{Schmildt}:}
@@ -159,15 +193,25 @@ objects of class \code{waas}).
 \item \code{"OrWAASBY"} The ranking regarding the superiority index.
 }
 
-\strong{Objects of class \code{waasb} or \code{gamem}:}
+\strong{Objects of class \code{waasb}:}
 \itemize{
 \item \code{"blupg"} For genotype's predicted mean.
-\item \code{"blupge"} for genotype-vs-environment's predicted mean (only for
-objects of class \code{waasb}).
+\item \code{"blupge"} for genotype-vs-environment's predicted mean.
 \item \code{"genpar"} Genetic parameters (default).
 \item \code{"lrt"} The statistic for the likelihood-ratio test for random effects.
 \item \code{"pval_lrt"}  The p-values for the likelihood-ratio test.
 \item \code{"vcomp"} The variance components for random effects.
+\item \code{"ranef"} Random effects.
+}
+
+\strong{Objects of class \code{gamem}:}
+\itemize{
+\item \code{"blupg"} For genotype's predicted mean.
+\item \code{"genpar"} Genetic parameters (default).
+\item \code{"lrt"} The statistic for the likelihood-ratio test for random effects.
+\item \code{"pval_lrt"}  The p-values for the likelihood-ratio test.
+\item \code{"vcomp"} The variance components for random effects.
+\item \code{"ranef"} Random effects.
 }
 
 \strong{Objects of class \code{Res_ind}}
@@ -222,10 +266,10 @@ AMMI <- waas(data_ge2, ENV, GEN, REP,
              resp = c(PH, ED, TKW, NKR))
 
 # Getting the weighted average of absolute scores
-get_model_data(AMMI, what = "WAASB")
+get_model_data(AMMI, what = "WAAS")
 
 # And the rank for the WAASB index.
-get_model_data(AMMI, what = "OrWAASB")
+get_model_data(AMMI, what = "OrWAAS")
 
 
 #################### BLUP model #####################
@@ -316,6 +360,14 @@ Zali, H., E. Farshadfar, S.H. Sabaghpour, and R. Karimizadeh. 2012.
 Evaluation of genotype vs environment interaction in chickpea using measures
 of stability from AMMI model. Ann. Biol. Res. 3:3126-3136.
 \href{http://eprints.icrisat.ac.in/id/eprint/7173}{http://eprints.icrisat.ac.in/id/eprint/7173}
+}
+\seealso{
+\code{\link{AMMI_indexes}}, \code{\link{anova_ind}},
+\code{\link{anova_joint}}, \code{\link{ecovalence}},  \code{\link{Fox}},
+\code{\link{gai}}, \code{\link{gamem}}, \code{\link{gafem}},
+\code{\link{ge_means}}, \code{\link{ge_reg}}, \code{\link{performs_ammi}},
+\code{\link{Resende_indexes}}, \code{\link{Shukla}},
+\code{\link{superiority}}, \code{\link{waas}}, \code{\link{waasb}}
 }
 \author{
 Tiago Olivoto \email{tiagoolivoto@gmail.com}

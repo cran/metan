@@ -13,13 +13,12 @@
 #' @importFrom dendextend  set  rotate_DendSer
 #' @importFrom lme4  ranef  VarCorr  fortify.merMod
 #' @importFrom lmerTest  ranova  lmer
-#' @importFrom gplots  heatmap.2
 #' @importFrom FWDselect  selection
 #' @importFrom grDevices  colorRampPalette  dev.off  pdf
 #'             chull  tiff  boxplot.stats
 #' @importFrom methods  is  as
 #' @importFrom graphics  plot  boxplot  hist  par  mtext abline
-#' @importFrom utils  head combn  stack
+#' @importFrom utils  head combn  stack data
 #' @importFrom methods setClass setGeneric setMethod setRefClass
 #'
 NULL
@@ -157,10 +156,14 @@ NULL
 NULL
 
 .onAttach <- function(libname, pkgname) {
-  packageStartupMessage("\n******************************************************")
-  packageStartupMessage("metan has been successfully loaded in R ", paste0(R.Version()[c("major","minor")], collapse = "."))
-  packageStartupMessage("Please, see the complete vignette at:\nhttps://tiagoolivoto.github.io/metan/")
-  packageStartupMessage("******************************************************\n")
+  metan_version <-  "v1.2.1 (2019-01-14)"
+  packageStartupMessage("[]=====================================================================[]")
+  packageStartupMessage("[] Multi-Environment Trial Analysis (metan) ", metan_version, "        []")
+  packageStartupMessage("[] Author: Tiago Olivoto                                               []")
+  packageStartupMessage("[] Type vignette('metan_start') for a short tutorial                   []")
+  packageStartupMessage("[] Type citation('metan') to know how to cite metan                    []")
+  packageStartupMessage("[] For a complete tutorial visit https://tiagoolivoto.github.io/metan/ []")
+  packageStartupMessage("[]=====================================================================[]")
 }
 
 if (getRversion() >= "2.15.1") {
@@ -181,5 +184,11 @@ if (getRversion() >= "2.15.1") {
       "val", "Statistic", "Cluster", "CCP", "U1", "U2", "V1", "V2", "Var", "LEVEL",
       "GROUP", "Group", "model", "Variance (%)", "Xs", "Xo", "Pr(>Chisq)", "dat",
       "BLOCK", "rowid", "grank", "rMean", "rShukaVar", "value", "DF", "without", "RPGV_Y",
-      "HMRPGV_Y", "Pairs", "name", "v1", "v2", "slope", "new_var", "TYPE", "CODE"))
-}
+      "HMRPGV_Y", "Pairs", "name", "v1", "v2", "slope", "new_var", "TYPE", "CODE",
+      "Sum.Sq", "Mean.Sq", "F.value", "Pr.F", "Sum Sq", "Df", "Source", "BLUPbre",
+      "BLUPe+ge+re+bre", "BLUPg+e+ge+re", "BLUPg+e+ge+re+bre", "BLUPg+bre", "BLUPg+ge+bre",
+      "BLUPge+e+re", "BLUPre", "Estimate", "HMRPGV", "RPGV", "Variance", "blup",
+      "intercept", "lower", "upper", "pred_ols", "res_ammi", "res_ols", "pattern",
+      "replacement", "comparison", "group1", "group2", "p.adj", "term", "rel_freq",
+      "variable"))
+  }

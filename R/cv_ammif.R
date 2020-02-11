@@ -24,12 +24,13 @@
 #'   environments.
 #' @param gen The name of the column that contains the levels of the genotypes.
 #' @param rep The name of the column that contains the levels of the
-#'   replications/blocks.
+#'   replications/blocks. \strong{AT LEAST THREE REPLICATES ARE REQUIRED TO
+#'   PERFORM THE CROSS-VALIDATION}.
 #' @param resp The response variable.
 #' @param block Defaults to \code{NULL}. In this case, a randomized complete
 #'   block design is considered. If block is informed, then a resolvable
 #'   alpha-lattice design (Patterson and Williams, 1976) is employed.
-#'   \strong{All effects are assumed to be fixed.}
+#'   \strong{All effects, except the error, are assumed to be fixed.}
 #' @param nboot The number of resamples to be used in the cross-validation.
 #'   Defaults to 200.
 #' @param design The experimental design used in each environment. Defaults to
@@ -38,7 +39,9 @@
 #' @param verbose A logical argument to define if a progress bar is shown.
 #'   Default is \code{TRUE}.
 #' @references Patterson, H.D., and E.R. Williams. 1976. A new class of
-#'   resolvable incomplete block designs. Biometrika 63:83-92.
+#' resolvable incomplete block designs. Biometrika 63:83-92.
+#' \href{https://doi.org/10.1093/biomet/63.1.83}{doi:10.1093/biomet/63.1.83}
+#'
 #' @return
 #' An object of class \code{cv_ammif} with the following items:
 #' * \strong{RMSPD}: A vector with nboot-estimates of the Root Mean Squared
@@ -89,6 +92,9 @@ cv_ammif <- function(.data, env, gen, rep, resp, nboot = 200, block, design = "R
     Nenv <- length(unique(data$ENV))
     Ngen <- length(unique(data$GEN))
     Nbloc <- length(unique(data$REP))
+    if (Nbloc <= 2) {
+      stop("At least three replicates are required to perform the cross-validation.")
+    }
     nrepval <- Nbloc - 1
     minimo <- min(Nenv, Ngen) - 1
     naxisvalidation <- minimo + 1
@@ -115,7 +121,7 @@ cv_ammif <- function(.data, env, gen, rep, resp, nboot = 200, block, design = "R
           rownames(modeling) <- modeling$rowid      }
         if (design == "RCBD") {
           tmp <- split_factors(data, ENV, keep_factors = TRUE, verbose = FALSE)
-          modeling <- do.call(rbind, lapply(tmp[[1]], function(x) {
+          modeling <- do.call(rbind, lapply(tmp, function(x) {
             X2 <- sample(unique(data$REP), nrepval, replace = FALSE)
             x %>% as.data.frame() %>%
               dplyr::group_by(GEN) %>%
@@ -126,12 +132,10 @@ cv_ammif <- function(.data, env, gen, rep, resp, nboot = 200, block, design = "R
         testing <- anti_join(data, modeling, by = c("ENV", "GEN", "REP", "Y", "rowid")) %>%
           arrange(ENV, GEN) %>%
           as.data.frame()
-
         MEDIAS <- modeling %>%
           group_by(ENV, GEN) %>%
           summarise(Y = mean(Y)) %>%
           as.data.frame()
-
         residual <- modeling %>%
           group_by(ENV, GEN) %>%
           summarise(Y = mean(Y)) %>%
@@ -182,7 +186,6 @@ cv_ammif <- function(.data, env, gen, rep, resp, nboot = 200, block, design = "R
         class = "cvalidation")
     )
   }
-
   if(!missing(block)){
     data <- .data %>%
       dplyr::select(ENV = {{env}},
@@ -195,6 +198,9 @@ cv_ammif <- function(.data, env, gen, rep, resp, nboot = 200, block, design = "R
     Nenv <- length(unique(data$ENV))
     Ngen <- length(unique(data$GEN))
     Nbloc <- length(unique(data$REP))
+    if (Nbloc <= 2) {
+      stop("At least three replicates are required to perform the cross-validation.")
+    }
     nrepval <- Nbloc - 1
     minimo <- min(Nenv, Ngen) - 1
     naxisvalidation <- minimo + 1
@@ -221,7 +227,7 @@ cv_ammif <- function(.data, env, gen, rep, resp, nboot = 200, block, design = "R
           rownames(modeling) <- modeling$rowid      }
         if (design == "RCBD") {
           tmp <- split_factors(data, ENV, keep_factors = TRUE, verbose = FALSE)
-          modeling <- do.call(rbind, lapply(tmp[[1]], function(x) {
+          modeling <- do.call(rbind, lapply(tmp, function(x) {
             X2 <- sample(unique(data$REP), nrepval, replace = FALSE)
             x %>% dplyr::group_by(GEN) %>% dplyr::filter(REP %in% X2)
           })) %>% as.data.frame()

@@ -21,19 +21,19 @@
 #' @author Tiago Olivoto \email{tiagoolivoto@@gmail.com}
 #' @export
 #' @examples
-#'
+#' \donttest{
 #' library(metan)
-#' matrix = data_ge %>% make_mat(row = GEN, col = ENV, val = GY)
+#' matrix <- data_ge %>% make_mat(row = GEN, col = ENV, val = GY)
 #' matrix
 #'
 #' # An own function (sem, standart error of mean)
 #'
-#' sem = function(data){
+#' sem <- function(data){
 #'return(sd(data) / sqrt(length(data)))
 #'}
 #'
 #' data_ge %>% make_mat(GEN, ENV, GY, sem)
-#'
+#'}
 
 make_mat <- function(.data, row, col, value, fun = mean) {
   data <- .data %>%
@@ -42,7 +42,7 @@ make_mat <- function(.data, row, col, value, fun = mean) {
            {{value}}) %>%
     group_by({{row}}, {{col}}) %>%
     summarise_if(is.numeric, fun) %>%
-    spread({{col}}, {{value}}) %>%
+    pivot_wider(names_from = {{col}}, values_from = {{value}}) %>%
     ungroup()
   data %<>% column_to_rownames(var = names(data[1]))
   return(data)

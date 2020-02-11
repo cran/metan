@@ -8,6 +8,7 @@ plot_scores(
   x,
   var = 1,
   type = 1,
+  repel = TRUE,
   polygon = FALSE,
   title = TRUE,
   plot_theme = theme_metan(),
@@ -51,7 +52,7 @@ plot_scores(
 }
 \arguments{
 \item{x}{An object fitted with the functions \code{\link{performs_ammi}},
-\code{\link{waas}} or \code{\link{waasb}}.}
+\code{\link{waas}}, \code{\link{waas_means}}, or \code{\link{waasb}}.}
 
 \item{var}{The variable to plot. Defaults to \code{var = 1} the first
 variable of \code{x}.}
@@ -66,6 +67,9 @@ inferences related to the interaction effects.
 produces a biplot showing the GY x WAASB.
 \item \code{type = 4} Produces a plot with the Nominal yield x Environment PC.
 }}
+
+\item{repel}{If \code{TRUE} (default), the text labels repel away from each
+other and away from the data points.}
 
 \item{polygon}{Logical argument. If \code{TRUE}, a polygon is drawn when
 \code{type = 2}.}
@@ -192,30 +196,36 @@ of narrow adaptations.
 \donttest{
 library(metan)
 # AMMI model
-ammi_model = performs_ammi(data_ge, ENV, GEN, REP,
-                           resp = c(GY, HM))
+model <- waas(data_ge,
+             env = ENV,
+             gen = GEN,
+             rep = REP,
+             resp = everything())
 
-# GY x PC1 (variable GY)
-plot_scores(ammi_model,
-            col.env = 'olivedrab',
-            col.gen = 'orange2',
-            x.lab = 'My own x label')
-
-# PC1 x PC2 (variable HM)
-plot_scores(ammi_model,
-            var = "HM", # or var = 2
-            type = 2,
-            polygon = TRUE)
+# GY x PC1 for variable GY (default plot)
+plot_scores(model)
 
 # PC1 x PC2 (variable HM)
-# Draw a convex hull polygon
-plot_scores(ammi_model,
-            var = "HM",
-            type = 2,
-            polygon = TRUE)
+plot_scores(model,
+            polygon = TRUE, # Draw a convex hull polygon
+            var = "HM",     # or var = 2 to select variable
+            type = 2)       # type of biplot
+
+# PC1 x PC2 (variable HM)
+# Change size of plot fonts and colors
+# Minimal theme
+plot_scores(model,
+           var = "HM",
+           type = 2,
+           col.gen = "black",
+           col.env = "gray",
+           col.segm.env = "gray",
+           size.tex.pa = 2,
+           size.tex.lab = 16,
+           plot_theme = theme_metan_minimal())
 
 # WAASB index
-waasb_model = waasb(data_ge, ENV, GEN, REP, GY)
+waasb_model <- waasb(data_ge, ENV, GEN, REP, GY)
 
 # GY x WAASB
 plot_scores(waasb_model,

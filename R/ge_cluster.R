@@ -62,11 +62,12 @@
 #'  \href{https://dl.sciencesocieties.org/publications/cs/abstracts/35/5/CS0350051300?access=0&view=pdf}{doi:10.2135/cropsci1995.0011183X003500050008x}
 #' @export
 #' @examples
-#'
+#' \donttest{
 #' library(metan)
 #'
-#' d1 = ge_cluster(data_ge, ENV, GEN, GY, nclust = 3)
+#' d1 <- ge_cluster(data_ge, ENV, GEN, GY, nclust = 3)
 #' plot(d1, nclust = 3)
+#' }
 #'
 ge_cluster <- function(.data, env = NULL, gen = NULL, resp = NULL,
                        table = FALSE, distmethod = "euclidean",
@@ -159,3 +160,28 @@ ge_cluster <- function(.data, env = NULL, gen = NULL, resp = NULL,
                    class = "ge_cluster"))
 }
 
+
+
+
+
+
+
+#' Plot an object of class ge_cluster
+#'
+#' Plot an object of class ge_cluster
+#'
+#'
+#' @param x An object of class \code{ge_cluster}
+#' @param nclust The number of clusters to show.
+#' @param xlab The label of the x axis.
+#' @param ... Other arguments passed from the function \code{plot.hclust}.
+#' @method plot ge_cluster
+#' @export
+#' @author Tiago Olivoto \email{tiagoolivoto@@gmail.com}
+#'
+plot.ge_cluster <- function(x, nclust = NULL, xlab = "", ...){
+  plot(x$hc, hang = -1, xlab = xlab, sub = "", ...)
+  if(!missing(nclust)){
+    rect.hclust(x$hc, k = nclust, border = "red")
+  }
+}

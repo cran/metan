@@ -18,7 +18,7 @@
 #' @importFrom tibble has_rownames
 #' @export
 #' @examples
-#'
+#' \donttest{
 #' library(metan)
 #'
 #' set.seed(1)
@@ -30,6 +30,7 @@
 #'
 #' gen_cols <- t(mat)
 #' make_long(gen_cols, gen_in = "cols")
+#' }
 #'
 make_long <- function(mat, gen_in = "rows") {
   if (!gen_in %in% c("rows", "cols")) {
@@ -45,14 +46,14 @@ make_long <- function(mat, gen_in = "rows") {
     data <-
       mat %>%
       rownames_to_column("GEN") %>%
-      gather(ENV, Y, -GEN) %>%
+      pivot_longer(names_to = "ENV", values_to = "Y", -GEN)  %>%
       arrange(GEN, ENV)
   }
   if (gen_in == "cols") {
     data <-
       mat %>%
       rownames_to_column("ENV") %>%
-      gather(GEN, Y, -ENV) %>%
+      pivot_longer(names_to = "GEN", values_to = "Y", -ENV) %>%
       arrange(ENV, GEN)
   }
   return(as_tibble(data))

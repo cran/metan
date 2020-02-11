@@ -267,3 +267,157 @@ mtsi <- function(.data,
                         Selected = names(MTSI)[1:ngs]),
                    class = "mtsi"))
 }
+
+
+
+
+
+
+
+
+
+#' Plot the multi-trait stability index
+#'
+#' Makes a radar plot showing the multitrait stability index proposed by Olivoto
+#' et al. (2019)
+#'
+#'
+#' @param x An object of class \code{mtsi}
+#' @param SI An integer [0-100]. The selection intensity in percentage of the
+#'   total number of genotypes.
+#' @param radar Logical argument. If true (default) a radar plot is generated
+#'   after using \code{coord_polar()}.
+#' @param arrange.label Logical argument. If \code{TRUE}, the labels are
+#'   arranged to avoid text overlapping. This becomes useful when the number of
+#'   genotypes is large, say, more than 30.
+#' @param size.point The size of the point in graphic. Defaults to 2.5.
+#' @param col.sel The colour for selected genotypes.
+#' @param col.nonsel The colour for nonselected genotypes.
+#' @param size.text The size for the text in the plot. Defaults to 10.
+#' @param ... Other arguments to be passed from ggplot2::theme().
+#' @return An object of class \code{gg, ggplot}.
+#' @author Tiago Olivoto \email{tiagoolivoto@@gmail.com}
+#' @method plot mtsi
+#' @export
+#' @references Olivoto, T., A.D.C. L{\'{u}}cio, J.A.G. da silva, B.G. Sari, and M.I. Diel. 2019. Mean performance and stability in multi-environment trials II: Selection based on multiple traits. Agron. J. (in press).
+#' @examples
+#' \donttest{
+#' library(metan)
+#' mtsi_model <- waasb(data_ge, ENV, GEN, REP, resp = c(GY, HM))
+#' mtsi_index <- mtsi(mtsi_model)
+#' plot(mtsi_index)
+#'}
+#'
+#'
+plot.mtsi <- function(x, SI = 15, radar = TRUE, arrange.label = FALSE, size.point = 2.5,
+                      col.sel = "red", col.nonsel = "black", size.text = 10, ...) {
+  if (!class(x) == "mtsi") {
+    stop("The object 'x' is not of class 'mtsi'")
+  }
+  data <- tibble(MTSI = x$MTSI, Genotype = names(x$MTSI), sel = "Selected")
+  data[["sel"]][(round(nrow(data) * (SI/100), 0) + 1):nrow(data)] <- "Nonselected"
+  cutpoint <- max(subset(data, sel == "Selected")$MTSI)
+  p <- ggplot(data = data, aes(x = reorder(Genotype, -MTSI),
+                               y = MTSI)) + geom_hline(yintercept = cutpoint, col = col.sel) +
+    geom_path(colour = "black", group = 1) + geom_point(size = size.point,
+                                                        aes(fill = sel), shape = 21, colour = "black") + scale_x_discrete() +
+    scale_y_reverse() + theme_minimal() + theme(legend.position = "bottom",
+                                                legend.title = element_blank(), axis.title.x = element_blank(),
+                                                panel.border = element_blank(), axis.text = element_text(colour = "black"),
+                                                text = element_text(size = size.text)) + labs(y = "Multitrait stability index") +
+    scale_fill_manual(values = c(col.nonsel, col.sel))
+  if (radar == TRUE) {
+    if(arrange.label == TRUE){
+      tot_gen <- length(unique(data$Genotype))
+      fseq <- c(1:(tot_gen/2))
+      sseq <- c((tot_gen/2 + 1):tot_gen)
+      fang <- c(90 - 180/length(fseq) * fseq)
+      sang <- c(-90 - 180/length(sseq) * sseq)
+      p <- p + coord_polar() + theme(axis.text.x = element_text(angle = c(fang,
+                                                                          sang)), legend.margin = margin(-120, 0, 0, 0), ...)
+    } else{
+      p <- p + coord_polar()
+    }
+  }
+  return(p)
+}
+
+
+
+
+
+
+
+#' Print an object of class mtsi
+#'
+#' Print a \code{mtsi} object in two ways. By default, the results are shown in
+#' the R console. The results can also be exported to the directory.
+#'
+#' @param x An object of class \code{mtsi}.
+#' @param export A logical argument. If \code{TRUE|T}, a *.txt file is exported
+#'   to the working directory
+#' @param file.name The name of the file if \code{export = TRUE}
+#' @param digits The significant digits to be shown.
+#' @param ... Options used by the tibble package to format the output. See
+#'   \code{\link[tibble:formatting]{tibble::print()}} for more details.
+#' @author Tiago Olivoto \email{tiagoolivoto@@gmail.com}
+#' @method print mtsi
+#' @export
+#' @examples
+#' \donttest{
+#' library(metan)
+#' # Based on stability only
+#' MTSI_MODEL <- waasb(data_ge,
+#'   resp = c(GY, HM),
+#'   gen = GEN,
+#'   env = ENV,
+#'   rep = REP
+#' )
+#'
+#' MTSI_index <- mtsi(MTSI_MODEL)
+#' print(MTSI_index)
+#' }
+print.mtsi <- function(x, export = FALSE, file.name = NULL, digits = 4, ...) {
+  if (!class(x) == "mtsi") {
+    stop("The object must be of class 'mtsi'")
+  }
+  if (export == TRUE) {
+    file.name <- ifelse(is.null(file.name) == TRUE, "mtsi print", file.name)
+    sink(paste0(file.name, ".txt"))
+  }
+  opar <- options(pillar.sigfig = digits)
+  on.exit(options(opar))
+  cat("-------------------- Correlation matrix used used in factor analysis -----------------\n")
+  print(x$cormat)
+  cat("\n")
+  cat("---------------------------- Principal component analysis -----------------------------\n")
+  print(x$PCA)
+  cat("\n")
+  cat("--------------------------------- Initial loadings -----------------------------------\n")
+  print(x$initial.loadings)
+  cat("\n")
+  cat("-------------------------- Loadings after varimax rotation ---------------------------\n")
+  print(x$finish.loadings)
+  cat("\n")
+  cat("--------------------------- Scores for genotypes-ideotype -----------------------------\n")
+  print(rbind(x$scores.gen, x$scores.ide))
+  cat("\n")
+  cat("---------------------------- Multitrait stability index ------------------------------\n")
+  print(x$MTSI)
+  cat("\n")
+  cat("--------------------------- Selection differential (index) ----------------------------\n")
+  print(x$sel.dif)
+  cat("\n")
+  cat("-------------------------- Mean of Selection differential -----------------------------\n")
+  print(x$mean.sd)
+  cat("\n")
+  cat("------------------------- Selection differential (variables) --------------------------\n")
+  print(x$sel.dif.var)
+  cat("\n")
+  cat("-------------------------------- Selected genotypes -----------------------------------\n")
+  cat(x$Selected)
+  cat("\n")
+  if (export == TRUE) {
+    sink()
+  }
+}

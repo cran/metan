@@ -18,7 +18,8 @@
 #'   environments.
 #' @param gen The name of the column that contains the levels of the genotypes.
 #' @param rep The name of the column that contains the levels of the
-#'   replications/blocks.
+#'   replications/blocks. \strong{AT LEAST THREE REPLICATES ARE REQUIRED TO
+#'   PERFORM THE CROSS-VALIDATION}.
 #' @param resp The response variable.
 #' @param block Defaults to \code{NULL}. In this case, a randomized complete
 #'   block design is considered. If block is informed, then a resolvable
@@ -31,38 +32,42 @@
 #' @param verbose A logical argument to define if a progress bar is shown.
 #'   Default is \code{TRUE}.
 #' @details Six models may be fitted depending upon the values in \code{block}
-#'   and \code{random} arguments. *  \strong{Model 1:} \code{block = NULL} and
-#'   \code{random = "gen"} (The default option). This model considers a
-#'   Randomized Complete Block Design assuming genotype and
-#'   genotype-vs-environment as random effects. Environment and blocks nested
-#'   within environments are treated as fixed factors.
+#'   and \code{random} arguments.
+#'   *  \strong{Model 1:} \code{block = NULL} and \code{random = "gen"} (The
+#'   default option). This model considers a Randomized Complete Block Design in
+#'   each environment assuming genotype and genotype-environment interaction as
+#'   random effects. Environments and blocks nested within environments are
+#'   assumed to fixed factors.
 #'
 #'   *  \strong{Model 2:} \code{block = NULL} and \code{random = "env"}. This
-#'   model considers a Randomized Complete Block Design treating environment,
-#'   genotype-vs-environment, and blocks-within-environments as random factors.
-#'   Genotypes are assumed to be fixed factors.
+#'   model considers a Randomized Complete Block Design in each environment
+#'   treating environment, genotype-environment interaction, and blocks nested
+#'   within environments as random factors. Genotypes are assumed to be fixed
+#'   factors.
 #'
 #'   *  \strong{Model 3:} \code{block = NULL} and \code{random = "all"}. This
-#'   model considers a Randomized Complete Block Design assuming all effects
-#'   (genotypes, environments, genotype-vs-environment interaction and blocks
-#'   nested within environments) as random.
+#'   model considers a Randomized Complete Block Design in each environment
+#'   assuming a random-effect model, i.e., all effects (genotypes, environments,
+#'   genotype-vs-environment interaction and blocks nested within environments)
+#'   are assumed to be random factors.
 #'
-#'   *  \strong{Model 4:} \code{block != NULL} and \code{random = "gen"}. This
-#'   model considers an alpha-lattice design assuming genotype,
-#'   genotype-vs-environment interaction, and incomplete block nested within
-#'   replicates as random to make use of inter-block information (Mohring et
-#'   al., 2015). Complete replicates nested within environments and environments
-#'   are treated as fixed factors.
+#'   *  \strong{Model 4:} \code{block} is not \code{NULL} and \code{random =
+#'   "gen"}. This model considers an alpha-lattice design in each environment
+#'   assuming genotype, genotype-environment interaction, and incomplete blocks
+#'   nested within complete replicates as random to make use of inter-block
+#'   information (Mohring et al., 2015). Complete replicates nested within
+#'   environments and environments are assumed to be fixed factors.
 #'
-#'   *  \strong{Model 5:} \code{block != NULL} and \code{random = "env"}. This
-#'   model considers an alpha-lattice design assuming genotype as fixed. All
-#'   other sources of variation (environment, complete replicates nested within
-#'   environments, and incomplete blocks nested within replicates) as treated as
-#'   random factors.
+#'   *  \strong{Model 5:} \code{block} is not \code{NULL} and \code{random =
+#'   "env"}. This model considers an alpha-lattice design in each environment
+#'   assuming genotype as fixed. All other sources of variation (environment,
+#'   genotype-environment interaction, complete replicates nested within
+#'   environments, and incomplete blocks nested within replicates) are assumed
+#'   to be random factors.
 #'
-#'   *  \strong{Model 6:} \code{block != NULL} and \code{random = "all"}. This
-#'   model considers an alpha-lattice design assuming all effects, except the
-#'   intercept, as random factors.
+#'   *  \strong{Model 6:} \code{block} is not \code{NULL} and \code{random =
+#'   "all"}. This model considers an alpha-lattice design in each environment
+#'   assuming all effects, except the intercept, as random factors.
 #'
 #'
 #' @return An object of class \code{cv_blup} with the following items: *
@@ -76,7 +81,9 @@
 #'   \href{https://dl.sciencesocieties.org/publications/aj/abstracts/0/0/agronj2019.03.0220?access=0&view=pdf}{doi:10.2134/agronj2019.03.0220}
 #'
 #' @references Patterson, H.D., and E.R. Williams. 1976. A new class of
-#'   resolvable incomplete block designs. Biometrika 63:83-92.
+#' resolvable incomplete block designs. Biometrika 63:83-92.
+#' \href{https://doi.org/10.1093/biomet/63.1.83}{doi:10.1093/biomet/63.1.83}
+#'
 #' @references Mohring, J., E. Williams, and H.-P. Piepho. 2015. Inter-block
 #'   information: to recover or not to recover it? TAG. Theor. Appl. Genet.
 #'   128:1541-54.
@@ -104,7 +111,15 @@
 #'          cv_blup(ENV, GEN, REP, GY, nboot = 10)
 #' }
 #'
-cv_blup <- function(.data, env, gen, rep, resp, block = NULL, nboot = 200, random = "gen", verbose = TRUE) {
+cv_blup <- function(.data,
+                    env,
+                    gen,
+                    rep,
+                    resp,
+                    block = NULL,
+                    nboot = 200,
+                    random = "gen",
+                    verbose = TRUE) {
     if(missing(block)){
         data <- .data %>%
             dplyr::select(ENV = {{env}},
@@ -114,6 +129,9 @@ cv_blup <- function(.data, env, gen, rep, resp, block = NULL, nboot = 200, rando
             mutate_at(1:3, as.factor)
         data <- tibble::rowid_to_column(data)
         Nbloc <- nlevels(data$REP)
+        if (Nbloc <= 2) {
+            stop("At least three replicates are required to perform the cross-validation.")
+        }
         nrepval <- Nbloc - 1
         if (verbose == TRUE) {
             pb <- progress_bar$new(
@@ -133,8 +151,8 @@ cv_blup <- function(.data, env, gen, rep, resp, block = NULL, nboot = 200, rando
             random == "all" ~ "BLUP_ge_RCBD"
         )
         for (b in 1:nboot) {
-            tmp <- metan::split_factors(data, ENV, keep_factors = TRUE, verbose = FALSE)
-            modeling <- do.call(rbind, lapply(tmp[[1]], function(x) {
+            tmp <- split_factors(data, ENV, keep_factors = TRUE, verbose = FALSE)
+            modeling <- do.call(rbind, lapply(tmp, function(x) {
                 X2 <- sample(unique(data$REP), nrepval, replace = FALSE)
                 x %>%
                     group_by(GEN) %>%
@@ -173,11 +191,10 @@ cv_blup <- function(.data, env, gen, rep, resp, block = NULL, nboot = 200, rando
                                  Y = {{resp}})
         data <- rowid_to_column(data)
         Nbloc <- nlevels(data$REP)
-        nrepval <- Nbloc - 1
-        if (nrepval != Nbloc - 1) {
-            stop("The number replications used for validation must be equal to total number of replications -1 (In this case ",
-                 (Nbloc - 1), ").")
+        if (Nbloc <= 2) {
+            stop("At least three replicates are required to perform the cross-validation.")
         }
+        nrepval <- Nbloc - 1
         if (verbose == TRUE) {
             pb <- progress_bar$new(
                 format = "Validating :current of :total sets [:bar]:percent (:elapsedfull -:eta left)",
@@ -185,9 +202,9 @@ cv_blup <- function(.data, env, gen, rep, resp, block = NULL, nboot = 200, rando
         }
         RMSPDres <- data.frame(RMSPD = matrix(NA, nboot, 1))
         model_formula <- case_when(
-            random == "gen" ~ paste("Y ~ + (1 | GEN) + ENV / REP + (1 | REP:BLOCK)  + (1 | GEN:ENV)"),
-            random == "env" ~ paste("Y ~ + GEN + (1|ENV/REP/BLOCK) + (1 | GEN:ENV)"),
-            random == "all" ~ paste("Y ~ + (1 | GEN) + (1|ENV/REP/BLOCK) + (1 | GEN:ENV)")
+            random == "gen" ~ paste("Y ~  (1 | GEN) + ENV / REP + (1|BLOCK:(REP:ENV))  + (1 | GEN:ENV)"),
+            random == "env" ~ paste("Y ~ GEN + (1|ENV/REP/BLOCK) + (1 | GEN:ENV)"),
+            random == "all" ~ paste("Y ~  (1 | GEN) + (1|ENV/REP/BLOCK) + (1 | GEN:ENV)")
         )
         model_formula = as.formula(model_formula)
         MOD <- case_when(
@@ -197,7 +214,7 @@ cv_blup <- function(.data, env, gen, rep, resp, block = NULL, nboot = 200, rando
         )
         for (b in 1:nboot) {
             tmp <- split_factors(data, ENV, keep_factors = TRUE, verbose = FALSE)
-            modeling <- do.call(rbind, lapply(tmp[[1]], function(x) {
+            modeling <- do.call(rbind, lapply(tmp, function(x) {
                 X2 <- sample(unique(data$REP), nrepval, replace = FALSE)
                 x %>%
                     group_by(GEN) %>%

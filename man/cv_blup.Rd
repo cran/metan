@@ -26,7 +26,8 @@ environments.}
 \item{gen}{The name of the column that contains the levels of the genotypes.}
 
 \item{rep}{The name of the column that contains the levels of the
-replications/blocks.}
+replications/blocks. \strong{AT LEAST THREE REPLICATES ARE REQUIRED TO
+PERFORM THE CROSS-VALIDATION}.}
 
 \item{resp}{The response variable.}
 
@@ -65,34 +66,38 @@ Difference (Olivoto et al. 2019) is computed. At the end of boots, a list is
 returned.
 
 Six models may be fitted depending upon the values in \code{block}
-and \code{random} arguments. *  \strong{Model 1:} \code{block = NULL} and
-\code{random = "gen"} (The default option). This model considers a
-Randomized Complete Block Design assuming genotype and
-genotype-vs-environment as random effects. Environment and blocks nested
-within environments are treated as fixed factors.
+and \code{random} arguments.
 \itemize{
+\item \strong{Model 1:} \code{block = NULL} and \code{random = "gen"} (The
+default option). This model considers a Randomized Complete Block Design in
+each environment assuming genotype and genotype-environment interaction as
+random effects. Environments and blocks nested within environments are
+assumed to fixed factors.
 \item \strong{Model 2:} \code{block = NULL} and \code{random = "env"}. This
-model considers a Randomized Complete Block Design treating environment,
-genotype-vs-environment, and blocks-within-environments as random factors.
-Genotypes are assumed to be fixed factors.
+model considers a Randomized Complete Block Design in each environment
+treating environment, genotype-environment interaction, and blocks nested
+within environments as random factors. Genotypes are assumed to be fixed
+factors.
 \item \strong{Model 3:} \code{block = NULL} and \code{random = "all"}. This
-model considers a Randomized Complete Block Design assuming all effects
-(genotypes, environments, genotype-vs-environment interaction and blocks
-nested within environments) as random.
-\item \strong{Model 4:} \code{block != NULL} and \code{random = "gen"}. This
-model considers an alpha-lattice design assuming genotype,
-genotype-vs-environment interaction, and incomplete block nested within
-replicates as random to make use of inter-block information (Mohring et
-al., 2015). Complete replicates nested within environments and environments
-are treated as fixed factors.
-\item \strong{Model 5:} \code{block != NULL} and \code{random = "env"}. This
-model considers an alpha-lattice design assuming genotype as fixed. All
-other sources of variation (environment, complete replicates nested within
-environments, and incomplete blocks nested within replicates) as treated as
-random factors.
-\item \strong{Model 6:} \code{block != NULL} and \code{random = "all"}. This
-model considers an alpha-lattice design assuming all effects, except the
-intercept, as random factors.
+model considers a Randomized Complete Block Design in each environment
+assuming a random-effect model, i.e., all effects (genotypes, environments,
+genotype-vs-environment interaction and blocks nested within environments)
+are assumed to be random factors.
+\item \strong{Model 4:} \code{block} is not \code{NULL} and \code{random =
+  "gen"}. This model considers an alpha-lattice design in each environment
+assuming genotype, genotype-environment interaction, and incomplete blocks
+nested within complete replicates as random to make use of inter-block
+information (Mohring et al., 2015). Complete replicates nested within
+environments and environments are assumed to be fixed factors.
+\item \strong{Model 5:} \code{block} is not \code{NULL} and \code{random =
+  "env"}. This model considers an alpha-lattice design in each environment
+assuming genotype as fixed. All other sources of variation (environment,
+genotype-environment interaction, complete replicates nested within
+environments, and incomplete blocks nested within replicates) are assumed
+to be random factors.
+\item \strong{Model 6:} \code{block} is not \code{NULL} and \code{random =
+  "all"}. This model considers an alpha-lattice design in each environment
+assuming all effects, except the intercept, as random factors.
 }
 }
 \examples{
@@ -121,6 +126,7 @@ Agron. J. 111:2949-2960.
 
 Patterson, H.D., and E.R. Williams. 1976. A new class of
 resolvable incomplete block designs. Biometrika 63:83-92.
+\href{https://doi.org/10.1093/biomet/63.1.83}{doi:10.1093/biomet/63.1.83}
 
 Mohring, J., E. Williams, and H.-P. Piepho. 2015. Inter-block
 information: to recover or not to recover it? TAG. Theor. Appl. Genet.

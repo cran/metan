@@ -26,7 +26,8 @@ environments.}
 \item{gen}{The name of the column that contains the levels of the genotypes.}
 
 \item{rep}{The name of the column that contains the levels of the
-replications/blocks.}
+replications/blocks. \strong{AT LEAST THREE REPLICATES ARE REQUIRED TO
+PERFORM THE CROSS-VALIDATION}.}
 
 \item{resp}{The response variable.}
 
@@ -36,7 +37,7 @@ Defaults to 200.}
 \item{block}{Defaults to \code{NULL}. In this case, a randomized complete
 block design is considered. If block is informed, then a resolvable
 alpha-lattice design (Patterson and Williams, 1976) is employed.
-\strong{All effects are assumed to be fixed.}}
+\strong{All effects, except the error, are assumed to be fixed.}}
 
 \item{design}{The experimental design used in each environment. Defaults to
 \code{RCBD} (Randomized complete Block Design). For Completely Randomized
@@ -97,6 +98,7 @@ model <- data_ge \%>\%
 \references{
 Patterson, H.D., and E.R. Williams. 1976. A new class of
 resolvable incomplete block designs. Biometrika 63:83-92.
+\href{https://doi.org/10.1093/biomet/63.1.83}{doi:10.1093/biomet/63.1.83}
 }
 \seealso{
 \code{\link{cv_ammi}, \link{cv_blup}}
