@@ -58,10 +58,18 @@ NULL
 corr_coef <- function(data, ..., verbose = TRUE){
   if(missing(...)){
     x <- select_if(data, is.numeric)
+    if(has_na(x)){
+      x <- remove_rows_na(x)
+      has_text_in_num(x)
+    }
   }
   if(!missing(...)){
     x <- select(data, ...) %>%
       select_numeric_cols()
+    if(has_na(x)){
+      x <- remove_rows_na(x)
+      has_text_in_num(x)
+    }
   }
   if(has_na(data) ==  TRUE){
     x <- remove_rows_na(x, verbose = verbose)
@@ -262,9 +270,9 @@ plot.corr_coef <- function(x,
     theme_bw() +
     xlab(NULL) +
     ylab(NULL) +
-    scale_y_discrete(expand = expand_scale(mult = c(0,0)),
+    scale_y_discrete(expand = expansion(mult = c(0,0)),
                      position = lab.y.position)+
-    scale_x_discrete(expand = expand_scale(mult = c(0,0)),
+    scale_x_discrete(expand = expansion(mult = c(0,0)),
                      position = lab.x.position) +
     coord_fixed() +
     theme(axis.ticks = element_blank(),

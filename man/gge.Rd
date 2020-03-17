@@ -11,13 +11,13 @@ gge(
   resp,
   centering = "environment",
   scaling = "none",
-  svp = "environment"
+  svp = "environment",
+  ...
 )
 }
 \arguments{
 \item{.data}{The dataset containing the columns related to Environments, Genotypes
-and the response variable(s). It is also possible to use a two-way table with genotypes
-in lines and environments in columns as input. In this case you must use \code{table = TRUE}.}
+and the response variable(s).}
 
 \item{env}{The name of the column that contains the levels of the environments.}
 
@@ -43,6 +43,10 @@ environment eigenvectors, also called column metric preserving); or \code{'symme
 (The singular value is symmetrically partitioned into the genotype and the environment eigenvectors
 This SVP is most often used in AMMI analysis and other biplot analysis, but it is not ideal for
 visualizing either the relationship among genotypes or that among the environments).}
+
+\item{...}{Arguments passed to the function
+\code{\link{impute_missing_val}()} for imputation of missing values in case
+of unbalanced data.}
 }
 \value{
 The function returns a list of class \code{gge} containing the following objects
@@ -79,12 +83,12 @@ plot(mod)
 
 # GGE model for all numeric variables
 mod2 <- gge(data_ge2, ENV, GEN, resp = everything())
-plot(mod2)
+plot(mod2, var = "ED")
 
 # If we have a two-way table with the mean values for
 # genotypes and environments
 
-table <- make_mat(data_ge, GEN, ENV, GY)
+table <- make_mat(data_ge, GEN, ENV, GY) \%>\% round(2)
 table
 make_long(table) \%>\%
 gge(ENV, GEN, Y) \%>\%

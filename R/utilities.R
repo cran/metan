@@ -18,6 +18,8 @@
 #' @param pattern A string to be matched. Regular Expression Syntax is also
 #'   allowed.
 #' @param replacement A string for replacement.
+#' @param ignore_case If \code{FALSE} (default), the pattern matching is case
+#'   sensitive and if \code{TRUE}, case is ignored during matching.
 #' @param pull Logical argument. If \code{TRUE}, returns the last column (on the
 #'   assumption that's the column you've created most recently), as a vector.
 #' @param .before,.after For \code{replace_sting()}, \code{replace_number()},
@@ -38,6 +40,7 @@
 #' return the row index.
 #' * \code{has_text_in_num()}: Inspect columns looking for text in numeric
 #' sequence and return a warning if text is found.
+#' * \code{remove_space()}: Remove all blank spaces of a string.
 #' * \code{remove_strings()}: Remove all strings of a variable.
 #' * \code{replace_number()}: Replace numbers with a replacement.
 #' * \code{replace_string()}: Replace all strings with a replacement, ignoring
@@ -140,7 +143,7 @@
 #' }
 #' @export
 all_upper_case <- function(.data, ...){
-  if (any(class(.data) %in% c("data.frame","tbl_df", "data.table"))){
+  if (has_class(.data, c("data.frame","tbl_df", "data.table"))){
     .data <- as.data.frame(.data)
     if(!missing(...)){
       mutate_at(.data, vars(...), toupper) %>%
@@ -156,7 +159,7 @@ all_upper_case <- function(.data, ...){
 #' @name utils_num_str
 #' @export
 all_lower_case <- function(.data, ...){
-  if (any(class(.data) %in% c("data.frame","tbl_df", "data.table"))){
+  if (has_class(.data, c("data.frame","tbl_df", "data.table"))){
     .data <- as.data.frame(.data)
     if(!missing(...)){
       mutate_at(.data, vars(...), tolower) %>%
@@ -177,7 +180,7 @@ all_title_case <- function(.data, ...){
     substr(x, 1, 1) <- toupper(substr(x, 1, 1))
     return(x)
   }
-  if (any(class(.data) %in% c("data.frame","tbl_df", "data.table"))){
+  if (has_class(.data, c("data.frame","tbl_df", "data.table"))){
     .data <- as.data.frame(.data)
     if(!missing(...)){
      mutate_at(.data, vars(...), to_title) %>%
@@ -200,7 +203,7 @@ extract_number <- function(.data,
                            pull = FALSE,
                            .before = NULL,
                            .after  = NULL){
-  if (any(class(.data) %in% c("data.frame","tbl_df", "data.table"))){
+  if (has_class(.data, c("data.frame","tbl_df", "data.table"))){
   if (drop == FALSE){
     results <- .data %>%
       mutate({{new_var}} :=   as.numeric(gsub("[^0-9.-]+", "", as.character({{var}}))))
@@ -231,7 +234,7 @@ extract_string <- function(.data,
                            pull = FALSE,
                            .before = NULL,
                            .after  = NULL){
-  if (any(class(.data) %in% c("data.frame","tbl_df", "data.table"))){
+  if (has_class(.data, c("data.frame","tbl_df", "data.table"))){
   if (drop == FALSE){
     results <- .data %>%
       mutate({{new_var}} := as.character(gsub("[^A-z.-]+", "", as.character({{var}}))))
@@ -276,8 +279,29 @@ has_text_in_num <- function(.data){
 }
 #' @name utils_num_str
 #' @export
+remove_space <- function(.data, ...){
+  if (has_class(.data, c("data.frame","tbl_df", "data.table"))){
+    if(missing(...)){
+      vars <- vars(everything())
+    } else{
+      vars <- vars(...)
+    }
+    results <-
+      mutate_at(.data,
+                .vars = vars,
+                .funs = gsub,
+                pattern = "[[:space:]]",
+                replacement = "")
+    return(results)
+  } else{
+    return(gsub(pattern = "[[:space:]]", replacement = "", .data))
+  }
+}
+
+#' @name utils_num_str
+#' @export
 remove_strings <- function(.data, ...){
-  if (any(class(.data) %in% c("data.frame","tbl_df", "data.table"))){
+  if (has_class(.data, c("data.frame","tbl_df", "data.table"))){
   if(missing(...)){
     vars <- vars(everything())
   } else{
@@ -287,13 +311,15 @@ remove_strings <- function(.data, ...){
     mutate_at(.data,
               .vars = vars,
               .funs = gsub,
-              pattern = "[A-z]",
+              pattern = "[^0-9.-]",
               replacement = "") %>%
     mutate_at(.vars = vars,
               .funs = as.numeric)
   return(results)
   } else{
-    return(gsub(pattern, replacement, .data))
+    return(gsub(pattern = "[^0-9.-]", replacement = "", .data)) %>%
+      remove_space() %>%
+      as.numeric()
   }
 }
 #' @name utils_num_str
@@ -312,7 +338,7 @@ replace_number <- function(.data,
   } else{
     pattern <- pattern
   }
-  if (any(class(.data) %in% c("data.frame","tbl_df", "data.table"))){
+  if (has_class(.data, c("data.frame","tbl_df", "data.table"))){
   if (drop == FALSE){
     results <- .data %>%
       mutate({{new_var}} := gsub(pattern, replacement, as.character({{var}})))
@@ -341,6 +367,7 @@ replace_string <- function(.data,
                            new_var = new_var,
                            pattern = NULL,
                            replacement = "",
+                           ignore_case = FALSE,
                            drop = FALSE,
                            pull = FALSE,
                            .before = NULL,
@@ -350,10 +377,10 @@ replace_string <- function(.data,
   } else {
     pattern <- pattern
   }
-  if (any(class(.data) %in% c("data.frame","tbl_df", "data.table"))){
+  if (has_class(.data, c("data.frame","tbl_df", "data.table"))){
   if (drop == FALSE){
     results <- .data %>%
-      mutate({{new_var}} := gsub(pattern, replacement, as.character({{var}})))
+      mutate({{new_var}} := gsub(pattern, replacement, as.character({{var}}), ignore.case = ignore_case))
     if(pull == TRUE){
       results <- pull(results)
     }
@@ -362,14 +389,14 @@ replace_string <- function(.data,
     }
   } else{
     results <- .data %>%
-      transmute({{new_var}} := gsub(pattern, replacement, as.character({{var}})))
+      transmute({{new_var}} := gsub(pattern, replacement, as.character({{var}}), ignore.case = ignore_case))
     if(pull == TRUE){
       results <- pull(results)
     }
   }
   return(results)
   } else{
-    return(gsub(pattern, replacement, .data))
+    return(gsub(pattern, replacement, .data, ignore.case = ignore_case))
   }
 }
 #' @name utils_num_str
@@ -398,7 +425,7 @@ tidy_strings <- function(.data, ..., sep = "_"){
     str <- gsub("(?<=[A-Z])(?=[0-9])|(?<=[0-9])(?=[A-Z])", sep, str, perl = TRUE)
     return(str)
   }
-  if (any(class(.data) %in% c("data.frame","tbl_df", "data.table"))){
+  if (has_class(.data, c("data.frame","tbl_df", "data.table"))){
     if(missing(...)){
       results <-
         mutate_if(.data, ~!is.numeric(.x),  fstr)
@@ -429,9 +456,9 @@ tidy_strings <- function(.data, ..., sep = "_"){
 #' rows in \code{.data} plus the rows declared in \code{...}.
 #' * \code{all_pairs()}: Get all the possible pairs between the levels of a
 #' factor.
-#' * \code{colnames_to_lower}: Translate all column names to lower case.
-#' * \code{colnames_to_upper}: Translate all column names to upper case.
-#' * \code{colnames_to_title}: Translate all column names to title case.
+#' * \code{colnames_to_lower()}: Translate all column names to lower case.
+#' * \code{colnames_to_upper()}: Translate all column names to upper case.
+#' * \code{colnames_to_title()}: Translate all column names to title case.
 #' * \code{column_exists()}: Checks if a column exists in a data frame. Return a
 #' logical value.
 #' * \code{columns_to_first()}: Move columns to first positions in \code{.data}.
@@ -439,7 +466,7 @@ tidy_strings <- function(.data, ..., sep = "_"){
 #' * \code{concatenate()}: Concatenate columns of a data frame. If \code{drop =
 #' TRUE} then the existing variables are dropped. If \code{pull = TRUE} then the
 #' concatenated variable is pull out to a vector. This is specially useful when
-#' using \code{concatenate} to add columns to a data frame with \code{add_cols}.
+#' using \code{concatenate} to add columns to a data frame with \code{add_cols()}.
 #' * \code{get_levels()}: Get the levels of a factor variable.
 #' * \code{get_level_size()}: Get the size of each level of a factor variable.
 #' * \code{remove_cols()}: Remove one or more columns from a data frame.
@@ -819,7 +846,7 @@ select_rows <- function(.data, ...){
 #'    - \code{ci_mean()} computes the confidence interval for the mean.
 #'    - \code{cv()} computes the coefficient of variation.
 #'    - \code{freq_table()} Computes frequency fable. Handles grouped data.
-#'    - \code{hm_mean(), gm_mean()} computes the harmonic and geometric means,
+#' - \code{hmean(), gmean()} computes the harmonic and geometric means,
 #' respectively. The harmonic mean is the reciprocal of the arithmetic mean of
 #' the reciprocals. The geometric mean is the \emph{n}th root of \emph{n}
 #' products.
@@ -975,7 +1002,32 @@ freq_table <- function(.data, ...){
 }
 #' @name utils_stats
 #' @export
+hmean <- function(.data, ..., na.rm = FALSE) {
+  funct <- function(df){
+    1 / mean(1 / df, na.rm = na.rm)
+  }
+  if(has_na(.data) && na.rm == FALSE){
+    stop("NA values in data. Use 'na.rm = TRUE' to remove NAs from analysis.\nTo remove rows with NA use `remove_rows_na()'. \nTo remove columns with NA use `remove_cols_na()'.", call. = FALSE)
+  }
+  if(is.null(nrow(.data))){
+    funct(.data)
+  } else{
+    if(missing(...)){
+      .data %>%
+        summarise_if(is.numeric, funct) %>%
+        ungroup()
+    } else{
+      .data %>%
+        select_cols(group_vars(.), ...) %>%
+        summarise_if(is.numeric, funct) %>%
+        ungroup()
+    }
+  }
+}
+#' @name utils_stats
+#' @export
 hm_mean <- function(.data, ..., na.rm = FALSE) {
+  .Deprecated(msg = "`hm_mean()` is deprecated. Use `hmean()` instead.")
   funct <- function(df){
     1 / mean(1 / df, na.rm = na.rm)
   }
@@ -999,7 +1051,32 @@ hm_mean <- function(.data, ..., na.rm = FALSE) {
 }
 #' @name utils_stats
 #' @export
+gmean <- function(.data, ..., na.rm = FALSE){
+  funct <- function(df){
+    exp(sum(log(df[df > 0]), na.rm = na.rm) / length(df))
+  }
+  if(has_na(.data) && na.rm == FALSE){
+    stop("NA values in data. Use 'na.rm = TRUE' to remove NAs from analysis.\nTo remove rows with NA use `remove_rows_na()'. \nTo remove columns with NA use `remove_cols_na()'.", call. = FALSE)
+  }
+  if(is.null(nrow(.data))){
+    funct(.data)
+  } else{
+    if(missing(...)){
+      .data %>%
+        summarise_if(is.numeric, funct) %>%
+        ungroup()
+    } else{
+      .data %>%
+        select_cols(group_vars(.), ...) %>%
+        summarise_if(is.numeric, funct) %>%
+        ungroup()
+    }
+  }
+}
+#' @name utils_stats
+#' @export
 gm_mean <- function(.data, ..., na.rm = FALSE){
+  .Deprecated(msg = "`gm_mean()` is deprecated. Use `gmean()` instead.")
   funct <- function(df){
     exp(sum(log(df[df > 0]), na.rm = na.rm) / length(df))
   }
@@ -1291,51 +1368,51 @@ valid_n <- function(.data, ..., na.rm = FALSE){
 # main statistics, possible by one or more factors
 #' @name utils_stats
 #' @export
-cv_by <- function(.data, ...){
+cv_by <- function(.data, ..., na.rm = FALSE){
   group_by(.data, ...) %>%
-    summarise_if(is.numeric, cv) %>%
+    summarise_if(is.numeric, cv, na.rm = na.rm) %>%
     ungroup()
 }
 #' @name utils_stats
 #' @export
-max_by <- function(.data, ...){
+max_by <- function(.data, ..., na.rm = FALSE){
   group_by(.data, ...) %>%
-    summarise_if(is.numeric, max) %>%
+    summarise_if(is.numeric, max, na.rm = na.rm) %>%
     ungroup()
 }
 #' @name utils_stats
 #' @export
-means_by <- function(.data, ...){
+means_by <- function(.data, ..., na.rm = FALSE){
   group_by(.data, ...) %>%
-    summarise_if(is.numeric, mean) %>%
+    summarise_if(is.numeric, mean, na.rm = na.rm) %>%
     ungroup()
 }
 #' @name utils_stats
 #' @export
-min_by <- function(.data, ...){
+min_by <- function(.data, ..., na.rm = FALSE){
   group_by(.data, ...) %>%
-    summarise_if(is.numeric, min) %>%
+    summarise_if(is.numeric, min, na.rm = na.rm) %>%
     ungroup()
 }
 #' @name utils_stats
 #' @export
-n_by <- function(.data, ...){
+n_by <- function(.data, ..., na.rm = FALSE){
     group_by(.data, ...) %>%
     summarise_all(list(~sum(!is.na(.)))) %>%
     ungroup()
 }
 #' @name utils_stats
 #' @export
-sd_by <- function(.data, ...){
+sd_by <- function(.data, ..., na.rm = FALSE){
   group_by(.data, ...) %>%
-    summarise_if(is.numeric, sd) %>%
+    summarise_if(is.numeric, sd, na.rm = na.rm) %>%
     ungroup()
 }
 #' @name utils_stats
 #' @export
-sem_by <- function(.data, ...){
+sem_by <- function(.data, ..., na.rm = FALSE){
   group_by(.data, ...) %>%
-    summarise_if(is.numeric, sem) %>%
+    summarise_if(is.numeric, sem, na.rm = na.rm) %>%
     ungroup()
 }
 #' @title Utilities for handling with matrices
@@ -1477,6 +1554,7 @@ doo <- function(.data, .fun, ...){
 #' @param class The class to add or remove
 #' @details
 #' * \code{add_class()}: add a class to the object \code{x} keeping all the other class(es).
+#' * \code{has_class()}: Check if a class exists in object \code{x} and returns a logical value.
 #' * \code{set_class()}: set a class to the object \code{x}.
 #' * \code{remove_class()}: remove a class from the object \code{x}.
 #' @md
@@ -1490,6 +1568,7 @@ doo <- function(.data, .fun, ...){
 #' data_ge2 %>%
 #' add_class("my_class")
 #'class(df)
+#'has_class(df, "my_class")
 #'remove_class(df, "my_class") %>% class()
 #'set_class(df, "data_frame") %>% class()
 #'}
@@ -1497,6 +1576,11 @@ doo <- function(.data, .fun, ...){
 add_class <- function(x, class){
   class(x) <- unique(c(class(x), class))
  return(x)
+}
+#' @name utils_class
+#' @export
+has_class <- function(x, class){
+  any(class(x)  %in%  class)
 }
 #' @name utils_class
 #' @export
@@ -1547,4 +1631,46 @@ stars_pval <- function(p_value){
       symbols = c("****", "***", "**", "*",  "ns")
     )
   )
+}
+
+
+
+
+
+
+
+
+
+#' Check if a data set is balanced
+#'
+#' Check if a data set coming from multi-environment trials is balanced, i.e.,
+#' all genotypes are in all environments.
+#' @param .data The dataset containing the columns related to Environments,
+#'   Genotypes, replication/block and response variable(s).
+#' @param env The name of the column that contains the levels of the
+#'   environments.
+#' @param gen The name of the column that contains the levels of the genotypes.
+#' @param resp The response variable.
+#' @return A logical value
+#' @export
+#' @author Tiago Olivoto \email{tiagoolivoto@@gmail.com}
+#' @examples
+#'\donttest{
+#' unb <- data_ge %>%
+#'         remove_rows(1:3) %>%
+#'         droplevels()
+#' is_balanced_trial(data_ge, ENV, GEN, GY)
+#' is_balanced_trial(unb, ENV, GEN, GY)
+#' }
+#'
+
+is_balanced_trial <- function(.data, env, gen, resp){
+  mat <-
+    .data %>%
+    make_mat({{env}}, {{gen}}, {{resp}})
+  if(has_na(mat) == TRUE){
+    return(FALSE)
+  } else{
+    return(TRUE)
+  }
 }

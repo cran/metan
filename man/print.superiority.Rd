@@ -27,7 +27,7 @@ into a *.txt file.
 \examples{
 \donttest{
 library(metan)
-model <- superiority(data_ge2, ENV, GEN, REP, PH)
+model <- superiority(data_ge2, ENV, GEN, PH)
 print(model)
 }
 }

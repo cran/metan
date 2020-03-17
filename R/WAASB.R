@@ -99,6 +99,10 @@
 #'   within-environment ANOVA is not performed.
 #' @param verbose Logical argument. If \code{verbose = FALSE} the code will run
 #'   silently.
+#' @param ... Arguments passed to the function
+#'   \code{\link{impute_missing_val}()} for imputation of missing values in the
+#'   matrix of BLUPs for genotype-environment interaction, thus allowing the
+#'   computation of the WAASB index.
 #' @references
 #' Olivoto, T., A.D.C. L{\'{u}}cio, J.A.G. da silva, V.S. Marchioro, V.Q. de
 #' Souza, and E. Jost. 2019. Mean performance and stability in multi-environment
@@ -256,28 +260,33 @@ waasb <- function(.data,
                   random = "gen",
                   prob = 0.05,
                   ind_anova = TRUE,
-                  verbose = TRUE) {
+                  verbose = TRUE,
+                  ...) {
     if (!random %in% c("env", "gen", "all")) {
         stop("The argument 'random' must be one of the 'gen', 'env', or 'all'.")
     }
     block_test <- missing(block)
     if(!missing(block)){
         factors  <- .data %>%
-            select(ENV = {{env}},
-                   GEN = {{gen}},
-                   REP = {{rep}},
-                   BLOCK = {{block}}) %>%
+            select({{env}},
+                   {{gen}},
+                   {{rep}},
+                   {{block}}) %>%
             mutate_all(as.factor)
     } else{
         factors  <- .data %>%
-            select(ENV = {{env}},
-                   GEN = {{gen}},
-                   REP = {{rep}}) %>%
+            select({{env}},
+                   {{gen}},
+                   {{rep}}) %>%
             mutate_all(as.factor)
     }
     vars <- .data %>% select({{resp}}, -names(factors))
-    has_text_in_num(vars)
     vars %<>% select_numeric_cols()
+    if(!missing(block)){
+        factors %<>% set_names("ENV", "GEN", "REP", "BLOCK")
+    } else{
+        factors %<>% set_names("ENV", "GEN", "REP")
+    }
     model_formula <-
         case_when(
             random == "gen" & block_test ~ paste("Y ~ ENV/REP + (1 | GEN) + (1 | GEN:ENV)"),
@@ -341,12 +350,16 @@ waasb <- function(.data,
     vin <- 0
     if (verbose == TRUE) {
         pb <- progress_bar$new(
-            format = "Evaluating the variable :what [:bar]:percent (:eta left )",
+            format = "Evaluating the variable :what [:bar]:percent",
             clear = FALSE, total = nvar, width = 90)
     }
     for (var in 1:nvar) {
         data <- factors %>%
             mutate(Y = vars[[var]])
+        if(has_na(data)){
+            data <- remove_rows_na(data)
+            has_text_in_num(data)
+        }
         Nenv <- nlevels(data$ENV)
         Ngen <- nlevels(data$GEN)
         Nrep <- nlevels(data$REP)
@@ -359,9 +372,9 @@ waasb <- function(.data,
         }
         if(ind_anova == TRUE){
             if(missing(block)){
-                individual <- data %>% anova_ind(ENV, GEN, REP, Y, verbose = FALSE)
+                individual <- data %>% anova_ind(ENV, GEN, REP, Y)
             } else{
-                individual <- data %>% anova_ind(ENV, GEN, REP, Y, block = BLOCK, verbose = FALSE)
+                individual <- data %>% anova_ind(ENV, GEN, REP, Y, block = BLOCK)
             }
         } else{
             individual = NULL
@@ -406,8 +419,11 @@ waasb <- function(.data,
             separate(Names, into = c("GEN", "ENV")) %>%
             add_cols(BLUPge = bups[[1]][[1]]) %>%
             to_factor(1:2)
-        intmatrix <- make_mat(bINT, GEN, ENV, BLUPge)
-        intmatrix
+        intmatrix <- as.matrix(make_mat(bINT, GEN, ENV, BLUPge))
+        if(has_na(intmatrix)){
+            intmatrix <- impute_missing_val(intmatrix, verbose = verbose, ...)$.data
+            warning("Data imputation used to fill the GxE matrix", call. = FALSE)
+        }
         s <- svd(intmatrix)
         U <- s$u[, 1:minimo]
         LL <- diag(s$d[1:minimo])

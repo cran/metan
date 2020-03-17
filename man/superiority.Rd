@@ -4,7 +4,7 @@
 \alias{superiority}
 \title{Lin e Binns' superiority index}
 \usage{
-superiority(.data, env, gen, rep, resp, verbose = TRUE)
+superiority(.data, env, gen, resp, rep = "deprecated", verbose = TRUE)
 }
 \arguments{
 \item{.data}{The dataset containing the columns related to Environments,
@@ -15,11 +15,10 @@ environments.}
 
 \item{gen}{The name of the column that contains the levels of the genotypes.}
 
-\item{rep}{The name of the column that contains the levels of the
-replications/blocks}
-
 \item{resp}{The response variable(s). To analyze multiple variables in a
 single procedure use, for example, \code{resp = c(var1, var2, var3)}.}
+
+\item{rep}{\strong{Deprecated argument. It will be retired in the next release.}}
 
 \item{verbose}{Logical argument. If \code{verbose = FALSE} the code will run
 silently.}
@@ -30,22 +29,19 @@ result of one variable and contains the following items:
 \itemize{
 \item \strong{environments} The mean for each environment, the environment index
 and classification as favorable and unfavorable environments.
-\item \strong{index} The superiority index computed for all, favorable and
-unfavorable environments.
+\item \strong{index} The superiority index computed for all (\code{Pi_a}),
+favorable (\code{Pi_f}) and unfavorable (\code{Pi_u}) environments.
 }
 }
 \description{
 Nonparametric stability analysis using the superiority index proposed by Lin
-& Binns, (1992).
+& Binns (1988).
 }
 \examples{
 \donttest{
 library(metan)
-out <- superiority(data_ge2,
-                   env = ENV,
-                   gen = GEN,
-                   rep = REP,
-                   resp = PH)
+out <- superiority(data_ge2, ENV, GEN, PH)
+print(out)
 }
 
 }
@@ -53,7 +49,7 @@ out <- superiority(data_ge2,
 Lin, C.S., and M.R. Binns. 1988. A superiority measure of
 cultivar performance for cultivar x location data. Can. J. Plant Sci.
 68:193-198.
-\href{http://pubs.aic.ca/doi/abs/10.4141/cjps88-018}{doi:10.4141/cjps88-018}
+\href{https://www.nrcresearchpress.com/doi/10.4141/cjps88-018#.XmEYwKhKgdU}{doi:10.4141/cjps88-018}
 }
 \seealso{
 \code{\link{Annicchiarico}, \link{ecovalence}, \link{ge_stats}}

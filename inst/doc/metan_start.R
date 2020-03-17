@@ -31,7 +31,7 @@ ammi_model <- performs_ammi(data_ge, ENV, GEN, REP, resp = c(GY, HM))
 waas_index <- waas(data_ge, ENV, GEN, REP, GY, verbose = FALSE)
 
 ## ---- fig.height=8, fig.width=5,  message=FALSE, warning=FALSE----------------
-a <- plot_scores(ammi_model, axis.expand = 1.2)
+a <- plot_scores(ammi_model)
 b <- plot_scores(ammi_model,
                  type = 2,
                  polygon = TRUE,
@@ -47,7 +47,7 @@ make_mat(predicted$GY, GEN, ENV, YpredAMMI) %>%
   round_cols()
 
 ## ----warning=FALSE, message=FALSE---------------------------------------------
-model2 <- waasb(data_ge, ENV, GEN, REP, everything())
+model2 <- gamem_met(data_ge, ENV, GEN, REP, everything())
 
 ## ----fig.height=12, fig.width=4, message=FALSE, warning=FALSE-----------------
 plot(model2, which = c(1, 2, 7), ncol = 1)
@@ -73,13 +73,13 @@ get_model_data(model2, what = "blupge") %>%
   round_cols()
 
 ## -----------------------------------------------------------------------------
-get_model_data(model2, what = "WAASB") %>% 
+model3 <- waasb(data_ge, ENV, GEN, REP, everything(), verbose = FALSE)
+get_model_data(model3, what = "WAASB") %>% 
   round_cols()
 
 ## -----------------------------------------------------------------------------
-index <- Resende_indexes(model2)
-get_model_data(index, "HMRPGV") %>% 
-  round_cols()
+index <- Resende_indexes(model3)
+get_model_data(index) %>% round_cols()
 
 ## ----echo = TRUE--------------------------------------------------------------
 gge_model <- gge(data_ge, ENV, GEN, GY)

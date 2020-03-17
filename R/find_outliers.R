@@ -9,8 +9,6 @@
 #'@param by One variable (factor) to compute the function by. It is a shortcut
 #'  to \code{\link[dplyr]{group_by}()}. To compute the statistics by more than
 #'  one grouping variable use that function.
-#' @param values An alternative way to pass the data to the function. It must be
-#'  a numeric vector.
 #' @param plots If \code{TRUE}, then histograms and boxplots are shown.
 #' @param coef The multiplication coefficient, defaults to 1.5. For more details
 #'   see \code{?boxplot.stat}.
@@ -35,7 +33,6 @@
 find_outliers <- function(.data =  NULL,
                           var = NULL,
                           by = NULL,
-                          values = "deprecated",
                           plots = FALSE,
                           coef = 1.5,
                           verbose = TRUE,
@@ -58,7 +55,7 @@ find_outliers <- function(.data =  NULL,
       names(results)[[which(names(results) == "data")]] <- "outliers"
     return(results)
   }
-  if(any(class(.data) == "numeric")){
+  if(has_class(.data, "numeric")){
     var_name <- as.numeric(.data)
     dd <- data.frame(.data)
   } else {
@@ -84,7 +81,7 @@ find_outliers <- function(.data =  NULL,
   if ((na2 - na1) > 0) {
     if(verbose == TRUE){
       cat("Number of possible outliers:", na2 - na1, "\n")
-      cat("Lines:", names_out, "\n")
+      cat("Line(s):", names_out, "\n")
       cat("Proportion: ", round((na2 - na1)/sum(!is.na(var_name2)) *
                                   100, 1), "%\n", sep = "")
       cat("Mean of the outliers:", round(mo, 3), "\n")
@@ -153,7 +150,7 @@ find_outliers <- function(.data =  NULL,
                      na.rm = TRUE,
                      size = 0.2,
                      bins = nbins)+
-      scale_y_continuous(expand = expand_scale(mult = c(0, .1)))+
+      scale_y_continuous(expand = expansion(mult = c(0, .1)))+
       plot_theme +
       labs(x = "Observed value",
            y = "Count")
@@ -166,7 +163,7 @@ find_outliers <- function(.data =  NULL,
                      na.rm = TRUE,
                      size = 0.2,
                      bins = nbins)+
-      scale_y_continuous(expand = expand_scale(mult = c(0, .1)))+
+      scale_y_continuous(expand = expansion(mult = c(0, .1)))+
       plot_theme +
       labs(x = "Observed value",
            y = "Count")

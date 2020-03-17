@@ -74,7 +74,7 @@
 #'
 #'   Lin, C.S., and M.R. Binns. 1988. A superiority measure of cultivar
 #'   performance for cultivar x location data. Can. J. Plant Sci. 68:193-198.
-#'   \href{http://pubs.aic.ca/doi/abs/10.4141/cjps88-018}{doi:10.4141/cjps88-018}
+#'   \href{https://www.nrcresearchpress.com/doi/10.4141/cjps88-018#.XmEYwKhKgdU}{doi:10.4141/cjps88-018}
 #'
 #'   Olivoto, T., A.D.C. L{\'{u}}cio, J.A.G. da silva, V.S. Marchioro,
 #'   V.Q. de Souza, and E. Jost. 2019a. Mean performance and stability in
@@ -116,22 +116,31 @@ ge_stats = function(.data,
                     resp,
                     verbose = TRUE,
                     prob = 0.05){
-  factors  <- .data %>%
-    select(ENV = {{env}},
-           GEN = {{gen}},
-           REP = {{rep}}) %>%
+  factors  <-
+    .data %>%
+    select({{env}}, {{gen}}, {{rep}}) %>%
     mutate_all(as.factor)
-  vars <- .data %>% select({{resp}}, -names(factors))
-  has_text_in_num(vars)
-  vars %<>% select_numeric_cols()
+  vars <- .data %>%
+    select({{resp}}, -names(factors)) %>%
+    select_numeric_cols()
+  factors %<>% set_names("ENV", "GEN", "REP")
   listres <- list()
   nvar <- ncol(vars)
+  if (verbose == TRUE) {
+    pb <- progress_bar$new(
+      format = "Evaluating the variable :what [:bar]:percent",
+      clear = FALSE, total = nvar, width = 90)
+  }
   for (var in 1:nvar) {
     data <- factors %>%
       mutate(mean = vars[[var]])
+    if(has_na(data)){
+      data <- remove_rows_na(data)
+      has_text_in_num(data)
+    }
 ge_mean = make_mat(data, GEN, ENV, mean)
-ge_effect = ge_effects(data, ENV, GEN, REP, mean)[[1]]
-gge_effect = ge_effects(data, ENV, GEN, REP, mean, type = "gge")[[1]]
+ge_effect = ge_effects(data, ENV, GEN, mean)[[1]]
+gge_effect = ge_effects(data, ENV, GEN, mean, type = "gge")[[1]]
 Mean = apply(ge_mean, 1, mean)
 Variance = rowSums(apply(ge_mean, 2, function(x) (x - Mean)^2))
 CV <- apply(ge_mean, 1, function(x) (sd(x) / mean(x) * 100))
@@ -144,11 +153,11 @@ er_mod <- ge_reg(data, ENV, GEN, REP, mean, verbose = FALSE)
 ec_mod <- ecovalence(data, ENV, GEN, REP, mean, verbose = FALSE)[[1]]
 an_mod <- Annicchiarico(data, ENV, GEN, REP, mean, verbose = FALSE, prob = prob)
 shu_mod <- Shukla(data, ENV, GEN, REP, mean, verbose = FALSE)[[1]]
-fox_mod <- Fox(data, ENV, GEN, REP, mean, verbose = FALSE)[[1]]
+fox_mod <- Fox(data, ENV, GEN, mean, verbose = FALSE)[[1]]
 gai_mod <- gai(data, ENV, GEN, REP, mean, verbose = FALSE)[[1]]
-hue_mod <- Huehn(data, ENV, GEN, REP, mean, verbose = FALSE)[[1]]
-lb_mod <- superiority(data, ENV, GEN, REP, mean, verbose = FALSE)[[1]]
-then_mod <- Thennarasu(data, ENV, GEN, REP, mean, verbose = FALSE)[[1]]
+hue_mod <- Huehn(data, ENV, GEN, mean, verbose = FALSE)[[1]]
+lb_mod <- superiority(data, ENV, GEN, mean, verbose = FALSE)[[1]]
+then_mod <- Thennarasu(data, ENV, GEN, mean, verbose = FALSE)[[1]]
 ammm_mod <- performs_ammi(data, ENV, GEN, REP, mean, verbose = FALSE)
 ammm_mod <- AMMI_indexes(ammm_mod)[[1]]
 blup_mod <- waasb(data, ENV, GEN, REP, mean, verbose = FALSE)
@@ -215,15 +224,10 @@ temp <- tibble(GEN = an_mod[[1]]$general$GEN,
                N3_R = then_mod$N3_R,
                N4 = then_mod$N4,
                N4_R = then_mod$N4_R)
-if (nvar > 1) {
-  listres[[paste(names(vars[var]))]] <- temp
-  if (verbose == TRUE) {
-    cat("Evaluating variable", paste(names(vars[var])),
-        round((var - 1)/(length(vars) - 1) * 100, 1), "%", "\n")
-  }
-} else {
-  listres[[paste(names(vars[var]))]] <- temp
+if (verbose == TRUE) {
+  pb$tick(tokens = list(what = names(vars[var])))
 }
+listres[[paste(names(vars[var]))]] <- temp
   }
   return(structure(listres, class = "ge_stats"))
 }

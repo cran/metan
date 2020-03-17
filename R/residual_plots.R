@@ -106,6 +106,7 @@ residual_plots <- function(x,
                alpha = point.alpha) +
     geom_smooth(se = F,
                 method = "loess",
+                formula = y ~ x,
                 col = col.line) +
     geom_hline(yintercept = 0,
                linetype = 2,
@@ -158,6 +159,7 @@ residual_plots <- function(x,
                alpha = point.alpha) +
     geom_smooth(se = F,
                 method = "loess",
+                formula = y ~ x,
                 col = col.line) +
     labs(x = "Fitted values",
          y = expression(sqrt("|Standardized residuals|"))) +
@@ -207,7 +209,7 @@ residual_plots <- function(x,
                   size = 1,
                   args = list(mean = mean(df$resid), sd = sd(df$resid))) +
     labs(x = "Raw residuals", y = "Density") +
-    scale_y_continuous(expand = expand_scale(mult = c(0, 0.1))) +
+    scale_y_continuous(expand = expansion(mult = c(0, 0.1))) +
     ggtitle("Histogram of residuals") +
     plot_theme %+replace%
     theme(axis.text = element_text(size = size.tex.lab, colour = "black"),

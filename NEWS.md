@@ -1,3 +1,34 @@
+# metan 1.4.0
+## Bug fixes
+* Factor columns can now have custom names rather than `ENV`, `GEN`, and `REP` only ([#2](https://github.com/TiagoOlivoto/metan/issues/2)).
+
+## New functions
+* `gmd()` a shortcut to `get_model_data()`
+* `gtb()` to generate a genotype-by-trait biplot.
+* `gamem_met()` to analyze genotypes in multi-environment trials using mixed- or random-effect models allowing unbalanced data. Thanks to [@EderOliveira](https://www.embrapa.br/en/web/portal/team/-/empregado/321725/eder-jorge-de-oliveira) for his e-mail.
+* `has_class()` to check if a class exists.
+* `impute_missing_val()` to impute missing values in a two-way table based on Expectation-Maximization algoritms. 
+* `non_collinear_vars()` to select a set of predictors with minimal multicollinearity.
+* `replace_na()` to replace `NA` values quicly.
+* `random_na()` to generate random `NA` values based on a desired proportion.
+
+
+## Minor changes
+* `gge()`, `performs_ammi()`, `waas()`, and `waasb()` now handle with unbalanced data by implementing a low-rank matrix approximation using singular value decomposition to impute missing entires. Imputation generates a warning message.
+* `NA` values are checked and removed with a warning when computing stability indexes. Thanks to [@MdFarhad](https://www.researchgate.net/profile/Md_Farhad) for alerting me.
+* New argument `plot_res` in `path_coeff()` to create a residual plot of the multiple regression model.
+* Update the citation file to include the [published official reference](https://doi.org/10.1111/2041-210X.13384).
+* Argument `verbose` deprecated in functions `anova_ind()` and `split_factors()`
+* Argument `rep` deprecated in functions `Fox()`, `Huehn()`, `superiority()`, and `Thennarasu()`.
+* Deprecated argument `means_by` removed in functions `can_corr()` and `clustering()`.
+* Deprecated argument `verbose` removed in functions `colindiag()` and `split_factors()`.
+* Deprecated argument `values` removed in functions `desc_stat()` and `find_outliers()`.
+* Deprecated argument `var` removed in function `desc_wider()`.
+* Remove dependency on lattice by using ggplot2 in `plot.resp_surf()`.
+* An up-to-date cheat sheet was included.
+
+
+
 # metan 1.3.0
 
 ## New functions
@@ -5,13 +36,13 @@
    - `gafem()` To analyze genotypes using fixed-effect models.
    - `residual_plots()` A helper function to create residuals plots.
    - `stars_pval()` To generate significance stars from p-values
-   - `doo()` An lternative to `dplyr::do` for doing anything
+   - `doo()` An alternative to `dplyr::do` for doing anything
    
 ### utils_stats
    - `cv_by()` For computing coefficient of variation by levels of a factor.
    - `max_by()` For computing maximum values by levels of a factor.
    - `means_by()` For computing arithmetic means by levels of a factor.
-   - `min_by()` For compuing minimum values by levels of a factor.
+   - `min_by()` For computing minimum values by levels of a factor.
    - `n_by()` For getting the length.
    - `sd_by()` For computing sample standard deviation.
    - `sem_by()` For computing standard error of the mean by levels of a factor.
@@ -43,7 +74,7 @@
    - argument `repel` included in `plot_scores()` to control wheater the labels are repelled or not to avoid overlapping.
 
 ## Deprecated arguments
-   Argument `means_by` was deprecated in functions `can_corr()` and `clustering()`. Use `means_by()` to pass data based on means of factor to these function.
+   Argument `means_by` was deprecated in functions `can_corr()` and `clustering()`. Use `means_by()` to pass data based on means of factor to these functions.
    
 ## Minor changes
 

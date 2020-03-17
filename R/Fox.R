@@ -11,10 +11,9 @@
 #' @param env The name of the column that contains the levels of the
 #'   environments.
 #' @param gen The name of the column that contains the levels of the genotypes.
-#' @param rep The name of the column that contains the levels of the
-#'   replications/blocks.
 #' @param resp The response variable(s). To analyze multiple variables in a
 #'   single procedure use, for example, \code{resp = c(var1, var2, var3)}.
+#' @param rep \strong{Deprecated argument. It will be retired in the next release.}
 #' @param verbose Logical argument. If \code{verbose = FALSE} the code will run
 #'   silently.
 #' @return An object of class \code{Fox}, which is a list containing the results
@@ -34,27 +33,37 @@
 #' @examples
 #' \donttest{
 #' library(metan)
-#' out = Fox(data_ge2,
-#'           env = ENV,
-#'           gen = GEN,
-#'           rep = REP,
-#'           resp = PH)
+#' out <- Fox(data_ge2, ENV, GEN, PH)
+#' print(out)
 #'}
 #'
-Fox <- function(.data, env, gen, rep, resp, verbose = TRUE) {
-  factors  <- .data %>%
-    select(ENV = {{env}},
-           GEN = {{gen}},
-           REP = {{rep}}) %>%
+Fox <- function(.data, env, gen, resp, rep = "deprecated", verbose = TRUE) {
+  if(rep != "deprecated"){
+    warning("`verbose` is deprecated. It will be defunct in the new release.", call. = FALSE)
+  }
+  factors  <-
+    .data %>%
+    select({{env}}, {{gen}}) %>%
     mutate_all(as.factor)
-  vars <- .data %>% select({{resp}}, -names(factors))
-  has_text_in_num(vars)
-  vars %<>% select_numeric_cols()
+  vars <-
+    .data %>%
+    select({{resp}}, -names(factors)) %>%
+    select_numeric_cols()
+  factors %<>% set_names("ENV", "GEN")
   listres <- list()
   nvar <- ncol(vars)
+  if (verbose == TRUE) {
+    pb <- progress_bar$new(
+      format = "Evaluating the variable :what [:bar]:percent",
+      clear = FALSE, total = nvar, width = 90)
+  }
   for (var in 1:nvar) {
     data <- factors %>%
       mutate(Y = vars[[var]])
+    if(has_na(data)){
+      data <- remove_rows_na(data)
+      has_text_in_num(data)
+    }
     temp <- data %>%
       group_by(ENV) %>%
       mutate(grank = rank(-Y)) %>%
@@ -62,15 +71,10 @@ Fox <- function(.data, env, gen, rep, resp, verbose = TRUE) {
       summarise(Y = mean(Y),
                 TOP = sum(grank <= 3)) %>%
       as_tibble()
-    if (nvar > 1) {
-      listres[[paste(names(vars[var]))]] <- temp
-      if (verbose == TRUE) {
-        cat("Evaluating variable", paste(names(vars[var])),
-            round((var - 1)/(length(vars) - 1) * 100, 1), "%", "\n")
-      }
-    } else {
-      listres[[paste(names(vars[var]))]] <- temp
+    if (verbose == TRUE) {
+      pb$tick(tokens = list(what = names(vars[var])))
     }
+    listres[[paste(names(vars[var]))]] <- temp
   }
   return(structure(listres, class = "Fox"))
 }
@@ -102,12 +106,9 @@ Fox <- function(.data, env, gen, rep, resp, verbose = TRUE) {
 #' @examples
 #' \donttest{
 #' library(metan)
-#' fox <- Fox(data_ge2,
-#'            env = ENV,
-#'            gen = GEN,
-#'            rep = REP,
-#'            resp = PH)
-#' print(fox)
+#' library(metan)
+#' out <- Fox(data_ge2, ENV, GEN, PH)
+#' print(out)
 #' }
 print.Fox <- function(x, export = FALSE, file.name = NULL, digits = 3, ...) {
   if (!class(x) == "Fox") {

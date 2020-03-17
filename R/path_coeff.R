@@ -18,12 +18,12 @@
 #' \code{Selectedpred}, a vector with the name of the selected variables in the
 #' iterative process.
 #'
-#' @param .data The data. Must be a dataframe or an object of class
-#'   \code{split_factors}.
+#' @param .data The data. Must be a data frame or a grouped data passed from
+#'   \code{\link[dplyr]{group_by}()}
 #' @param resp The dependent variable.
-#'@param by One variable (factor) to compute the function by. It is a shortcut
-#'  to \code{\link[dplyr]{group_by}()}. To compute the statistics by more than
-#'  one grouping variable use that function.
+#' @param by One variable (factor) to compute the function by. It is a shortcut
+#'   to \code{\link[dplyr]{group_by}()}. To compute the statistics by more than
+#'   one grouping variable use that function.
 #' @param pred The predictor variables, set to \code{everything()}, i.e., the
 #'   predictor variables are all the numeric variables in the data except that
 #'   in \code{resp}.
@@ -45,8 +45,11 @@
 #'   that will be accepted. See the \bold{Details} section for more information.
 #' @param missingval How to deal with missing values. For more information,
 #'   please see \code{\link[stats]{cor}()}.
+#' @param plot_res If \code{TRUE}, create a scatter plot of residual against
+#'   predicted value and a normal Q-Q plot.
 #' @param verbose If \code{verbose = TRUE} then some results are shown in the
 #'   console.
+#' @param ... Additional arguments passed on to \code{\link[stats]{plot.lm}}
 #' @return An object of class \code{path_coeff, group_path, or brute_path} with
 #'   the following items:
 #' * \strong{Corr.x} A correlation matrix between the predictor variables.
@@ -90,9 +93,11 @@
 #'
 #'
 #' # Declaring the predictors
+#' # Create a residual plot with 'plot_res = TRUE'
 #' pcoeff2 <- path_coeff(data_ge2,
 #'                       resp = KW,
-#'                       pred = c(PH, EH, NKE, TKW))
+#'                       pred = c(PH, EH, NKE, TKW),
+#'                       plot_res = TRUE)
 #'
 #'
 #' # Selecting variables to be excluded from the analysis
@@ -126,7 +131,9 @@ path_coeff <- function(.data,
                        brutstep = FALSE,
                        maxvif = 10,
                        missingval = "pairwise.complete.obs",
-                       verbose = TRUE) {
+                       plot_res = FALSE,
+                       verbose = TRUE,
+                       ...) {
   if (missing(resp) == TRUE) {
     stop("A response variable (dependent) must be declared.")
   }
@@ -149,9 +156,8 @@ path_coeff <- function(.data,
           maxvif = maxvif,
           missingval = missingval,
           verbose = verbose)
-    return(results)
+    return(set_class(results, c("group_path", "tbl_df", "tbl",  "data.frame")))
   }
-
   data <- select_numeric_cols(.data)
   nam <- names(.data)
   if (brutstep == FALSE) {
@@ -162,6 +168,14 @@ path_coeff <- function(.data,
     }
     names <- colnames(pr)
     y <- data %>% select({{resp}})
+    if(plot_res == TRUE){
+    dfs <- cbind(y, pr)
+    form <- as.formula(paste(names(y), "~ ."))
+    mod <- lm(form, data = dfs)
+    opar <- par(mfrow = c(1, 2))
+    on.exit(par(opar))
+    plot(mod, which = c(1, 2), ...)
+    }
     nam_resp <- names(y)
     cor.y <- cor(pr, y, use = missingval)
     cor.x <- cor(pr, use = missingval)
@@ -171,8 +185,7 @@ path_coeff <- function(.data,
       cor.x <- cor(pr, use = missingval)
     }
     if (is.null(correction) == TRUE) {
-      betas <- data.frame(matrix(nrow = knumber, ncol = length(pr) +
-                                   1))
+      betas <- data.frame(matrix(nrow = knumber, ncol = length(pr) + 1))
       cc <- 0
       nvar <- length(pr) + 1
       for (i in 1:knumber) {
@@ -423,7 +436,7 @@ path_coeff <- function(.data,
                       Residual = Residual,
                       Response = nam_resp,
                       weightvar = weightvarname)
-      ModelEstimates[[paste("Model", modelcode)]] <- Results
+      ModelEstimates[[paste("Model_", modelcode, sep = "")]] <- set_class(Results, "path_coeff")
       statistics[i, 1] <- paste("Model", modelcode, sep = "")
       statistics[i, 2] <- FDSel$Information_Criterion
       statistics[i, 3] <- npred
@@ -440,9 +453,13 @@ path_coeff <- function(.data,
       npred <- npred - 1
       modelcode <- modelcode + 1
     }
-    statistics <- statistics[-c(1), ]
-    names(statistics) <- c("Model", "AIC", "Numpred",
-                           "CN", "Determinant", "R2", "Residual", "maxVIF")
+    statistics %<>% remove_rows(1) %>%
+      set_names("Model", "AIC", "Numpred", "CN", "Determinant", "R2", "Residual", "maxVIF") %>%
+      arrange(Model) %>%
+      tidy_strings()
+    # arrange(statistics, Model) %>% tidy_strings()
+    # # statistics <- statistics[-c(1), ]
+    # # names(statistics) <- c("Model", "AIC", "Numpred", "CN", "Determinant", "R2", "Residual", "maxVIF")
     if (verbose == TRUE) {
       cat("Done!\n")
       cat("--------------------------------------------------------------------------\n")
@@ -451,9 +468,10 @@ path_coeff <- function(.data,
       print(statistics, digits = 3, row.names = FALSE)
       cat("--------------------------------------------------------------------------\n\n")
     }
-    temp <- list(Models = ModelEstimates, Summary = statistics,
+    temp <- list(Models = set_class(ModelEstimates, "path_coeff"),
+                 Summary = statistics,
                  Selectedpred = selectedpred)
-    return(structure(temp, class = "brute_path"))
+    return(set_class(temp, c("brute_path", "path_coeff")))
   }
 }
 
@@ -498,16 +516,22 @@ path_coeff <- function(.data,
 #' print(pcoeff2)
 #' }
 print.path_coeff <- function(x, export = FALSE, file.name = NULL, digits = 4, ...) {
+  args <- match.call()
   if (export == TRUE) {
     file.name <- ifelse(is.null(file.name) == TRUE, "path_coeff print", file.name)
     sink(paste0(file.name, ".txt"))
   }
-  if (!class(x) %in% c("path_coeff", "group_path")) {
+  if (!has_class(x, c("path_coeff", "brute_path"))) {
     stop("The object 'x' must be of class 'path_coeff' or 'group_path'.")
   }
   opar <- options(pillar.sigfig = digits)
   on.exit(options(opar))
-  if (class(x) == "path_coeff") {
+  if (has_class(x, "brute_path")) {
+    df <- as_tibble(x[["Summary"]])
+    print(df)
+    message("Go to '", args[["x"]], " > s' to select a specific model", sep = "")
+
+  } else{
     cat("----------------------------------------------------------------------------------------------\n")
     cat("Correlation matrix between the predictor traits\n")
     cat("----------------------------------------------------------------------------------------------\n")
@@ -542,48 +566,6 @@ print.path_coeff <- function(x, export = FALSE, file.name = NULL, digits = 4, ..
     cat("----------------------------------------------------------------------------------------------\n")
     print(x$Coefficients)
     cat("----------------------------------------------------------------------------------------------\n")
-  }
-  if (any(class(x) == "group_path")) {
-    for (k in 1:length(x)) {
-      x <- x[[k]]
-      nam <- names(x[k])
-      cat("----------------------------------------------------------------------------------------------\n")
-      cat("Level:", names(x)[[k]], "\n")
-      cat("----------------------------------------------------------------------------------------------\n")
-      cat("Correlation matrix between the predictor traits\n")
-      cat("----------------------------------------------------------------------------------------------\n")
-      print(x$Corr.x)
-      cat("----------------------------------------------------------------------------------------------\n")
-      cat("Vector of correlations between dependent and each predictor\n")
-      cat("----------------------------------------------------------------------------------------------\n")
-      print(t(x$Corr.y))
-      cat("----------------------------------------------------------------------------------------------\n")
-      cat("Multicollinearity diagnosis and goodness-of-fit\n")
-      cat("----------------------------------------------------------------------------------------------\n")
-      cat("Condition number: ", round(x$CN, 4), "\n")
-      cat("Determinant:      ", round(x$Det, 8), "\n")
-      cat("R-square:         ", round(x$R2, 4), "\n")
-      cat("Residual:         ", round(x$Residual, 4), "\n")
-      cat("Response:         ", paste(x$Response)[[2]], "\n")
-      cat("Predictors:       ", paste(x$Predictors), "\n")
-      cat("----------------------------------------------------------------------------------------------\n")
-      cat("Variance inflation factors\n")
-      cat("----------------------------------------------------------------------------------------------\n")
-      print(x$VIF)
-      cat("----------------------------------------------------------------------------------------------\n")
-      cat("Eigenvalues and eigenvectors\n")
-      cat("----------------------------------------------------------------------------------------------\n")
-      print(x$Eigen)
-      cat("----------------------------------------------------------------------------------------------\n")
-      cat("Variables with the largest weight in the eigenvalue of smallest magnitude\n")
-      cat("----------------------------------------------------------------------------------------------\n")
-      cat(x$weightvar, "\n")
-      cat("----------------------------------------------------------------------------------------------\n")
-      cat("Direct (diagonal) and indirect (off-diagonal) effects\n")
-      cat("----------------------------------------------------------------------------------------------\n")
-      print(x$Coefficients)
-      cat("----------------------------------------------------------------------------------------------\n\n\n")
-    }
   }
   if (export == TRUE) {
     sink()

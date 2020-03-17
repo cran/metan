@@ -45,13 +45,13 @@ ge_winners <- function(.data, env, gen, resp, type = "winners", better = NULL) {
   if(!type  %in% c("ranks", "winners")){
     stop("The argument 'type' must be one of the 'ranks' or 'winners'")
   }
-  factors  <- .data %>%
-    select(ENV = {{env}},
-           GEN = {{gen}}) %>%
+  factors  <-
+    .data %>%
+    select({{env}}, {{gen}}) %>%
     mutate_all(as.factor)
   vars <- .data %>% select({{resp}}, -names(factors))
-  has_text_in_num(vars)
   vars %<>% select_numeric_cols()
+  factors %<>% set_names("ENV", "GEN")
   listres <- list()
   nvar <- ncol(vars)
   if(!missing(better)){
@@ -66,37 +66,39 @@ ge_winners <- function(.data, env, gen, resp, type = "winners", better = NULL) {
     stop("Invalid values in argument 'better'. It must have 'h' or 'l' only.", call. = FALSE)
   }
   for (var in 1:nvar) {
+    temp <- factors %>%
+      mutate(mean = vars[[var]])
+    if(has_na(temp)){
+      temp <- remove_rows_na(temp)
+      has_text_in_num(temp)
+    }
     if (length(better) == 1) {
       if (better == "h") {
-        temp <- factors %>%
-          mutate(mean = vars[[var]]) %>%
-          group_by(ENV, GEN) %>%
-          summarise(mean = mean(mean)) %>%
+        temp <-
+          temp %>%
+          means_by(ENV, GEN) %>%
           group_by(ENV) %>%
           arrange(desc(mean), .by_group = TRUE)
       }
       if (better == "l") {
-        temp <- factors %>%
-          mutate(mean = vars[[var]]) %>%
-          group_by(ENV, GEN) %>%
-          summarise(mean = mean(mean)) %>%
+        temp <-
+          temp %>%
+          means_by(ENV, GEN) %>%
           group_by(ENV) %>%
           arrange(mean, .by_group = TRUE)
       }
     } else {
       if (better[[var]] == "h") {
-        temp <- factors %>%
-          mutate(mean = vars[[var]]) %>%
-          group_by(ENV, GEN) %>%
-          summarise(mean = mean(mean)) %>%
+        temp <-
+          temp %>%
+          means_by(ENV, GEN) %>%
           group_by(ENV) %>%
           arrange(desc(mean), .by_group = TRUE)
       }
       if (better[[var]] == "l") {
-        temp <- factors %>%
-          mutate(mean = vars[[var]]) %>%
-          group_by(ENV, GEN) %>%
-          summarise(mean = mean(mean)) %>%
+        temp <-
+          temp %>%
+          means_by(ENV, GEN) %>%
           group_by(ENV) %>%
           arrange(mean, .by_group = TRUE)
       }

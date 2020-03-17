@@ -2,9 +2,12 @@
 % Please edit documentation in R/get_model_data.R
 \name{get_model_data}
 \alias{get_model_data}
+\alias{gmd}
 \title{Get data from a model easily}
 \usage{
 get_model_data(x, what = NULL, type = "GEN", verbose = TRUE)
+
+gmd(x, what = NULL, type = "GEN", verbose = TRUE)
 }
 \arguments{
 \item{x}{An object created with the functions \code{\link{AMMI_indexes}},
@@ -29,10 +32,13 @@ A tibble showing the values of the variable chosen in argument
 \code{what}.
 }
 \description{
-Easily get data from some objects generated in the \strong{metan} package
-such as the WAASB and WAASBY indexes  (Olivoto et al., 2019a, 2019b) BLUPs,
-variance components, details of AMMI models and AMMI-based stability
-statistics.
+\itemize{
+\item \code{get_model_data()} Easily get data from some objects generated in the
+\strong{metan} package such as the WAASB and WAASBY indexes  (Olivoto et al.,
+2019a, 2019b) BLUPs, variance components, details of AMMI models and
+AMMI-based stability statistics.
+\item \code{gmd()} Is a shortcut to \code{get_model_data}.
+}
 }
 \details{
 Bellow are listed the options allowed in the argument \code{what} depending
@@ -359,7 +365,6 @@ Pflanzenzuchtg 52:127-138.
 Zali, H., E. Farshadfar, S.H. Sabaghpour, and R. Karimizadeh. 2012.
 Evaluation of genotype vs environment interaction in chickpea using measures
 of stability from AMMI model. Ann. Biol. Res. 3:3126-3136.
-\href{http://eprints.icrisat.ac.in/id/eprint/7173}{http://eprints.icrisat.ac.in/id/eprint/7173}
 }
 \seealso{
 \code{\link{AMMI_indexes}}, \code{\link{anova_ind}},

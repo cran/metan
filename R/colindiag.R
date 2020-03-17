@@ -15,7 +15,6 @@
 #'  one grouping variable use that function.
 #' @param n If a correlation matrix is provided, then \code{n} is the number of
 #'   objects used to compute the correlation coefficients.
-#' @param verbose \strong{Deprecated argument. It will be retired in the next release.}
 #' @return
 #'
 #' If \code{.data} is a grouped data passed from \code{\link[dplyr]{group_by}()}
@@ -88,11 +87,10 @@
 colindiag <- function(.data,
                       ...,
                       by = NULL,
-                      n = NULL,
-                      verbose = "DEPRECATED") {
-  if (!any(class(.data) %in% c("matrix", "data.frame", "split_factors",
-                               "covcor_design", "tbl_df"))) {
-    stop("The object 'x' must be a correlation matrix, a data.frame or an object of class split_factors")
+                      n = NULL) {
+
+  if (!has_class(.data, c("matrix", "data.frame", "grouped_df", "covcor_design", "tbl_df"))) {
+    stop("The object 'x' must be a correlation matrix, a data.frame or a grouped data.frame")
   }
   if (is.matrix(.data) && is.null(n)) {
     stop("You have a matrix but the sample size used to compute the correlations (n) was not declared.")
@@ -110,8 +108,7 @@ colindiag <- function(.data,
     results <- .data %>%
       doo(colindiag,
           ...,
-          n = n,
-          verbose = verbose)
+          n = n)
     return(results %>% set_class(c("tbl_df", "tbl",  "data.frame", "colingroup", "colindiag")))
   }
   internal <- function(x) {
@@ -171,8 +168,16 @@ colindiag <- function(.data,
     if(!missing(...)){
       dfs <-  select_cols(.data, ...) %>%
         select_numeric_cols()
+      if(has_na(dfs)){
+        dfs <- remove_rows_na(dfs)
+        has_text_in_num(dfs)
+      }
     } else{
       dfs <- select_numeric_cols(.data)
+      if(has_na(dfs)){
+        dfs <- remove_rows_na(dfs)
+        has_text_in_num(dfs)
+      }
     }
     out <- internal(dfs)
   }
@@ -208,7 +213,7 @@ print.colindiag <- function(x, export = FALSE, file.name = NULL, digits = 3, ...
     file.name <- ifelse(is.null(file.name) == TRUE, "colindiag print", file.name)
     sink(paste0(file.name, ".txt"))
   }
-  if(any(class(x) == "colingroup")){
+  if(has_class(x, "colingroup")){
     for (i in 1:nrow(x)){
       df <- x[i,]
       names <-

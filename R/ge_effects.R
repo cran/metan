@@ -10,8 +10,7 @@
 #'   environments. The analysis of variance is computed for each level of this
 #'   factor.
 #' @param gen The name of the column that contains the levels of the genotypes.
-#' @param rep The name of the column that contains the levels of the
-#'   replications/blocks.
+#' @param rep Deprecated argument. It will be retired in the next release.
 #' @param resp The response variable(s). To analyze multiple variables in a
 #'   single procedure a vector of variables may be used. For example \code{resp
 #'   = c(var1, var2, var3)}.
@@ -28,55 +27,55 @@
 #' @examples
 #' \donttest{
 #' library(metan)
-#' ge_eff <- ge_effects(data_ge, ENV, GEN, REP, GY)
-#' gge_eff <- ge_effects(data_ge, ENV, GEN, REP, GY, type = "gge")
+#' ge_eff <- ge_effects(data_ge, ENV, GEN, GY)
+#' gge_eff <- ge_effects(data_ge, ENV, GEN, GY, type = "gge")
 #' plot(ge_eff)
 #' }
 #'
-ge_effects <- function(.data, env, gen, rep, resp, type = "ge", verbose = TRUE) {
+ge_effects <- function(.data,
+                       env,
+                       gen,
+                       resp,
+                       rep = "deprecated",
+                       type = "ge",
+                       verbose = TRUE) {
   if(!type  %in% c("ge", "gge")){
     stop("Invalid value for the argument 'type': It must be either 'ge' or 'gge'", call. = FALSE)
   }
-  datain <- .data
+  if(rep != "deprecated"){
+    warning("`rep` is deprecated. It will be defunct in the new release.", call. = FALSE)
+  }
+  factors  <-
+    .data %>%
+    select({{env}}, {{gen}}) %>%
+    mutate_all(as.factor)
+  vars <- .data %>% select({{resp}}, -names(factors))
+  vars %<>% select_numeric_cols()
+  factors %<>% set_names("ENV", "GEN")
   listres <- list()
-  d <- match.call()
-  nvar <- as.numeric(ifelse(length(d$resp) > 1, length(d$resp) - 1, length(d$resp)))
-  for (var in 2:length(d$resp)) {
-    if (length(d$resp) > 1) {
-      Y <- eval(substitute(resp)[[var]], eval(datain))
-      varnam <- paste(d$resp[var])
-    } else {
-      Y <- eval(substitute(resp), eval(datain))
-      varnam <- paste(d$resp)
+  nvar <- ncol(vars)
+  for (var in 1:nvar) {
+    data <- factors %>%
+      mutate(Y = vars[[var]])
+    if(has_na(data)){
+      data <- remove_rows_na(data)
+      has_text_in_num(data)
     }
-    data <- datain %>%
-      select(ENV = {{env}},
-             GEN = {{gen}},
-             REP = {{rep}}) %>%
-      mutate(Y = Y) %>%
-      group_by(ENV, GEN) %>%
-      summarise(Y = mean(Y)) %>%
-      ungroup()
+    data <- means_by(data, ENV, GEN, na.rm = TRUE)
     if(type == "ge"){
       effects <- data %>%
         mutate(ge = residuals(lm(Y ~ ENV + GEN, data = data))) %>%
         make_mat(GEN, ENV, ge) %>%
-        as_tibble(rownames = NA)
+        rownames_to_column("GEN") %>%
+        as_tibble()
     } else{
       effects <- data %>%
         mutate(gge = residuals(lm(Y ~ ENV, data = data))) %>%
         make_mat(GEN, ENV, gge)    %>%
-        as_tibble(rownames = NA)
+        rownames_to_column("GEN") %>%
+        as_tibble()
     }
-    if (length(d$resp) > 1) {
-      listres[[paste(d$resp[var])]] <- effects
-      if (verbose == TRUE) {
-        cat("Evaluating variable", paste(d$resp[var]),
-            round((var - 1)/(length(d$resp) - 1) * 100, 1), "%", "\n")
-      }
-    } else {
-      listres[[paste(d$resp)]] <- effects
-    }
+      listres[[paste(names(vars[var]))]] <- effects
   }
   return(structure(listres, class = "ge_effects"))
 }
@@ -114,13 +113,15 @@ ge_effects <- function(.data, env, gen, rep, resp, type = "ge", verbose = TRUE) 
 #' @examples
 #' \donttest{
 #' library(metan)
-#' ge_eff <- ge_effects(data_ge2, ENV, GEN, REP, PH)
+#' ge_eff <- ge_effects(data_ge2, ENV, GEN, PH)
 #' plot(ge_eff)
 #' }
 #'
 plot.ge_effects <- function(x, var = 1, plot_theme = theme_metan(), x.lab = NULL, y.lab = NULL,
                             leg.position = "right", size.text = 12, ...){
-  data <- make_long(x[[var]])
+  data <- x[[var]] %>%
+    column_to_rownames("GEN") %>%
+    make_long()
   names <- names(data)
   if (is.null(y.lab) == FALSE) {
     y.lab <- y.lab
@@ -135,8 +136,8 @@ plot.ge_effects <- function(x, var = 1, plot_theme = theme_metan(), x.lab = NULL
   p <-
     ggplot(data, aes_string(names[2], names[1], fill= names[3])) +
     geom_tile()+
-    scale_y_discrete(expand = expand_scale(mult = c(0,0)))+
-    scale_x_discrete(expand = expand_scale(mult = c(0,0)))+
+    scale_y_discrete(expand = expansion(mult = c(0,0)))+
+    scale_x_discrete(expand = expansion(mult = c(0,0)))+
     scale_fill_gradient2()+
     guides(fill = guide_colourbar(label = TRUE,
                                   draw.ulim = TRUE,

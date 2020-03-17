@@ -7,10 +7,9 @@
 #' @param env The name of the column that contains the levels of the
 #'   environments.
 #' @param gen The name of the column that contains the levels of the genotypes.
-#' @param rep The name of the column that contains the levels of the
-#'   replications/blocks.
 #' @param resp The response variable(s). To analyze multiple variables in a
 #'   single procedure use, for example, \code{resp = c(var1, var2, var3)}.
+#' @param rep \strong{Deprecated argument. It will be retired in the next release.}
 #' @param verbose Logical argument. If \code{verbose = FALSE} the code will run
 #'   silently.
 #' @return An object of class \code{Thennarasu}, which is a list containing the results
@@ -25,24 +24,38 @@
 #' @examples
 #' \donttest{
 #' library(metan)
-#' out <- Thennarasu(data_ge, ENV, GEN, REP, GY)
+#' out <- Thennarasu(data_ge, ENV, GEN, GY)
+#' print(out)
 #' }
 #'
-Thennarasu <- function(.data, env, gen, rep, resp, verbose = TRUE) {
-  factors  <- .data %>%
-    select(ENV = {{env}},
-           GEN = {{gen}},
-           REP = {{rep}}) %>%
+Thennarasu <- function(.data, env, gen, resp, rep = "deprecated", verbose = TRUE) {
+  if(rep != "deprecated"){
+    warning("`verbose` is deprecated. It will be defunct in the new release.", call. = FALSE)
+  }
+  factors  <-
+    .data %>%
+    select({{env}}, {{gen}}) %>%
     mutate_all(as.factor)
-  vars <- .data %>% select({{resp}}, -names(factors))
-  has_text_in_num(vars)
-  vars %<>% select_numeric_cols()
+  vars <-
+    .data %>%
+    select({{resp}}, -names(factors)) %>%
+    select_numeric_cols()
+  factors %<>% set_names("ENV", "GEN")
   listres <- list()
   nvar <- ncol(vars)
+  if (verbose == TRUE) {
+    pb <- progress_bar$new(
+      format = "Evaluating the variable :what [:bar]:percent",
+      clear = FALSE, total = nvar, width = 90)
+  }
   for (var in 1:nvar) {
     data <- factors %>%
-      mutate(Y = vars[[var]]) %>%
-            make_mat(GEN, ENV, Y)
+      mutate(Y = vars[[var]])
+    if(has_na(data)){
+      data <- remove_rows_na(data)
+      has_text_in_num(data)
+    }
+    data %<>% make_mat(GEN, ENV, Y)
     nr <- nrow(data)
     nc <- ncol(data)
     data_m <- as.matrix(data)
@@ -75,15 +88,60 @@ Thennarasu <- function(.data, env, gen, rep, resp, verbose = TRUE) {
                    N3_R = rank(N3),
                    N4 = N4,
                    N4_R = rank(N4))
-    if (nvar > 1) {
-      listres[[paste(names(vars[var]))]] <- temp
-      if (verbose == TRUE) {
-        cat("Evaluating variable", paste(names(vars[var])),
-            round((var - 1)/(length(vars) - 1) * 100, 1), "%", "\n")
-      }
-    } else {
-      listres[[paste(names(vars[var]))]] <- temp
+    if (verbose == TRUE) {
+      pb$tick(tokens = list(what = names(vars[var])))
     }
+    listres[[paste(names(vars[var]))]] <- temp
   }
   return(structure(listres, class = "Thennarasu"))
+}
+
+
+
+#' Print an object ofclass \code{Thennarasu}
+#'
+#' Print the \code{Thennarasu} object in two ways. By default, the results are
+#' shown in the R console. The results can also be exported to the directory
+#' into a *.txt file.
+#'
+#'
+#' @param x An object of class \code{Thennarasu}.
+#' @param export A logical argument. If \code{TRUE}, a *.txt file is exported to
+#'   the working directory.
+#' @param file.name The name of the file if \code{export = TRUE}
+#' @param digits The significant digits to be shown.
+#' @param ... Options used by the tibble package to format the output. See
+#'   \code{\link[tibble:formatting]{tibble::print()}} for more details.
+#' @author Tiago Olivoto \email{tiagoolivoto@@gmail.com}
+#' @method print Thennarasu
+#' @export
+#' @examples
+#' \donttest{
+#' library(metan)
+#' model <- Thennarasu(data_ge2, ENV, GEN, PH)
+#' print(model)
+#' }
+print.Thennarasu <- function(x, export = FALSE, file.name = NULL, digits = 3, ...) {
+  if (!class(x) == "Thennarasu") {
+    stop("The object must be of class 'Thennarasu'")
+  }
+  if (export == TRUE) {
+    file.name <- ifelse(is.null(file.name) == TRUE, "Thennarasu summary", file.name)
+    sink(paste0(file.name, ".txt"))
+  }
+  opar <- options(pillar.sigfig = digits)
+  on.exit(options(opar))
+  for (i in 1:length(x)) {
+    var <- x[[i]]
+    cat("Variable", names(x)[i], "\n")
+    cat("---------------------------------------------------------------------------\n")
+    cat("Thennarasu's stability indexes\n")
+    cat("---------------------------------------------------------------------------\n")
+    print(var)
+    cat("---------------------------------------------------------------------------\n")
+    cat("\n\n")
+  }
+  if (export == TRUE) {
+    sink()
+  }
 }

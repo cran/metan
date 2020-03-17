@@ -1,7 +1,7 @@
 #' Lin e Binns' superiority index
 #'
 #' Nonparametric stability analysis using the superiority index proposed by Lin
-#' & Binns, (1992).
+#' & Binns (1988).
 #'
 #'
 #' @param .data The dataset containing the columns related to Environments,
@@ -9,10 +9,9 @@
 #' @param env The name of the column that contains the levels of the
 #'   environments.
 #' @param gen The name of the column that contains the levels of the genotypes.
-#' @param rep The name of the column that contains the levels of the
-#'   replications/blocks
 #' @param resp The response variable(s). To analyze multiple variables in a
 #'   single procedure use, for example, \code{resp = c(var1, var2, var3)}.
+#' @param rep \strong{Deprecated argument. It will be retired in the next release.}
 #' @param verbose Logical argument. If \code{verbose = FALSE} the code will run
 #'   silently.
 #' @return An object of class \code{superiority} where each element is the
@@ -20,8 +19,8 @@
 #'
 #' * \strong{environments} The mean for each environment, the environment index
 #' and classification as favorable and unfavorable environments.
-#' * \strong{index} The superiority index computed for all, favorable and
-#' unfavorable environments.
+#' * \strong{index} The superiority index computed for all (\code{Pi_a}),
+#' favorable (\code{Pi_f}) and unfavorable (\code{Pi_u}) environments.
 #'
 #' @md
 #' @author Tiago Olivoto, \email{tiagoolivoto@@gmail.com}
@@ -29,40 +28,50 @@
 #' @references Lin, C.S., and M.R. Binns. 1988. A superiority measure of
 #'   cultivar performance for cultivar x location data. Can. J. Plant Sci.
 #'   68:193-198.
-#'   \href{http://pubs.aic.ca/doi/abs/10.4141/cjps88-018}{doi:10.4141/cjps88-018}
+#'   \href{https://www.nrcresearchpress.com/doi/10.4141/cjps88-018#.XmEYwKhKgdU}{doi:10.4141/cjps88-018}
 #'
 #' @export
 #' @examples
 #' \donttest{
 #' library(metan)
-#' out <- superiority(data_ge2,
-#'                    env = ENV,
-#'                    gen = GEN,
-#'                    rep = REP,
-#'                    resp = PH)
+#' out <- superiority(data_ge2, ENV, GEN, PH)
+#' print(out)
 #'}
 #'
-superiority <- function(.data, env, gen, rep, resp, verbose = TRUE) {
-  factors  <- .data %>%
-    select(ENV = {{env}},
-           GEN = {{gen}},
-           REP = {{rep}}) %>%
+superiority <- function(.data, env, gen, resp, rep = "deprecated", verbose = TRUE) {
+  if(rep != "deprecated"){
+    warning("`verbose` is deprecated. It will be defunct in the new release.", call. = FALSE)
+  }
+  factors  <-
+    .data %>%
+    select({{env}}, {{gen}}) %>%
     mutate_all(as.factor)
-  vars <- .data %>% select({{resp}}, -names(factors))
-  has_text_in_num(vars)
-  vars %<>% select_numeric_cols()
+  vars <-
+    .data %>%
+    select({{resp}}, -names(factors)) %>%
+    select_numeric_cols()
+  factors %<>% set_names("ENV", "GEN")
   listres <- list()
   nvar <- ncol(vars)
+  if (verbose == TRUE) {
+    pb <- progress_bar$new(
+      format = "Evaluating the variable :what [:bar]:percent",
+      clear = FALSE, total = nvar, width = 90)
+  }
   for (var in 1:nvar) {
     data <- factors %>%
       mutate(mean = vars[[var]])
-    ge_mean <- data %>% dplyr::group_by(ENV, GEN) %>% dplyr::summarise(mean = mean(mean))
-    environments <- data %>% dplyr::group_by(ENV) %>% dplyr::summarise(Mean = mean(mean))
-    environments <- mutate(environments, index = Mean - mean(environments$Mean),
-                           class = ifelse(index < 0, "unfavorable", "favorable")) %>%
-      as.data.frame()
-    data <- suppressMessages(left_join(data, environments %>%
-                                         select(ENV, class)))
+    if(has_na(data)){
+      data <- remove_rows_na(data)
+      has_text_in_num(data)
+    }
+    environments <-
+      data %>%
+      means_by(ENV, na.rm = TRUE) %>%
+      add_cols(index = mean - mean(mean),
+               class = ifelse(index < 0, "unfavorable", "favorable")) %>%
+      as_tibble()
+    data <- left_join(data, environments %>% select(ENV, class), by = "ENV")
     lin_fun <- function(mat) {
       P <- apply(mat, 1, function(x) {
         sum((x - apply(mat, 2, max))^2)/(2 * length(x))
@@ -76,7 +85,7 @@ superiority <- function(.data, env, gen, rep, resp, verbose = TRUE) {
     ge_mu <- subset(data, class == "unfavorable")
     mat_u <- dplyr::select_if(make_mat(ge_mu, row = GEN,
                                        col = ENV, value = mean), function(x) !any(is.na(x)))
-    temp <- list(environments = tibble(environments),
+    temp <- list(environments = environments,
                  index = tibble(GEN = rownames(mat_g),
                                 Y = apply(mat_g, 1, mean),
                                 Pi_a = lin_fun(mat_g),
@@ -86,15 +95,10 @@ superiority <- function(.data, env, gen, rep, resp, verbose = TRUE) {
                                 Pi_u = lin_fun(mat_u),
                                 R_u = rank(lin_fun(mat_u))))
     rownames(temp) <- NULL
-    if (nvar > 1) {
-      listres[[paste(names(vars[var]))]] <- temp
-      if (verbose == TRUE) {
-        cat("Evaluating variable", paste(names(vars[var])),
-            round((var - 1)/(length(vars) - 1) * 100, 1), "%", "\n")
-      }
-    } else {
-      listres[[paste(names(vars[var]))]] <- temp
+    if (verbose == TRUE) {
+      pb$tick(tokens = list(what = names(vars[var])))
     }
+    listres[[paste(names(vars[var]))]] <- temp
   }
   return(structure(listres, class = "superiority"))
 }
@@ -124,7 +128,7 @@ superiority <- function(.data, env, gen, rep, resp, verbose = TRUE) {
 #' @examples
 #' \donttest{
 #' library(metan)
-#' model <- superiority(data_ge2, ENV, GEN, REP, PH)
+#' model <- superiority(data_ge2, ENV, GEN, PH)
 #' print(model)
 #' }
 print.superiority <- function(x, export = FALSE, file.name = NULL, digits = 3, ...) {

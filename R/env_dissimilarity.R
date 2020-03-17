@@ -74,8 +74,12 @@ env_dissimilarity <- function(.data,
   for (var in 1:nvar) {
     data <- factors %>%
       mutate(mean = vars[[var]])
+    if(has_na(data)){
+      data <- remove_rows_na(data)
+      has_text_in_num(data)
+    }
     mat <- make_mat(data, GEN, ENV, mean)
-    ind_anova <- anova_ind(data, ENV, GEN, REP, mean, verbose = FALSE)
+    ind_anova <- anova_ind(data, ENV, GEN, REP, mean)
     NG <- nrow(mat)
     NE <- ncol(mat)
     NR <- nlevels(data$REP)

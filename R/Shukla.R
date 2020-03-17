@@ -45,31 +45,41 @@
 #'              resp = PH)
 #'}
 Shukla <- function(.data, env, gen, rep, resp, verbose = TRUE) {
-    factors  <- .data %>%
-      select(ENV = {{env}},
-             GEN = {{gen}},
-             REP = {{rep}}) %>%
-      mutate_all(as.factor)
-    g <- nlevels(factors$GEN)
-    e <- nlevels(factors$ENV)
-    r <- nlevels(factors$REP)
-    vars <- .data %>% select({{resp}}, -names(factors))
-    has_text_in_num(vars)
-    vars %<>% select_numeric_cols()
-    listres <- list()
-    nvar <- ncol(vars)
-    for (var in 1:nvar) {
-      data <- factors %>%
-        mutate(mean = vars[[var]])
-    g_means <- data %>%
-      group_by(GEN) %>%
-      summarise(Y = mean(mean))
-    ge_means <- data %>%
-      group_by(ENV, GEN) %>%
-      summarise(mean = mean(mean)) %>%
-      ungroup
+  factors  <-
+    .data %>%
+    select({{env}}, {{gen}}, {{rep}}) %>%
+    mutate_all(as.factor)
+  vars <-
+    .data %>%
+    select({{resp}}, -names(factors)) %>%
+    select_numeric_cols()
+  factors %<>% set_names("ENV", "GEN", "REP")
+  g <- nlevels(factors$GEN)
+  e <- nlevels(factors$ENV)
+  r <- nlevels(factors$REP)
+  listres <- list()
+  nvar <- ncol(vars)
+  if (verbose == TRUE) {
+    pb <- progress_bar$new(
+      format = "Evaluating the variable :what [:bar]:percent",
+      clear = FALSE, total = nvar, width = 90)
+  }
+  if (verbose == TRUE) {
+    pb <- progress_bar$new(
+      format = "Evaluating the variable :what [:bar]:percent",
+      clear = FALSE, total = nvar, width = 90)
+  }
+  for (var in 1:nvar) {
+    data <- factors %>%
+      mutate(Y = vars[[var]])
+    if(has_na(data)){
+      data <- remove_rows_na(data)
+      has_text_in_num(data)
+    }
+    g_means <- means_by(data, GEN)
+    ge_means <- means_by(data, GEN, ENV)
     ge_effect <- ge_means %>%
-      mutate(ge = residuals(lm(mean ~ ENV + GEN, data = .))) %>%
+      mutate(ge = residuals(lm(Y ~ ENV + GEN, data = .))) %>%
       make_mat(GEN, ENV, ge) %>%
       as.matrix()
     Wi <- rowSums(ge_effect^2)
@@ -78,15 +88,10 @@ Shukla <- function(.data, env, gen, rep, resp, verbose = TRUE) {
       mutate(rMean = rank(-Y),
              rShukaVar = rank(ShuklaVar),
              ssiShukaVar = rMean + rShukaVar)
-    if (nvar > 1) {
-      listres[[paste(names(vars[var]))]] <- temp
-      if (verbose == TRUE) {
-        cat("Evaluating variable", paste(names(vars[var])),
-            round((var - 1)/(length(vars) - 1) * 100, 1), "%", "\n")
-      }
-    } else {
-      listres[[paste(names(vars[var]))]] <- temp
+    if (verbose == TRUE) {
+      pb$tick(tokens = list(what = names(vars[var])))
     }
+    listres[[paste(names(vars[var]))]] <- temp
   }
   return(structure(listres, class = "Shukla"))
 }

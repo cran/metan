@@ -39,8 +39,8 @@ ge_plot <- function(.data,
     p <-
       ggplot(.data, aes({{env}}, {{gen}}, fill= {{resp}})) +
       geom_tile()+
-      scale_y_discrete(expand = expand_scale(mult = c(0,0)))+
-      scale_x_discrete(expand = expand_scale(mult = c(0,0)))+
+      scale_y_discrete(expand = expansion(mult = c(0,0)))+
+      scale_x_discrete(expand = expansion(mult = c(0,0)))+
       scale_fill_viridis_c()+
       guides(fill = guide_colourbar(label = TRUE,
                                     draw.ulim = TRUE,
@@ -63,17 +63,17 @@ ge_plot <- function(.data,
     p <- p +
       stat_summary(aes(colour = {{gen}},
                        group = {{gen}}),
-                   fun.y = mean,
+                   fun = mean,
                    geom = "line")
   } else {
     p <- p +
       stat_summary(aes(group = {{gen}}),
-                   fun.y = mean,
+                   fun = mean,
                    geom = "line",
                    colour = "black")
   }
   p <- p + geom_point(stat = "summary",
-                      fun.y = mean,
+                      fun = mean,
                       size = 3,
                       shape = 18) +
     plot_theme %+replace%

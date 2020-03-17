@@ -9,7 +9,6 @@ desc_stat(
   .data = NULL,
   ...,
   by = NULL,
-  values = "deprecated",
   stats = "main",
   hist = FALSE,
   level = 0.95,
@@ -19,7 +18,7 @@ desc_stat(
   plot_theme = theme_metan()
 )
 
-desc_wider(.data, which, var = "deprecated")
+desc_wider(.data, which)
 }
 \arguments{
 \item{.data}{The data to be analyzed. It can be a data frame (possible with
@@ -35,8 +34,6 @@ variables names. If no variable is informed, all the numeric variables from
 to \code{\link[dplyr]{group_by}()}. To compute the statistics by more than
 one grouping variable use that function.}
 
-\item{values}{Deprecated argument. It will be retired in the next release.}
-
 \item{stats}{The descriptive statistics to show. This is used to filter the
 output after computation. Defaults to \code{"main"} (cv, max, mean median,
 min, sd.amo, se, ci ). Other allowed values are \code{"all"} to
@@ -48,8 +45,8 @@ following:
 \item \code{"ci"}: 95 percent confidence interval of the mean.
 \item \code{"cv"}: coefficient of variation.
 \item \code{"iqr"}: interquartile range.
-\item \code{"gm.mean"}: geometric mean.
-\item \code{"hm.mean"}: harmonic mean.
+\item \code{"gmean"}: geometric mean.
+\item \code{"hmean"}: harmonic mean.
 \item \code{"Kurt"}: kurtosis.
 \item \code{"mad"}: median absolute deviation.
 \item \code{"max"}: maximum value.
@@ -92,8 +89,6 @@ silently.}
 \code{\link[ggplot2]{theme}}.}
 
 \item{which}{A statistic to fill the table.}
-
-\item{var}{Deprecated argument. It will be retired in the next release.}
 }
 \value{
 \itemize{

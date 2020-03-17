@@ -6,8 +6,7 @@
 #'
 #'
 #' @param .data The dataset containing the columns related to Environments, Genotypes
-#' and the response variable(s). It is also possible to use a two-way table with genotypes
-#' in lines and environments in columns as input. In this case you must use \code{table = TRUE}.
+#' and the response variable(s).
 #' @param env The name of the column that contains the levels of the environments.
 #' @param gen The name of the column that contains the levels of the genotypes.
 #' @param resp The response variable(s). To analyze multiple variables in a
@@ -29,6 +28,9 @@
 #'  This SVP is most often used in AMMI analysis and other biplot analysis, but it is not ideal for
 #'  visualizing either the relationship among genotypes or that among the environments).
 #'
+#' @param ... Arguments passed to the function
+#'   \code{\link{impute_missing_val}()} for imputation of missing values in case
+#'   of unbalanced data.
 #'
 #' @return The function returns a list of class \code{gge} containing the following objects
 #'
@@ -74,12 +76,12 @@
 #'
 #' # GGE model for all numeric variables
 #' mod2 <- gge(data_ge2, ENV, GEN, resp = everything())
-#' plot(mod2)
+#' plot(mod2, var = "ED")
 #'
 #' # If we have a two-way table with the mean values for
 #' # genotypes and environments
 #'
-#' table <- make_mat(data_ge, GEN, ENV, GY)
+#' table <- make_mat(data_ge, GEN, ENV, GY) %>% round(2)
 #' table
 #' make_long(table) %>%
 #' gge(ENV, GEN, Y) %>%
@@ -91,24 +93,29 @@ gge <- function(.data,
                 resp,
                 centering = "environment",
                 scaling = "none",
-                svp = "environment") {
-  factors  <- .data %>%
-    select(ENV = {{env}},
-           GEN = {{gen}}) %>%
+                svp = "environment",
+                ...) {
+  factors  <-
+    .data %>%
+    select({{env}}, {{gen}}) %>%
     mutate_all(as.factor)
   vars <- .data %>% select({{resp}}, -names(factors))
-  has_text_in_num(vars)
   vars %<>% select_numeric_cols()
+  factors %<>% set_names("ENV", "GEN")
   listres <- list()
   nvar <- ncol(vars)
   for (var in 1:nvar) {
-    ge_mat <-  factors %>%
+    ge_mat <-
+      factors %>%
       mutate(mean = vars[[var]]) %>%
       make_mat(GEN, ENV, mean) %>%
       as.matrix()
+    if(has_na(ge_mat)){
+      ge_mat <- impute_missing_val(ge_mat, verbose = FALSE, ...)$.data
+      warning("Data imputation used to fill the GxE matrix", call. = FALSE)
+    }
     grand_mean <- mean(ge_mat)
     mean_env <- colMeans(ge_mat)
-
     mean_gen <- rowMeans(ge_mat)
     scale_val <- apply(ge_mat, 2, sd)
     labelgen <- rownames(ge_mat)
@@ -319,6 +326,10 @@ plot.gge <- function(x,
                      title = TRUE,
                      plot_theme = theme_metan(),
                      ...) {
+  if(any(class(x) == "gtb")){
+    if(all(leg.lab %in% c("Gen", "Env")))
+    leg.lab <- c("Gen", "Trait")
+  }
   model <- x[[var]]
   if (!class(model) == "gge") {
     stop("The model must be of class 'gge'")
@@ -360,7 +371,8 @@ plot.gge <- function(x,
                xlim[2] + (diff(ylim) - diff(xlim))/2)
   }
   # Base plot
-  P1 <- ggplot(data = plotdata, aes(x = d1, y = d2, group = "type")) +
+  P1 <-
+    ggplot(data = plotdata, aes(x = d1, y = d2, group = "type")) +
     scale_color_manual(values = c(col.gen, col.env)) +
     scale_size_manual(values = c(size.text.gen, size.text.env)) +
     xlab(paste(labelaxes[1], " (", round(varexpl[1], 2), "%)", sep = "")) +
@@ -398,7 +410,11 @@ plot.gge <- function(x,
       theme(axis.text = element_text(size = size.text.lab, colour = "black"),
             axis.title = element_text(size = size.text.lab, colour = "black"))
     if (title == TRUE) {
-      ggt <- ggtitle("GGE Biplot")
+      if(any(class(x) == "gtb")){
+        ggt <- ggtitle("GT Biplot")
+      } else{
+        ggt <- ggtitle("GGE Biplot")
+      }
     }
   }
   # Mean vs. stability
@@ -871,7 +887,11 @@ plot.gge <- function(x,
                       col = col.env,
                       size = size.text.env)
     if (title == TRUE) {
+      if(any(class(x) == "gtb")){
+        ggt <- ggtitle("Relationship Among Traits")
+      } else{
       ggt <- ggtitle("Relationship Among Environments")
+    }
     }
   }
   if (title == T) {
@@ -879,14 +899,14 @@ plot.gge <- function(x,
     cent_text <-
       case_when(
         centering == 1 | centering == "global" ~ "Centering = 1",
-        centering == 2 | centering == "environment" ~ "Centering = 2",
+        centering == 2 | centering == "environment" | centering == "trait" ~ "Centering = 2",
         centering == 3 | centering == "double" ~ "Centering = 3",
         FALSE ~ "No Centering"
       )
     svp_text <-
       case_when(
         svp == 1 | svp == "genotype" ~ "SVP = 1",
-        svp == 2 | svp == "environment" ~ "SVP = 2",
+        svp == 2 | svp == "environment" | svp == "trait" ~ "SVP = 2",
         svp == 3 | svp == "symmetrical" ~ "SVP = 3"
       )
     annotationtxt <- paste(scal_text, ", ", cent_text, ", ", svp_text, sep = "")
@@ -920,7 +940,7 @@ plot.gge <- function(x,
 #'   (ENV), genotypes (GEN) and response variable (Y); or \code{'wide'} to
 #'   return a two-way table with genotypes in the row, environments in the
 #'   columns, filled by the estimated values.
-#' @param ... Additional parameter for the function
+#' @param ... Currently not used.
 #' @return A two-way table with genotypes in rows and environments in columns if
 #'   \code{output = "wide"} or a long format (columns ENV, GEN and Y) if
 #'   \code{output = "long"} with the predicted values by the GGE model.
@@ -937,7 +957,7 @@ plot.gge <- function(x,
 #' }
 #'
 predict.gge <- function(object, naxis = 2, output = "wide", ...) {
-  if (!class(object) == "gge") {
+  if (has_class(object, "gtb")) {
     stop("The object must be of class 'gge'.")
   }
   listres <- list()

@@ -17,7 +17,6 @@
 #'@param by One variable (factor) to compute the function by. It is a shortcut
 #'  to \code{\link[dplyr]{group_by}()}. To compute the statistics by more than
 #'  one grouping variable use that function.
-#'@param values Deprecated argument. It will be retired in the next release.
 #'@param stats The descriptive statistics to show. This is used to filter the
 #'  output after computation. Defaults to \code{"main"} (cv, max, mean median,
 #'  min, sd.amo, se, ci ). Other allowed values are \code{"all"} to
@@ -28,8 +27,8 @@
 #'  * \code{"ci"}: 95 percent confidence interval of the mean.
 #'  * \code{"cv"}: coefficient of variation.
 #'  * \code{"iqr"}: interquartile range.
-#'  * \code{"gm.mean"}: geometric mean.
-#'  * \code{"hm.mean"}: harmonic mean.
+#'  * \code{"gmean"}: geometric mean.
+#'  * \code{"hmean"}: harmonic mean.
 #'  * \code{"Kurt"}: kurtosis.
 #'  * \code{"mad"}: median absolute deviation.
 #'  * \code{"max"}: maximum value.
@@ -63,7 +62,6 @@
 #' @param plot_theme The graphical theme of the plot. Default is
 #'   \code{plot_theme = theme_metan()}. For more details, see
 #'   \code{\link[ggplot2]{theme}}.
-#'@param var Deprecated argument. It will be retired in the next release.
 #'@param which A statistic to fill the table.
 #'@return
 #' * \code{desc_stats()} returns a tibble with the statistics in the columns and
@@ -130,7 +128,6 @@
 desc_stat <- function(.data = NULL,
                       ...,
                       by = NULL,
-                      values = "deprecated",
                       stats = "main",
                       hist = FALSE,
                       level = 0.95,
@@ -156,11 +153,11 @@ desc_stat <- function(.data = NULL,
           plot_theme = plot_theme)
     return(results)
   }
-  all <- c("av.dev", "ci", "cv", "gm.mean", "hm.mean", "iqr", "kurt", "mad", "max", "mean", "median", "min", "n", "q2.5", "q25", "q75", "q97.5", "range", "sd.amo", "sd.pop", "se", "skew", "sum", "sum.dev", "sum.sq.dev", "valid.n", "var.amo", "var.pop")
+  all <- c("av.dev", "ci", "cv", "gmean", "hmean", "iqr", "kurt", "mad", "max", "mean", "median", "min", "n", "q2.5", "q25", "q75", "q97.5", "range", "sd.amo", "sd.pop", "se", "skew", "sum", "sum.dev", "sum.sq.dev", "valid.n", "var.amo", "var.pop")
   stats <- strsplit(
     case_when(
       all_lower_case(stats) == "main" ~ c("cv, max, mean, median, min, sd.amo, se, ci"),
-      all_lower_case(stats) == "all" ~ c("av.dev, ci, cv, gm.mean, hm.mean, iqr, kurt, mad, max, mean, median, min, n, q2.5, q25, q75, q97.5, range, sd.amo, sd.pop, se, skew, sum, sum.dev, sum.sq.dev, valid.n, var.amo, var.pop"),
+      all_lower_case(stats) == "all" ~ c("av.dev, ci, cv, gmean, hmean, iqr, kurt, mad, max, mean, median, min, n, q2.5, q25, q75, q97.5, range, sd.amo, sd.pop, se, skew, sum, sum.dev, sum.sq.dev, valid.n, var.amo, var.pop"),
       all_lower_case(stats) == "robust" ~ c("n, median, iqr"),
       all_lower_case(stats) == "quantile" ~ c("n, min, q25, median, q75, max"),
       TRUE ~ all_lower_case(stats)
@@ -169,7 +166,7 @@ desc_stat <- function(.data = NULL,
   if (!any(stats %in% c("all", "main", "robust", "quantile", all))) {
     stop("Invalid value for the argument 'stat'. Allowed values are:\nav.dev, ci, cv, iqr, kurt, mad, max, mean, median, min, n, q2.5, q25, q75, q97.5, range, sd.amo, sd.pop, se, skew, sum, sum.dev, sum.sq.dev, valid.n, var.amo, and var.pop.\nAlternatively, you can set the following groups of statistics:\n'main', 'all', 'robust', or 'quantile'.", call. = FALSE)
   }
-  if(any(class(.data) == "numeric")){
+  if(has_class(.data, "numeric")){
     .data <- data.frame(val = .data)
   }
   opar <- options(pillar.sigfig = digits)
@@ -193,7 +190,7 @@ desc_stat <- function(.data = NULL,
       facet_wrap(.~name, scales = "free")+
       labs(x = "Observed value",
            y = "Count")+
-      scale_y_continuous(expand = expand_scale(mult = c(0, .1)))+
+      scale_y_continuous(expand = expansion(mult = c(0, .1)))+
       plot_theme
     print(plt)
   }
@@ -204,8 +201,8 @@ desc_stat <- function(.data = NULL,
     summarise_all(list(n = ~n(),
                        valid.n = ~valid_n(., na.rm = na.rm),
                        mean = ~mean(., na.rm = na.rm),
-                       gm.mean = ~gm_mean(., na.rm = na.rm),
-                       hm.mean = ~hm_mean(., na.rm = na.rm),
+                       gmean = ~gmean(., na.rm = na.rm),
+                       hmean = ~hmean(., na.rm = na.rm),
                        range = ~range_data(., na.rm = na.rm),
                        min = ~min(., na.rm = na.rm),
                        q2.5 = ~quantile(., 0.025, na.rm = na.rm),
@@ -235,7 +232,7 @@ desc_stat <- function(.data = NULL,
 }
 #'@name desc_stat
 #'@export
-desc_wider <- function(.data, which, var = "deprecated") {
+desc_wider <- function(.data, which) {
   factors = .data %>% select_non_numeric_cols()
   numeric = .data %>% select({{which}})
   cbind(factors, numeric) %>%

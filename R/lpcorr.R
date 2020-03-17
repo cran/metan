@@ -18,8 +18,6 @@
 #'   objects used to compute the correlation coefficients.
 #' @param method a character string indicating which correlation coefficient is
 #'   to be computed. One of 'pearson' (default), 'kendall', or 'spearman'.
-#' @param verbose If \code{verbose = TRUE} then some results are shown in the
-#'   console.
 #' @return If \code{.data} is a grouped data passed from
 #'   \code{\link[dplyr]{group_by}()} then the results will be returned into a
 #'   list-column of data frames, containing:
@@ -39,20 +37,18 @@
 #'
 #' # Using a correlation matrix
 #' partial3 <- cor(iris[1:4]) %>%
-#'             lpcor(n = nrow(iris),
-#'                   verbose = FALSE)
+#'             lpcor(n = nrow(iris))
 #'
 #' # Select all numeric variables and compute the partial correlation
-#' # For each level of \code{Species}
+#' # For each level of Species
 #'
-#' partial4 <- lpcor(iris, everithig(), by = Species)
+#' partial4 <- lpcor(iris, by = Species)
 #'}
 lpcor <- function(.data,
                   ...,
                   by = NULL,
                   n = NULL,
-                  method = "pearson",
-                  verbose = TRUE) {
+                  method = "pearson") {
   if (!missing(by)){
     if(length(as.list(substitute(by))[-1L]) != 0){
       stop("Only one grouping variable can be used in the argument 'by'.\nUse 'group_by()' to pass '.data' grouped by more than one variable.", call. = FALSE)
@@ -62,11 +58,9 @@ lpcor <- function(.data,
   if(is_grouped_df(.data)){
     results <- .data %>%
       doo(lpcor,
-          ...,
           n = n,
-          method = method,
-          verbose = verbose)
-    return(add_class(results, "lpcor_group"))
+          method = method)
+    return(set_class(results, c("lpcor", "lpcor_group", "tbl_df", "tbl",  "data.frame")))
   }
   if (!is.matrix(.data) && !is.data.frame(.data)) {
     stop("The object 'x' must be a correlation matrix or a data.frame.")
@@ -107,30 +101,80 @@ lpcor <- function(.data,
     results <- mutate(results,
                       Pairs = names(sapply(combnam, names))) %>%
       select(Pairs, everything())
-    if (verbose == TRUE) {
-      print.data.frame(results)
-    }
     return(list(linear.mat = m,
                 partial.mat = as.matrix(X.resid),
-                results = results))
+                results = as_tibble(results)))
   }
   if (is.matrix(.data)) {
     out <- internal(.data)
   }
   if (is.data.frame(.data)) {
-    if(!missing(...)){
-      dfs <-  select_numeric_cols(.data)
-    } else{
-      if (verbose == TRUE) {
-        if (sum(lapply(.data, is.factor) == TRUE) > 0) {
-          message("The factors ", paste0(collapse = " ",
-                                         names(.data[, unlist(lapply(.data, is.factor))])),
-                  " where excluded to perform the analysis. If you want to perform an analysis for each level of a factor, use the function 'group_by() before.' ")
-        }
-      }
+    if (missing(...)){
       dfs <- select_numeric_cols(.data)
+      if(has_na(dfs)){
+        dfs <- remove_rows_na(dfs)
+        has_text_in_num(dfs)
+      }
+    } else{
+      dfs <- select(.data, ...) %>%
+        select_numeric_cols()
+      if(has_na(dfs)){
+        dfs <- remove_rows_na(dfs)
+        has_text_in_num(dfs)
+      }
     }
     out <- internal(dfs)
   }
   invisible(add_class(out, class = "lpcor"))
+}
+
+
+#' Print the partial correlation coefficients
+#'
+#' Print an object of class \code{lpcor} or or \code{lpcor_group} in two ways.
+#' By default, the results are shown in the R console. The results can also be
+#' exported to the directory.
+#'
+#'
+#' @param x An object of class \code{lpcor} or \code{lpcor_group}.
+#' @param export A logical argument. If \code{TRUE}, a *.txt file is exported
+#'   to the working directory
+#' @param file.name The name of the file if \code{export = TRUE}
+#' @param digits The significant digits to be shown.
+#' @param ... Options used by the tibble package to format the output. See
+#'   \code{\link[tibble:formatting]{tibble::print()}} for more details.
+#' @author Tiago Olivoto \email{tiagoolivoto@@gmail.com}
+#' @method print lpcor
+#' @export
+#' @examples
+#' \donttest{
+#' library(metan)
+#' pcor <- lpcor(data_ge2, NR, NKR, NKE)
+#' print(pcor)
+#'
+#' # Compute the correlations for each level of the factor ENV
+#' lpc2 <- lpcor(data_ge2,
+#'               NR, NKR, NKE,
+#'               by = ENV)
+#' print(lpc2)
+#' }
+print.lpcor <- function(x, export = FALSE, file.name = NULL, digits = 3, ...) {
+  if (export == TRUE) {
+    file.name <- ifelse(is.null(file.name) == TRUE, "Lpcor print", file.name)
+    sink(paste0(file.name, ".txt"))
+  }
+  opar <- options(pillar.sigfig = digits)
+  on.exit(options(opar))
+  if(has_class(x, "lpcor_group")){
+    x %>%
+    mutate(name = map(data, ~.x %>% .[[3]])) %>%
+      unnest(cols = name) %>%
+      remove_cols(data) %>%
+      print()
+  } else{
+    print(x[[3]])
+  }
+  if (export == TRUE) {
+    sink()
+  }
 }
