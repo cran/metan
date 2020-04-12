@@ -107,7 +107,7 @@
 #'
 #'
 #' ############ Find text in numeric sequences ###########
-#' mixed_text <- data_ge
+#' mixed_text <- data.frame(data_ge)
 #' mixed_text[2, 4] <- "2..503"
 #' mixed_text[3, 4] <- "3.2o75"
 #' find_text_in_num(mixed_text, GY)
@@ -132,8 +132,8 @@
 #' messy_int <- c("EnvGen", "Env_Gen", "env gen", "Env Gen", "ENV.GEN", "ENV_GEN")
 #' tidy_strings(messy_int)
 #'
-#' # Or a whole data frame
 #' library(tibble)
+#' # Or a whole data frame
 #' df <- tibble(Env = messy_env,
 #'              gen = messy_gen,
 #'              Env_GEN = interaction(Env, gen),
@@ -581,10 +581,7 @@ tidy_strings <- function(.data, ..., sep = "_"){
 #'
 #' ################### Adding rows ##################
 #' data_ge %>%
-#'   add_rows(ENV = "E_TEST",
-#'            GEN = "G_TEST",
-#'            REP = 3,
-#'            GY = 10.3,
+#'   add_rows(GY = 10.3,
 #'            HM = 100.11,
 #'            .after = 1)
 #'
@@ -1026,31 +1023,6 @@ hmean <- function(.data, ..., na.rm = FALSE) {
 }
 #' @name utils_stats
 #' @export
-hm_mean <- function(.data, ..., na.rm = FALSE) {
-  .Deprecated(msg = "`hm_mean()` is deprecated. Use `hmean()` instead.")
-  funct <- function(df){
-    1 / mean(1 / df, na.rm = na.rm)
-  }
-  if(has_na(.data) && na.rm == FALSE){
-    stop("NA values in data. Use 'na.rm = TRUE' to remove NAs from analysis.\nTo remove rows with NA use `remove_rows_na()'. \nTo remove columns with NA use `remove_cols_na()'.", call. = FALSE)
-  }
-  if(is.null(nrow(.data))){
-    funct(.data)
-  } else{
-    if(missing(...)){
-      .data %>%
-        summarise_if(is.numeric, funct) %>%
-        ungroup()
-    } else{
-      .data %>%
-       select_cols(group_vars(.), ...) %>%
-        summarise_if(is.numeric, funct) %>%
-        ungroup()
-    }
-  }
-}
-#' @name utils_stats
-#' @export
 gmean <- function(.data, ..., na.rm = FALSE){
   funct <- function(df){
     exp(sum(log(df[df > 0]), na.rm = na.rm) / length(df))
@@ -1068,31 +1040,6 @@ gmean <- function(.data, ..., na.rm = FALSE){
     } else{
       .data %>%
         select_cols(group_vars(.), ...) %>%
-        summarise_if(is.numeric, funct) %>%
-        ungroup()
-    }
-  }
-}
-#' @name utils_stats
-#' @export
-gm_mean <- function(.data, ..., na.rm = FALSE){
-  .Deprecated(msg = "`gm_mean()` is deprecated. Use `gmean()` instead.")
-  funct <- function(df){
-    exp(sum(log(df[df > 0]), na.rm = na.rm) / length(df))
-  }
-  if(has_na(.data) && na.rm == FALSE){
-    stop("NA values in data. Use 'na.rm = TRUE' to remove NAs from analysis.\nTo remove rows with NA use `remove_rows_na()'. \nTo remove columns with NA use `remove_cols_na()'.", call. = FALSE)
-  }
-  if(is.null(nrow(.data))){
-    funct(.data)
-  } else{
-    if(missing(...)){
-      .data %>%
-        summarise_if(is.numeric, funct) %>%
-        ungroup()
-    } else{
-      .data %>%
-       select_cols(group_vars(.), ...) %>%
         summarise_if(is.numeric, funct) %>%
         ungroup()
     }
@@ -1672,5 +1619,12 @@ is_balanced_trial <- function(.data, env, gen, resp){
     return(FALSE)
   } else{
     return(TRUE)
+  }
+}
+
+# For internal use only
+check_labels <- function(.data){
+  if(any(sapply(.data, grepl, pattern = ":"))){
+    stop("Using ':' in genotype or environment labels is not allowed. Use '_' instead.\ne.g., replace_string(data, ENV, pattern = ':', replacement = '_', new_var = ENV)", call. = FALSE)
   }
 }

@@ -46,7 +46,7 @@ predicted <- predict(ammi_model, naxis = c(4, 6))
 make_mat(predicted$GY, GEN, ENV, YpredAMMI) %>% 
   round_cols()
 
-## ----warning=FALSE, message=FALSE---------------------------------------------
+## ----warning=FALSE------------------------------------------------------------
 model2 <- gamem_met(data_ge, ENV, GEN, REP, everything())
 
 ## ----fig.height=12, fig.width=4, message=FALSE, warning=FALSE-----------------

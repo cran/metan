@@ -1,3 +1,31 @@
+# metan 1.5.0
+## New functions
+* `select_rows_na()` and `select_cols_na()` to select rows or columns with with `NA` values.
+* `mgidi()` to compute the multi-trait genotype-ideotype distance index.
+* `plot_bars()` to create bar plots quickly. Thanks to [@MariaDiel](https://www.researchgate.net/profile/Maria_Diel) for her suggestion. 
+
+## Minor changes
+* Deprecated functions `hm_mean()` and `gm_mean()` removed in favour of `hmean()` and `gmean()`, respectively.
+* Deprecated argument `rep` retired in `Fox()`, `ge_effects()`, `Huehn()`, `resp_surf()`, `superiority()`, and `Thennarasu()`
+* Deprecated argument `verbose` retired in `anova_ind()`
+* Deprecated argument `region` retired in `resp_surf()`
+* Remove dependency on dendextend by using ggplot2-based graphics in `plot.wsmp()`.
+* Update package site with [pkgdown v1.5.0](https://pkgdown.r-lib.org/news/index.html).
+* Update documentation in `ge_plot()`
+* Allow using `fai_blup()` with `gamem()`
+* Improve checking process with `inspect()`
+* Improve feedback for results, indicating random and fixed effects. Thanks to [@NelsonJunior](https://scholar.google.com.br/citations?user=i2F6X04AAAAJ&hl=pt-BR) for his suggestion.
+* `plot()` call on objects of class `gamem`, `waasb` and `waas` now returns the variable names automatically. Thanks to [@MdFarhad](https://www.researchgate.net/profile/Md_Farhad) for suggesting me this change.
+* `plot.gamem()` and `plot.waasb()` have a new argument (`type = "vcomp"`) to produce a plot showing the contribution of the variance components to the phenotypic variance
+* `cv_ammi()`, `cv_ammif()`, and `cv_blup()` now check for missing values and unbalanced data before computing the cross-validation. ([#3](https://github.com/TiagoOlivoto/metan/issues/3))
+
+
+## Bug fixes
+* Fix problems from a recent upgrade of package `tibble` to version 3.0.0.
+* `get_model_data()` now fills rows that don't matches across columns with `NA`. Thanks to [@MdFarhad](https://www.researchgate.net/profile/Md_Farhad) for his report.
+* `get_model_data()` called now report mean squares, F-calculated and P-values for blocks within replicates in `anova_ind()`.
+
+
 # metan 1.4.0
 ## Bug fixes
 * Factor columns can now have custom names rather than `ENV`, `GEN`, and `REP` only ([#2](https://github.com/TiagoOlivoto/metan/issues/2)).

@@ -356,9 +356,13 @@ waasb <- function(.data,
     for (var in 1:nvar) {
         data <- factors %>%
             mutate(Y = vars[[var]])
+        check_labels(data)
         if(has_na(data)){
             data <- remove_rows_na(data)
             has_text_in_num(data)
+        }
+        if(!is_balanced_trial(data, ENV, GEN, Y) && random == "env"){
+            warning("Fitting a model with unbalanced data considering genotype as fixed effect is not suggested.", call. = FALSE)
         }
         Nenv <- nlevels(data$ENV)
         Ngen <- nlevels(data$GEN)
@@ -416,7 +420,7 @@ waasb <- function(.data,
         bups <- lme4::ranef(Complete)
         bINT <-
             data.frame(Names = rownames(bups$`GEN:ENV`)) %>%
-            separate(Names, into = c("GEN", "ENV")) %>%
+            separate(Names, into = c("GEN", "ENV"), sep = ":") %>%
             add_cols(BLUPge = bups[[1]][[1]]) %>%
             to_factor(1:2)
         intmatrix <- as.matrix(make_mat(bINT, GEN, ENV, BLUPge))
@@ -468,13 +472,17 @@ waasb <- function(.data,
                    WAASBY = ((PctResp * wRes) + (PctWAASB * wWAASB))/(wRes + wWAASB),
                    OrWAASBY = rank(-WAASBY)) %>%
             ungroup()
-        Details <- ge_details(data, ENV, GEN, Y) %>%
-            add_rows(Parameters = "wresp", Y = PesoResp[vin], .before = 1) %>%
-            add_rows(Parameters = "mresp", Y = mresp[vin], .before = 1) %>%
-            add_rows(Parameters = "Ngen", Y = Ngen, .before = 1) %>%
-            add_rows(Parameters = "Nenv", Y = Nenv, .before = 1) %>%
+        Details <-
+            rbind(ge_details(data, ENV, GEN, Y),
+                  tribble(~Parameters,  ~Y,
+                          "wresp", PesoResp[vin],
+                          "mresp", mresp[vin],
+                          "Ngen", Ngen,
+                          "Nenv", Nenv)) %>%
             rename(Values = Y)
         if(mod1){
+            ran_ef <- c("GEN, GEN:ENV")
+            fix_ef <- c("ENV, REP(ENV)")
             data_factors <- data %>% select_non_numeric_cols()
             BLUPgen <-
                 data.frame(GEN = MGEN$Code,
@@ -486,13 +494,17 @@ waasb <- function(.data,
                          UL = Predicted + Limits) %>%
                 column_to_first(Rank)
             BLUPint <-
-                left_join(data_factors, bINT, by = c("ENV", "GEN")) %>%
-                left_join(BLUPgen, by = "GEN") %>%
-                select(ENV, GEN, REP, BLUPg, BLUPge) %>%
-                add_cols(`BLUPg+ge` = BLUPge + BLUPg,
-                         Predicted = predict(Complete))
+                suppressWarnings(
+                    left_join(data_factors, bINT, by = c("ENV", "GEN")) %>%
+                        left_join(BLUPgen, by = "GEN") %>%
+                        select(ENV, GEN, REP, BLUPg, BLUPge) %>%
+                        add_cols(`BLUPg+ge` = BLUPge + BLUPg,
+                                 Predicted = predict(Complete))
+                )
             BLUPenv <- NULL
         } else if(mod2){
+            ran_ef <- c("GEN, BLOCK(ENV:REP), GEN:ENV")
+            fix_ef <- c("ENV, REP(ENV)")
             data_factors <- data %>% select_non_numeric_cols()
             BLUPgen <-
                 data.frame(GEN = MGEN$Code,
@@ -505,18 +517,22 @@ waasb <- function(.data,
                 column_to_first(Rank)
             blupBRE <-
                 data.frame(Names = rownames(bups$`BLOCK:(REP:ENV)`)) %>%
-                separate(Names, into = c("BLOCK", "REP", "ENV")) %>%
+                separate(Names, into = c("BLOCK", "REP", "ENV"), sep = ":") %>%
                 add_cols(BLUPbre = bups$`BLOCK:(REP:ENV)`[[1]]) %>%
                 to_factor(1:3)
             BLUPint <-
-                left_join(data_factors, bINT, by = c("ENV", "GEN")) %>%
-                left_join(BLUPgen, by = "GEN") %>%
-                left_join(blupBRE, by = c("ENV", "REP", "BLOCK")) %>%
-                select(ENV, REP, BLOCK, GEN, BLUPg, BLUPge, BLUPbre) %>%
-                add_cols(`BLUPg+ge+bre` = BLUPge + BLUPg + BLUPbre,
-                         Predicted = `BLUPg+ge+bre` + left_join(data_factors, data %>% means_by(ENV, REP), by = c("ENV", "REP"))$Y)
+                suppressWarnings(
+                    left_join(data_factors, bINT, by = c("ENV", "GEN")) %>%
+                        left_join(BLUPgen, by = "GEN") %>%
+                        left_join(blupBRE, by = c("ENV", "REP", "BLOCK")) %>%
+                        select(ENV, REP, BLOCK, GEN, BLUPg, BLUPge, BLUPbre) %>%
+                        add_cols(`BLUPg+ge+bre` = BLUPge + BLUPg + BLUPbre,
+                                 Predicted = `BLUPg+ge+bre` + left_join(data_factors, data %>% means_by(ENV, REP), by = c("ENV", "REP"))$Y)
+                )
             BLUPenv <- NULL
         } else if (mod3){
+            ran_ef <- c("REP(ENV), ENV, GEN:ENV")
+            fix_ef <- c("GEN")
             data_factors <- data %>% select_non_numeric_cols()
             BLUPgen <- NULL
             BLUPenv <- data.frame(ENV = MENV$Code,
@@ -527,17 +543,21 @@ waasb <- function(.data,
                 column_to_first(Rank)
             blupRWE <-
                 data.frame(Names = rownames(bups$`REP:ENV`)) %>%
-                separate(Names, into = c("REP", "ENV")) %>%
+                separate(Names, into = c("REP", "ENV"), sep = ":") %>%
                 add_cols(BLUPre = bups$`REP:ENV`[[1]]) %>%
                 to_factor(1:2)
             BLUPint <-
-                left_join(data_factors, bINT, by = c("ENV", "GEN")) %>%
-                left_join(BLUPenv, by = "ENV") %>%
-                left_join(blupRWE, by = c("ENV", "REP")) %>%
-                select(ENV, GEN, REP, BLUPe, BLUPge, BLUPre) %>%
-                add_cols(`BLUPge+e+re` = BLUPge + BLUPe + BLUPre,
-                         Predicted = `BLUPge+e+re` + left_join(data_factors, MGEN %>% select(Code, Y), by = c("GEN" = "Code"))$Y)
+                suppressWarnings(
+                    left_join(data_factors, bINT, by = c("ENV", "GEN")) %>%
+                        left_join(BLUPenv, by = "ENV") %>%
+                        left_join(blupRWE, by = c("ENV", "REP")) %>%
+                        select(ENV, GEN, REP, BLUPe, BLUPge, BLUPre) %>%
+                        add_cols(`BLUPge+e+re` = BLUPge + BLUPe + BLUPre,
+                                 Predicted = `BLUPge+e+re` + left_join(data_factors, MGEN %>% select(Code, Y), by = c("GEN" = "Code"))$Y)
+                )
         } else if (mod4){
+            ran_ef <- c("BLOCK(ENV:REP), REP(ENV), ENV, GEN:ENV")
+            fix_ef <- c("GEN")
             data_factors <- data %>% select_non_numeric_cols()
             BLUPgen <- NULL
             BLUPenv <-
@@ -549,7 +569,7 @@ waasb <- function(.data,
                 column_to_first(Rank)
             blupRWE <-
                 data.frame(Names = rownames(bups$`REP:ENV`)) %>%
-                separate(Names, into = c("REP", "ENV")) %>%
+                separate(Names, into = c("REP", "ENV"), sep = ":") %>%
                 add_cols(BLUPre = bups$`REP:ENV`[[1]]) %>%
                 to_factor(1:2)
             blupBRE <-
@@ -564,14 +584,18 @@ waasb <- function(.data,
                 rename(Y = Estimate) %>%
                 to_factor(1)
             BLUPint <-
-                left_join(data_factors, bINT, by = c("ENV", "GEN")) %>%
-                left_join(BLUPenv, by = "ENV") %>%
-                left_join(blupRWE, by = c("ENV", "REP")) %>%
-                left_join(blupBRE, by = c("ENV", "REP", "BLOCK")) %>%
-                select(ENV, REP, BLOCK, GEN, BLUPe, BLUPge, BLUPre, BLUPbre) %>%
-                add_cols(`BLUPe+ge+re+bre` = BLUPge + BLUPe + BLUPre + BLUPbre,
-                         Predicted = `BLUPe+ge+re+bre` + left_join(data_factors, genCOEF, by = "GEN")$Y)
+                suppressWarnings(
+                    left_join(data_factors, bINT, by = c("ENV", "GEN")) %>%
+                        left_join(BLUPenv, by = "ENV") %>%
+                        left_join(blupRWE, by = c("ENV", "REP")) %>%
+                        left_join(blupBRE, by = c("ENV", "REP", "BLOCK")) %>%
+                        select(ENV, REP, BLOCK, GEN, BLUPe, BLUPge, BLUPre, BLUPbre) %>%
+                        add_cols(`BLUPe+ge+re+bre` = BLUPge + BLUPe + BLUPre + BLUPbre,
+                                 Predicted = `BLUPe+ge+re+bre` + left_join(data_factors, genCOEF, by = "GEN")$Y)
+                )
         } else if (mod5){
+            ran_ef <- c("GEN, REP(ENV), ENV, GEN:ENV")
+            fix_ef <- c("-")
             data_factors <- data %>% select_non_numeric_cols()
             BLUPgen <-
                 data.frame(GEN = MGEN$Code,
@@ -589,19 +613,23 @@ waasb <- function(.data,
                 add_cols(Rank = rank(-Predicted)) %>%
                 column_to_first(Rank)
             blupRWE <- data.frame(Names = rownames(bups$`REP:ENV`)) %>%
-                separate(Names, into = c("REP", "ENV")) %>%
+                separate(Names, into = c("REP", "ENV"), sep = ":") %>%
                 add_cols(BLUPre = bups$`REP:ENV`[[1]]) %>%
                 arrange(ENV) %>%
                 to_factor(1:2)
             BLUPint <-
-                left_join(data_factors, bINT, by = c("ENV", "GEN")) %>%
-                left_join(BLUPgen, by = "GEN") %>%
-                left_join(BLUPenv, by = "ENV") %>%
-                left_join(blupRWE, by = c("ENV", "REP")) %>%
-                select(GEN, ENV, REP, BLUPe, BLUPg, BLUPge, BLUPre) %>%
-                add_cols(`BLUPg+e+ge+re` = BLUPge + BLUPe + BLUPg + BLUPre,
-                         Predicted = `BLUPg+e+ge+re` + ovmean)
+                suppressWarnings(
+                    left_join(data_factors, bINT, by = c("ENV", "GEN")) %>%
+                        left_join(BLUPgen, by = "GEN") %>%
+                        left_join(BLUPenv, by = "ENV") %>%
+                        left_join(blupRWE, by = c("ENV", "REP")) %>%
+                        select(GEN, ENV, REP, BLUPe, BLUPg, BLUPge, BLUPre) %>%
+                        add_cols(`BLUPg+e+ge+re` = BLUPge + BLUPe + BLUPg + BLUPre,
+                                 Predicted = `BLUPg+e+ge+re` + ovmean)
+                )
         } else if (mod6){
+            ran_ef <- c("GEN, BLOCK(ENV:REP), REP(ENV), ENV, GEN:ENV")
+            fix_ef <- c("-")
             data_factors <- data %>% select_non_numeric_cols()
             BLUPgen <-
                 data.frame(GEN = MGEN$Code,
@@ -619,24 +647,26 @@ waasb <- function(.data,
                 add_cols(Rank = rank(-Predicted)) %>%
                 column_to_first(Rank)
             blupRWE <- data.frame(Names = rownames(bups$`REP:ENV`)) %>%
-                separate(Names, into = c("REP", "ENV")) %>%
+                separate(Names, into = c("REP", "ENV"), sep = ":") %>%
                 add_cols(BLUPre = bups$`REP:ENV`[[1]]) %>%
                 arrange(ENV) %>%
                 to_factor(1:2)
             blupBRE <-
                 data.frame(Names = rownames(bups$`BLOCK:(REP:ENV)`)) %>%
-                separate(Names, into = c("BLOCK", "REP", "ENV")) %>%
+                separate(Names, into = c("BLOCK", "REP", "ENV"), sep = ":") %>%
                 add_cols(BLUPbre = bups$`BLOCK:(REP:ENV)`[[1]]) %>%
                 to_factor(1:3)
             BLUPint <-
-                left_join(data_factors, bINT, by = c("ENV", "GEN")) %>%
-                left_join(BLUPgen, by = "GEN") %>%
-                left_join(BLUPenv, by = "ENV") %>%
-                left_join(blupRWE, by = c("ENV", "REP")) %>%
-                left_join(blupBRE, by = c("ENV", "REP", "BLOCK")) %>%
-                select(GEN, ENV, REP, BLOCK, BLUPg, BLUPe, BLUPge, BLUPre, BLUPbre) %>%
-                add_cols(`BLUPg+e+ge+re+bre` = BLUPg + BLUPge + BLUPe + BLUPre + BLUPbre,
-                         Predicted = `BLUPg+e+ge+re+bre` + ovmean)
+                suppressWarnings(
+                    left_join(data_factors, bINT, by = c("ENV", "GEN")) %>%
+                        left_join(BLUPgen, by = "GEN") %>%
+                        left_join(BLUPenv, by = "ENV") %>%
+                        left_join(blupRWE, by = c("ENV", "REP")) %>%
+                        left_join(blupBRE, by = c("ENV", "REP", "BLOCK")) %>%
+                        select(GEN, ENV, REP, BLOCK, BLUPg, BLUPe, BLUPge, BLUPre, BLUPbre) %>%
+                        add_cols(`BLUPg+e+ge+re+bre` = BLUPg + BLUPge + BLUPe + BLUPre + BLUPbre,
+                                 Predicted = `BLUPg+e+ge+re+bre` + ovmean)
+                )
         }
         residuals <- data.frame(fortify.merMod(Complete))
         residuals$reff <- BLUPint$BLUPge
@@ -660,7 +690,10 @@ waasb <- function(.data,
         listres[[paste(names(vars[var]))]] <- temp
     }
     if (verbose == TRUE) {
-        cat("Model: ", model_formula, "\n")
+        message("Method: REML/BLUP\n", appendLF = FALSE)
+        message("Random effects: ", ran_ef, "\n", appendLF = FALSE)
+        message("Fixed effects: ", fix_ef, "\n", appendLF = FALSE)
+        message("Denominador DF: Satterthwaite's method\n", appendLF = FALSE)
         cat("---------------------------------------------------------------------------\n")
         cat("P-values for Likelihood Ratio Test of the analyzed traits\n")
         cat("---------------------------------------------------------------------------\n")
@@ -714,6 +747,10 @@ waasb <- function(.data,
 #' default).
 #' @param out How the output is returned. Must be one of the 'print' (default)
 #' or 'return'.
+#' @param n.dodge The number of rows that should be used to render the x labels.
+#'   This is useful for displaying labels that would otherwise overlap.
+#' @param check.overlap Silently remove overlapping labels, (recursively)
+#'   prioritizing the first, last, and middle labels.
 #' @param labels Logical argument. If \code{TRUE} labels the points outside
 #' confidence interval limits.
 #' @param plot_theme The graphical theme of the plot. Default is
@@ -735,11 +772,15 @@ waasb <- function(.data,
 #' c(1:4)} that means that the first four graphics will be plotted.
 #' @param ncol,nrow The number of columns and rows of the plot pannel. Defaults
 #'   to \code{NULL}
+#' @param align Specifies whether graphs in the grid should be horizontally
+#'   (\code{"h"}) or vertically (\code{"v"}) aligned. \code{"hv"} (default)
+#'   align in both directions, \code{"none"} do not align the plot.
 #' @param ... Additional arguments passed on to the function
 #'   \code{\link[cowplot]{plot_grid}}
 #' @author Tiago Olivoto \email{tiagoolivoto@@gmail.com}
 #' @importFrom cowplot plot_grid
 #' @importFrom dplyr distinct_all arrange_at
+#' @importFrom tibble tribble
 #' @method plot waasb
 #' @export
 #' @examples
@@ -753,24 +794,82 @@ waasb <- function(.data,
 #' plot(model2)
 #'}
 #'
-plot.waasb <- function(x, var = 1, type = "res", conf = 0.95, out = "print",
-                       labels = FALSE, plot_theme = theme_metan(), alpha = 0.2, fill.hist = "gray",
-                       col.hist = "black", col.point = "black", col.line = "red",
-                       col.lab.out = "red", size.lab.out = 2.5, size.tex.lab = 10,
-                       size.shape = 1.5, bins = 30, which = c(1:4), ncol = NULL,
-                       nrow = NULL, ...) {
-    x <- x[[var]]
+plot.waasb <- function(x,
+                       var = 1,
+                       type = "res",
+                       conf = 0.95,
+                       out = "print",
+                       n.dodge = 1,
+                       check.overlap = FALSE,
+                       labels = FALSE,
+                       plot_theme = theme_metan(),
+                       alpha = 0.2,
+                       fill.hist = "gray",
+                       col.hist = "black",
+                       col.point = "black",
+                       col.line = "red",
+                       col.lab.out = "red",
+                       size.lab.out = 2.5,
+                       size.tex.lab = 10,
+                       size.shape = 1.5,
+                       bins = 30,
+                       which = c(1:4),
+                       ncol = NULL,
+                       nrow = NULL,
+                       align = "hv",
+                       ...) {
+    if(!type  %in% c("res", 're', "vcomp")){
+        stop("Argument type = '", match.call()[["type"]], "' invalid. Use one of 'res', 're', or 'vcomp'", call. = FALSE)
+    }
+    if(type %in% c("vcomp", "re") && !class(x)  %in% c("waasb", "gamem")){
+        stop("Arguments 're' and 'vcomp' valid for objects of class 'waasb' or 'gamem'. ")
+    }
+    if(is.numeric(var)){
+        var_name <- names(x)[var]
+    } else{
+        var_name <- var
+    }
+    if(!var_name %in% names(x)){
+        stop("Variable not found in ", match.call()[["x"]] , call. = FALSE)
+    }
     if (type == "re" & max(which) >= 5) {
         stop("When type =\"re\", 'which' must be a value between 1 and 4")
     }
+    if(type == "vcomp"){
+        list <- lapply(x, function(x){
+            x[["random"]] %>% select(Group, Variance)
+        })
+        vcomp <- suppressWarnings(
+            lapply(seq_along(list),
+                   function(i){
+                       set_names(list[[i]], "Group", names(list)[i])
+                   }) %>%
+                reduce(full_join, by = "Group") %>%
+                pivot_longer(-Group))
+        p1 <-
+            ggplot(vcomp, aes(x = name, y = value, fill = Group)) +
+            geom_bar(stat = "identity",
+                     position = "fill",
+                     col = "black")  +
+            theme_bw()+
+            theme(legend.position = "bottom",
+                  panel.grid = element_blank(),
+                  legend.title = element_blank(),
+                  strip.background = element_rect(fill = NA),
+                  axis.text = element_text(colour = "black")) +
+            scale_x_discrete(guide = guide_axis(n.dodge = n.dodge, check.overlap = check.overlap))+
+            labs(x = "Traits", y = "Proportion of phenotypic variance")
+        return(p1)
+    }
     if (type == "res") {
+        x <- x[[var]]
         df <- data.frame(x$residuals)
         df$id <- rownames(df)
         df <- data.frame(df[order(df$.scresid), ])
         P <- ppoints(nrow(df))
         df$z <- qnorm(P)
         n <- nrow(df)
-        Q.x <- quantile(df$.scresid, c(0.25, 0.75))
+        Q.x <- quantile(df$.scresid, c(0.25, 0.75), na.rm = TRUE)
         Q.z <- qnorm(c(0.25, 0.75))
         b <- diff(Q.x)/diff(Q.z)
         coef <- c(Q.x[1] - b * Q.z[1], b)
@@ -904,8 +1003,26 @@ plot.waasb <- function(x, var = 1, type = "res", conf = 0.95, out = "print",
                   plot.title = element_text(size = size.tex.lab, hjust = 0, vjust = 1),
                   panel.spacing = unit(0, "cm"))
         plots <- list(p1, p2, p3, p4, p5, p6, p7)
+        p1 <-
+            plot_grid(plotlist = plots[c(which)],
+                      ncol = ncol,
+                      nrow = nrow,
+                      align = align,
+                      ...)
+        title <- ggdraw() +
+            draw_label(var_name,
+                       fontface = 'bold',
+                       x = 0,
+                       hjust = 0) +
+            theme(plot.margin = margin(0, 0, 0, 7))
+        p1 <-
+            plot_grid(title, p1,
+                      ncol = 1,
+                      rel_heights = c(0.05, 1))
+        return(p1)
     }
     if (type == "re") {
+        x <- x[[var]]
         blups <-
             x$BLUPint %>%
             select_cols(contains("BLUP"))
@@ -920,7 +1037,7 @@ plot.waasb <- function(x, var = 1, type = "res", conf = 0.95, out = "print",
             P <- ppoints(nrow(df))
             df$z <- qnorm(P)
             n <- nrow(df)
-            Q.x <- quantile(df[[2]], c(0.25, 0.75))
+            Q.x <- quantile(df[[2]], c(0.25, 0.75), na.rm = TRUE)
             Q.z <- qnorm(c(0.25, 0.75))
             b <- diff(Q.x)/diff(Q.z)
             coef <- c(Q.x[1] - b * Q.z[1], b)
@@ -955,28 +1072,19 @@ plot.waasb <- function(x, var = 1, type = "res", conf = 0.95, out = "print",
             plot_theme %+replace%
             theme(axis.text = element_text(size = size.tex.lab, colour = "black"),
                   axis.title = element_text(size = size.tex.lab, colour = "black"),
-                  plot.title = element_text(size = size.tex.lab, hjust = 0, vjust = 1))
+                  plot.title.position = "plot",
+                  plot.title = element_text(size = size.tex.lab + 1, hjust = 0, vjust = 1, face = "bold"))
         if (labels != FALSE) {
             p1 <- p1 + ggrepel::geom_text_repel(aes(z, blup, label = (label)),
                                                 color = col.lab.out,
-                                                size = size.lab.out)
+                                                size = size.lab.out)+
+                labs(title = var_name)
         } else {
-            p1 <- p1
+            p1 <- p1 + labs(title = var_name)
         }
-    }
-    if(!type == "re"){
-        plot_grid(plotlist = plots[c(which)],
-                  ncol = ncol,
-                  nrow = nrow,
-                  ...)
-    } else{
-        print(p1)
+        return(p1)
     }
 }
-
-
-
-
 
 
 

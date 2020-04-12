@@ -39,8 +39,9 @@
 #' * \code{"MSG", "FCG", "PFG"} The mean square, F-calculated and P-values for
 #' genotype effect, respectively.
 #' * \code{"MSB", "FCB", "PFB"} The mean square, F-calculated and P-values for
-#' block effect (in randomized complete block design) or complete replicate (in
-#' alpha lattice design), respectively.
+#' block effect in randomized complete block design.
+#' * \code{"MSCR", "FCR", "PFCR"} The mean square, F-calculated and P-values for
+#' complete replicates in alpha lattice design.
 #' * \code{"MSIB_R", "FCIB_R", "PFIB_R"} The mean square, F-calculated and
 #' P-values for incomplete blocks within complete replicates, respectively (for
 #' alpha lattice design only).
@@ -177,7 +178,8 @@
 #'
 #'
 #' @md
-#' @importFrom dplyr starts_with matches case_when
+#' @importFrom dplyr starts_with matches case_when full_join arrange_if
+#' @importFrom purrr reduce
 #' @author Tiago Olivoto \email{tiagoolivoto@@gmail.com}
 #' @export
 #' @references
@@ -352,6 +354,7 @@ get_model_data <- function(x,
   check1 <- c("Y", "WAAS", "PctResp", "PctWAAS", "wRes", "wWAAS", "OrResp", "OrWAAS", "OrPC1", "WAASY", "OrWAASY")
   check2 <- paste("PC", 1:200, sep = "")
   check3 <- c("blupg", "blupge", "vcomp", "lrt", "genpar", "pval_lrt", "details", "ranef")
+  check3.1 <- c("blupg", "vcomp", "lrt", "genpar", "pval_lrt", "details", "ranef")
   check4 <- c("Y", "WAASB", "PctResp", "PctWAASB", "wRes", "wWAASB",
               "OrResp", "OrWAASB", "OrPC1", "WAASBY", "OrWAASBY")
   check5 <- c("ipca_ss", "ipca_ms", "ipca_fval", "ipca_pval", "ipca_expl", "ipca_accum")
@@ -370,7 +373,7 @@ get_model_data <- function(x,
   check18 <- c("Mean_rp", "Sem_rp", "Wi", "rank")
   check19 <- c("ge_means", "env_means", "gen_means")
   check20 <- c("Sum Sq", "Mean Sq", "F value", "Pr(>F)", "fitted", "resid", "stdres", "se.fit", "details")
-  check21 <- c("MEAN", "MSG", "FCG", "PFG", "MSB", "FCB", "PFB", "MSIB_R", "FCIB_R", "PFIB_R", "MSE", "CV", "h2", "AS")
+  check21 <- c("MEAN", "MSG", "FCG", "PFG", "MSB", "FCB", "PFB", "MSCR", "FCR", "PFCR", "MSIB_R", "FCIB_R", "PFIB_R", "MSE", "CV", "h2", "AS")
 
   if (!is.null(what) && !what %in% c(check, check1, check2, check5, check6, check7, check8, check9,
                                      check10, check11, check12, check13, check14, check15, check16,
@@ -378,13 +381,11 @@ get_model_data <- function(x,
     stop("The argument 'what' is invalid. Please, check the function help (?get_model_data) for more details.")
   }
   if (!is.null(what) && what %in% check3 && !class(x) %in% c("waasb", "gamem", "gafem", "anova_joint")) {
-    stop("Invalid argument 'what'. It can only be used with an object of class 'waasb' or 'gamem', 'gafem, or 'anova_joint'. Please, check and fix.")
+    stop("Invalid argument 'what'. It can only be used with an oject of class 'waasb' or 'gamem', 'gafem, or 'anova_joint'. Please, check and fix.")
   }
   if (!type %in% c("GEN", "ENV")) {
     stop("Argument 'type' invalid. It must be either 'GEN' or 'ENV'.")
   }
-
-
   if (class(x)  %in% c("waasb", "gamem")) {
     if (is.null(what)){
       what <- "genpar"
@@ -393,8 +394,8 @@ get_model_data <- function(x,
       warning("Using what = 'genpar' is only possible for models fitted with random = 'gen' or random = 'all'\nSetting what to 'vcomp'.", call. = FALSE)
       what <- "vcomp"
     }
-    if(class(x) == "gamem" & !what %in% check3){
-      stop("Invalid value in 'what' for an object of class 'gamem'")
+    if(class(x) == "gamem" & !what %in% check3.1){
+      stop("Invalid value in 'what' for an object of class '", class(x), "'. Allowed are ", paste(check3.1, collapse = ", "), call. = FALSE)
     }
     if (class(x) == "waasb" & what %in% check4) {
       bind <- sapply(x, function(x) {
@@ -449,25 +450,31 @@ get_model_data <- function(x,
     }
     if (what %in% c("blupg", "blupge")) {
       if (what == "blupg") {
-        datt <- x[[1]][["BLUPgen"]]
-        bind <- sapply(x, function(x) {
-          val <- arrange(x[["BLUPgen"]], GEN)$Predicted
-        }) %>%
-          as_tibble() %>%
-          mutate(gen = datt %>%
-                   arrange(GEN) %>%
-                   pull(GEN)) %>%
-          column_to_first(gen)
+        list <- lapply(x, function(x){
+          x[["BLUPgen"]] %>% select(GEN, Predicted)
+        })
+        bind <- suppressWarnings(
+          lapply(seq_along(list),
+                 function(i){
+                   set_names(list[[i]], "GEN", names(list)[i])
+                 }) %>%
+            reduce(full_join, by = "GEN") %>%
+            arrange(GEN)
+        )
       }
       if (what == "blupge") {
-        bind <- sapply(x, function(x) {
-          val <- x[["BLUPint"]][["Predicted"]]
-        }) %>%
-          as_tibble() %>%
-          mutate(ENV = x[[1]][["BLUPint"]][["ENV"]],
-                 GEN = x[[1]][["BLUPint"]][["GEN"]]) %>%
-          column_to_first(ENV, GEN) %>%
-          means_by(ENV, GEN)
+        list <- lapply(x, function(x){
+          x[["BLUPint"]] %>% select(ENV, GEN, Predicted)
+        })
+        bind <-  suppressWarnings(
+          lapply(seq_along(list),
+                 function(i){
+                   set_names(list[[i]], "ENV", "GEN", names(list)[i])
+                 }) %>%
+            reduce(full_join, by = c("ENV", "GEN")) %>%
+            arrange(ENV, GEN) %>%
+            means_by(ENV, GEN)
+        )
       }
     }
     if (what == "ranef") {
@@ -509,16 +516,18 @@ get_model_data <- function(x,
         })
       nvcomp <- length(dfs[[1]])
       bind <- list()
+
       for(i in 1:nvcomp){
-        index <- dfs[[1]][[i]] %>%  select_non_numeric_cols() %>% ncol()
+        var_names <- names(dfs[[1]][[i]] %>%  select_non_numeric_cols())
+        index <- length(var_names)
         num <-
-          do.call(cbind,
-                  lapply(dfs, function(x){
-                    x[[i]][[index + 1]]
-                  }))
-        facts <- dfs[[1]][[i]] %>%
-          select_non_numeric_cols()
-        bind[[names(dfs[[1]])[i]]] <- cbind(facts, num) %>% as_tibble()
+          lapply(seq_along(dfs),
+                 function(j){
+                   set_names(dfs[[j]][[i]], var_names, names(dfs)[j])
+                 }) %>%
+          reduce(full_join, by = var_names) %>%
+          arrange_if(~!is.numeric(.x))
+        bind[[names(dfs[[1]])[i]]] <- num
       }
     }
   }
@@ -537,7 +546,6 @@ get_model_data <- function(x,
       mutate(ENV = x[[1]][["individual"]][["ENV"]]) %>%
       column_to_first(ENV)
   }
-
 
   if (class(x)  %in% c("anova_joint", "gafem")) {
     if (is.null(what)){

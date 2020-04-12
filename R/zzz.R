@@ -10,7 +10,6 @@
 #' @importFrom magrittr  %>% %<>%
 #' @importFrom GGally  ggally_text  eval_data_col  ggpairs
 #' @importFrom ade4  mantel.randtest
-#' @importFrom dendextend  set  rotate_DendSer
 #' @importFrom lme4  ranef  VarCorr  fortify.merMod
 #' @importFrom lmerTest  ranova  lmer
 #' @importFrom FWDselect  selection
@@ -156,7 +155,7 @@ NULL
 NULL
 
 .onAttach <- function(libname, pkgname) {
-  vers <-  "v1.4.0"
+  vers <-  "v1.5.0"
   packageStartupMessage("[]=====================================================[]")
   packageStartupMessage("[] Multi-Environment Trial Analysis (metan) ", vers, "     []")
   packageStartupMessage("[] Author: Tiago Olivoto                               []")
@@ -190,5 +189,5 @@ if (getRversion() >= "2.15.1") {
       "BLUPge+e+re", "BLUPre", "Estimate", "HMRPGV", "RPGV", "Variance", "blup",
       "intercept", "lower", "upper", "pred_ols", "res_ammi", "res_ols", "pattern",
       "replacement", "comparison", "group1", "group2", "p.adj", "term", "rel_freq",
-      "variable", "Model", "level", "RESIDUAL"))
+      "variable", "Model", "level", "RESIDUAL", "MGIDI", "sd.amo"))
   }

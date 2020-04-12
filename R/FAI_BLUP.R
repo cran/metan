@@ -47,50 +47,36 @@
 #'                 SI = 15,
 #'                 DI = c('max, max'),
 #'                 UI = c('min, min'))
-#'
-#' # Or using the pipe operator %>%
-#'
-#' FAI <- data_ge2 %>%
-#'        waasb(ENV, GEN, REP, c(KW, NKE, PH, EH)) %>%
-#'        fai_blup(DI = c('max, max, max, min'),
-#'                 UI = c('min, min, min, max'),
-#'                 SI = 15)
 #'}
 fai_blup <- function(.data, DI, UI, SI = NULL, mineval = 1, verbose = TRUE) {
   ideotype.D <- unlist(strsplit(DI, split=", "))
   ideotype.U <- unlist(strsplit(UI, split=", "))
-  if (!has_class(.data, c("data.frame", "tbl_df", "tbl", "waasb"))) {
-    stop("The .data must be an object of class 'waasb' or a data.frame/tbl_df.")
+  if (!has_class(.data, c("data.frame", "tbl_df", "tbl", "waasb", "gamem"))) {
+    stop("The .data must be an object of class 'waasb', 'gamem' or a data.frame/tbl_df.")
   }
-  if(class(.data) != "waasb" & any(sapply(.data, is.numeric)) == FALSE){
+  if(!has_class(.data, c("waasb", "gamem")) & any(sapply(.data, is.numeric)) == FALSE){
     stop("All columns in .data must be numeric.")
   }
-  if(class(.data) != "waasb" & has_rownames(.data) == FALSE){
-    stop("Please, provide rownames (with genotype's code).")
-  }
-  nvar <- ifelse(class(.data) == "waasb", length(.data), ncol(.data))
+  nvar <- ifelse(has_class(.data, c("waasb", "gamem")), length(.data), ncol(.data))
   if (nvar == 1) {
     stop("The multitrait stability index cannot be computed with one single variable.")
   }
   if (length(ideotype.D) != nvar || length(ideotype.U) != nvar) {
     stop("The length of DI and UI must be the same length of data.")
   }
-  if (class(.data) == "waasb") {
-    datt <- .data[[1]][["BLUPgen"]]
-    data <- data.frame(do.call(cbind, lapply(.data, function(x) {
-      val <- arrange(x[["BLUPgen"]], GEN)$Predicted
-    }))) %>% mutate(gen = datt %>% arrange(GEN) %>% pull(GEN)) %>%
-      select(gen, everything())
-    means <- data[, 2:ncol(data)]
-    rownames(means) <- data[, 1]
+  if(has_class(.data, c("gamem", "waasb"))){
+    means <- gmd(.data, "blupg") %>%
+      column_to_rownames("GEN")
   } else {
-    data <- .data
+    if(has_class(.data, c("data.frame", "matrix")) & !has_rownames(.data)){
+      stop("Please, provide rownames (with genotype's code).")
+    }
     means <- .data
   }
   if (is.null(SI)) {
     ngs <- NULL
   } else {
-    ngs <- round(nrow(data) * (SI/100), 0)
+    ngs <- round(nrow(means) * (SI/100), 0)
   }
   if (any(apply(means, 2, function(x) sd(x) == 0) == TRUE)) {
     nam <- paste(names(means[, apply(means, 2, function(x) sd(x) ==
@@ -253,11 +239,6 @@ fai_blup <- function(.data, DI, UI, SI = NULL, mineval = 1, verbose = TRUE) {
     print(fa)
     cat("\n-----------------------------------------------------------------------------------\n")
     cat("Comunalit Mean:", mean(comunalits), "\n")
-    cat("\n-----------------------------------------------------------------------------------\n")
-    cat("FAI-BLUP index\n")
-    cat("-----------------------------------------------------------------------------------\n")
-    print(round(ideotype.rank$ID1, 4))
-    cat("\n-----------------------------------------------------------------------------------\n")
     if (!is.null(ngs)) {
       cat("Selection differential\n")
       cat("-----------------------------------------------------------------------------------\n")
@@ -268,13 +249,13 @@ fai_blup <- function(.data, DI, UI, SI = NULL, mineval = 1, verbose = TRUE) {
       cat("\n-----------------------------------------------------------------------------------\n")
     }
   }
-  return(structure(list(data = data, FA = data.frame(fa), canonical.loadings = data.frame(canonical.loadings),
-                        FAI = ideotype.rank, selection.diferential = selection.diferential),
+  return(structure(list(data = means,
+                        FA = data.frame(fa),
+                        canonical.loadings = data.frame(canonical.loadings),
+                        FAI = data.frame(ideotype.rank) %>% rownames_to_column("Genotype"),
+                        selection.diferential = selection.diferential),
                    class = "fai_blup"))
 }
-
-
-
 
 
 
@@ -330,8 +311,10 @@ plot.fai_blup <- function(x, ideotype = 1, SI = 15, radar = TRUE, arrange.label 
   if (!class(x) == "fai_blup") {
     stop("The object 'x' is not of class 'fai_blup'")
   }
-  data <- tibble(FAI = x$FAI[[ideotype]], Genotype = names(x$FAI[[ideotype]]),
-                 sel = "Selected")
+  data <- x$FAI %>%
+    select_cols(Genotype, paste("ID", ideotype, sep = "")) %>%
+  add_cols(sel = "Selected") %>%
+    set_names("Genotype", "FAI", "sel")
   data[["sel"]][(round(nrow(data) * (SI/100), 0) + 1):nrow(data)] <- "Nonselected"
   cutpoint <- min(subset(data, sel == "Selected")$FAI)
   p <- ggplot(data = data, aes(x = reorder(Genotype, FAI),

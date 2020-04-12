@@ -1,20 +1,25 @@
-#' Multi-trait stability index
+#' Genotype-Ideotype Distance Index
 #'
-#' Computes the multi-trait stability index proposed by Olivoto et al. (2019)
+#' Computes the multi-trait genotype-ideotype distance index (MGIDI). MGIDI can
+#' be seen as the multi-trait stability index (Olivoto et al., 2019) computed
+#' with weight for mean performance equals to 100.
 #'
 #'
-#' @param .data An object of class \code{waasb} or \code{waas}.
-#' @param index If \code{index = 'waasby'} (default) both stability and mean
-#'   performance are considered. If \code{index = 'waasb'} the multi-trait index
-#'   will be computed considering the stability of genotypes only.  More details
-#'   can be seen in \code{\link{waasb}} and \code{\link{waas}} functions.
+#' @param .data An object fitted with \code{\link{gamem}}, \code{\link{gamem_met}}, or a two-way
+#'   table with BLUPs for genotypes in each trait (genotypes in rows and traits
+#'   in columns). In the last case, row names must contain the genotypes names.
+#' @param ideotype A vector of length \code{nvar} where \code{nvar} is the
+#'   number of variables used to plan the ideotype. Use \code{'h'} to indicate
+#'   the variables with increase in selction or \code{'l'} to indicate the
+#'   variables with reduction in selection. For example, \code{ideotype = c("h,
+#'   h, l, h, l")}.
 #' @param SI An integer (0-100). The selection intensity in percentage of the
 #' total number of genotypes.
 #' @param mineval The minimum value so that an eigenvector is retained in the
 #' factor analysis.
 #' @param verbose If \code{verbose = TRUE} (Default) then some results are
 #' shown in the console.
-#' @return An object of class \code{mtsi} with the following items:
+#' @return An object of class \code{mgidi} with the following items:
 #' * \strong{data} The data used to compute the factor analysis.
 #' * \strong{cormat} The correlation matrix among the environments.
 #' * \strong{PCA} The eigenvalues and explained variance.
@@ -28,106 +33,78 @@
 #' * \strong{canonical.loadings} The canonical loadings.
 #' * \strong{scores.gen} The scores for genotypes in all retained factors.
 #' * \strong{scores.ide} The scores for the ideotype in all retained factors.
-#' * \strong{MTSI} The multi-trait stability index.
-#' * \strong{contri.fac} The relative contribution of each factor on the MTSI value.
+#' * \strong{MGIDI} The multi-trait stability index.
+#' * \strong{contri.fac} The relative contribution of each factor on the MGIDI value.
 #' The lower the contribution of a factor, the close of the ideotype the variables in such
 #' factor are.
-#' * \strong{sel.dif} The selection differential for the WAASBY or WAASB index.
-#' * \strong{mean.sd} The mean for the differential selection.
-#' * \strong{sel.dif.var} The selection differential for the variables.
+#' * \strong{sel.dif} The selection differential for the variables.
 #' * \strong{Selected} The selected genotypes.
 #' @md
-#' @author Tiago Olivoto \email{tiagoolivoto@@gmail.com}
-#' @export
 #' @references Olivoto, T., A.D.C. L{\'{u}}cio, J.A.G. da silva, B.G. Sari, and
 #'   M.I. Diel. 2019. Mean performance and stability in multi-environment trials
 #'   II: Selection based on multiple traits. Agron. J. 111:2961-2969.
 #'   doi:10.2134/agronj2019.03.0221.
+#' @author Tiago Olivoto \email{tiagoolivoto@@gmail.com}
+#' @export
 #' @examples
 #'\donttest{
 #' library(metan)
-#' # Based on stability only, for both GY and HM, higher is better
-#' mtsi_model <- waasb(data_ge,
-#'                     env = ENV,
-#'                     gen = GEN,
-#'                     rep = REP,
-#'                     resp = c(GY, HM))
-#' mtsi_index <- mtsi(mtsi_model, index = 'waasb')
 #'
+#' model <- gamem(data_g,
+#'                gen = GEN,
+#'                rep = REP,
+#'                resp = c(NR, KW, CW, CL, NKE, TKW, PERK, PH))
+#' # Selection for increase all variables
+#' mgidi_model <- mgidi(model)
 #'
-#' # Based on mean performance and stability (using pipe operator %>%)
-#' # GY: higher is better
-#' # HM: lower is better
-#'
-#'mtsi_index2 <- data_ge %>%
-#'  waasb(ENV, GEN, REP,
-#'        resp = c(GY, HM),
-#'        mresp = c(100, 0)) %>%
-#'  mtsi()
 #'}
-mtsi <- function(.data,
-                 index = "waasby",
-                 SI = 15,
-                 mineval = 1,
-                 verbose = TRUE) {
-  if (!index %in% c("waasb", "waasby")) {
-    stop("The argument 'index' must be of of the 'waasb' or 'waasby'.", call. = FALSE)
+mgidi <- function(.data,
+                  SI = 15,
+                  mineval = 1,
+                  ideotype = NULL,
+                  verbose = TRUE) {
+  d <- match.call()
+  if(has_class(.data, c("gamem", "waasb"))){
+    data <- gmd(.data, "blupg", verbose = FALSE) %>%
+      column_to_rownames("GEN")
+  } else{
+  if(has_class(.data, c("data.frame", "matrix")) & !has_rownames(.data)){
+    stop("object '", d[[".data"]], "' must have rownames.", call. = FALSE)
   }
-  if (length(.data) == 1) {
+    if(any(sapply(.data, function(x){is.numeric(x)})== FALSE)){
+      stop("All variables in '", d[[".data"]], "' must be numeric.",call. = FALSE)
+    }
+    data <- .data
+  }
+  if (length(data) == 1) {
     stop("The multi-trait stability index cannot be computed with one single variable.", call. = FALSE)
   }
-  if (index == "waasby") {
-    ideotype.D <- rep(100, length(.data))
-  }
-
-  if (has_class(.data, c("waas", "waas_means"))){
-    if (index == "waasb") {
-      bind <- data.frame(do.call(cbind, lapply(.data, function(x) {
-        val <- x[["model"]][["WAAS"]]
-      })))
+  ideotype.D <- rep(100, length(data))
+  names(ideotype.D) <- names(data)
+  if(is.null(ideotype)){
+    rescaled <- rep(100, length(data))
+  } else{
+    rescaled <- unlist(strsplit(ideotype, split="\\s*(\\s|,)\\s*")) %>%
+    all_lower_case()
+    if(length(rescaled) != length(data)){
+      stop("Ideotype must have length ", ncol(data), ", the number of columns in data")
     }
-    if (index == "waasby") {
-      bind <- data.frame(do.call(cbind, lapply(.data, function(x) {
-        val <- x[["model"]][["WAASY"]]
-      })))
+    if(!all(rescaled %in% c("h", "l"))){
+      stop("argument 'ideotype' must have 'h' or 'l' only", call. = FALSE)
     }
-    bind$gen <- .data[[1]][["model"]][["Code"]]
-    bind$type <- .data[[1]][["model"]][["type"]]
-    data <- data.frame(subset(bind, type == "GEN") %>%
-                         remove_cols(type) %>%
-                         column_to_first(gen))
-  }
-  if (class(.data) == "waasb") {
-    if (index == "waasb") {
-      bind <- data.frame(do.call(cbind, lapply(.data, function(x) {
-        val <- x[["model"]][["WAASB"]]
-      })))
-    }
-    if (index == "waasby") {
-      bind <- data.frame(do.call(cbind, lapply(.data, function(x) {
-        val <- x[["model"]][["WAASBY"]]
-      })))
-    }
-    bind$gen <- .data[[1]][["model"]][["Code"]]
-    bind$type <- .data[[1]][["model"]][["type"]]
-    data <- data.frame(subset(bind, type == "GEN") %>%
-                         remove_cols(type) %>%
-                         column_to_first(gen))
+    rescaled <- ifelse(rescaled == "h", 100, 0)
   }
   if (is.null(SI)) {
     ngs <- NULL
   } else {
     ngs <- round(nrow(data) * (SI/100), 0)
   }
-  observed <- data.frame(do.call(cbind, lapply(.data, function(x) {
-    val <- x[["model"]][["Y"]]
-  })))
-  observed$gen <- .data[[1]][["model"]][["Code"]]
-  observed$type <- .data[[1]][["model"]][["type"]]
-  observed %<>% dplyr::filter(type == "GEN") %>% remove_cols(type) %>%
-    column_to_rownames("gen")
-  means <- data[, 2:ncol(data)]
-  rownames(means) <- data[, 1]
+  means <- data.frame(matrix(ncol = ncol(data), nrow = nrow(data)))
+  rownames(means) <- rownames(data)
+  for (i in 1:ncol(data)) {
+    means[i] <- resca(values = data[i], new_max = rescaled[i], new_min = 100 - rescaled[i])
+    colnames(means) <- colnames(data)
+  }
   cor.means <- cor(means)
   eigen.decomposition <- eigen(cor.means)
   eigen.values <- eigen.decomposition$values
@@ -173,42 +150,31 @@ mtsi <- function(.data,
   canonical.loadings <- t(t(A) %*% solve_svd(cor.means))
   scores <- z %*% canonical.loadings
   colnames(scores) <- paste("FA", 1:ncol(scores), sep = "")
-  rownames(scores) <- data[, 1]
+  rownames(scores) <- rownames(means)
   pos.var.factor <- which(abs(A) == apply(abs(A), 1, max), arr.ind = TRUE)
   var.factor <- lapply(1:ncol(A), function(i) {
     rownames(pos.var.factor)[pos.var.factor[, 2] == i]
   })
   names(var.factor) <- paste("FA", 1:ncol(A), sep = "")
   names.pos.var.factor <- rownames(pos.var.factor)
-  if (index == "waasb") {
-    ideotype.D <- apply(means, 2, min)
-  } else {
-    names(ideotype.D) <- colnames(means)
-  }
   ideotypes.matrix <- t(as.matrix(ideotype.D))/apply(means, 2, sd)
   rownames(ideotypes.matrix) <- "ID1"
   ideotypes.scores <- ideotypes.matrix %*% canonical.loadings
   gen_ide <- sweep(scores, 2, ideotypes.scores, "-")
-  MTSI <- sort(apply(gen_ide, 1, function(x) sqrt(sum(x^2))), decreasing = FALSE)
+  MGIDI <- sort(apply(gen_ide, 1, function(x) sqrt(sum(x^2))), decreasing = FALSE)
   contr.factor <- data.frame((sqrt(gen_ide^2)/apply(gen_ide, 1, function(x) sum(sqrt(x^2)))) * 100) %>%
     rownames_to_column("Gen") %>%
     as_tibble()
   means.factor <- means[, names.pos.var.factor]
-  observed <- observed[, names.pos.var.factor]
+  observed <- means[, names.pos.var.factor]
   if (!is.null(ngs)) {
-    sel.dif <- tibble(VAR = names(pos.var.factor[, 2]),
-                      Factor = paste("FA", as.numeric(pos.var.factor[, 2])),
-                      Xo = colMeans(means.factor),
-                      Xs = colMeans(means.factor[names(MTSI)[1:ngs], ]),
-                      SD = Xs - Xo,
-                      SDperc = (Xs - Xo) / Xo * 100)
-    mean_sd_ind <- apply(sel.dif[, 3:6], 2, mean)
+    data_order <- data[colnames(observed)]
     sel.dif.mean <- tibble(VAR = names(pos.var.factor[, 2]),
                            Factor = paste("FA", as.numeric(pos.var.factor[, 2])),
-                           xo = colMeans(observed),
-                           Xs = colMeans(observed[names(MTSI)[1:ngs], ]),
-                           SD = Xs - colMeans(observed),
-                           SDperc = (Xs - colMeans(observed)) / colMeans(observed) * 100)
+                           xo = colMeans(data_order),
+                           Xs = colMeans(data_order[names(MGIDI)[1:ngs], ]),
+                           SD = Xs - colMeans(data_order),
+                           SDperc = (Xs - colMeans(data_order)) / colMeans(data_order) * 100)
   }
   if (is.null(ngs)) {
     sel.dif <- NULL
@@ -226,21 +192,13 @@ mtsi <- function(.data,
     cat("Comunalit Mean:", mean(Communality), "\n")
     cat("-------------------------------------------------------------------------------\n")
     if (!is.null(ngs)) {
-      cat("Selection differential for the ", index, "index\n")
-      cat("-------------------------------------------------------------------------------\n")
-      print(sel.dif)
-      cat("------------------------------------------------------------------------------\n")
-      cat("Mean of selection differential\n")
-      cat("-------------------------------------------------------------------------------\n")
-      print(mean_sd_ind)
-      cat("-------------------------------------------------------------------------------\n")
-      cat("Selection differential for the mean of the variables\n")
+      cat("Selection differential \n")
       cat("-------------------------------------------------------------------------------\n")
       print(sel.dif.mean)
       cat("------------------------------------------------------------------------------\n")
       cat("Selected genotypes\n")
       cat("-------------------------------------------------------------------------------\n")
-      cat(names(MTSI)[1:ngs])
+      cat(names(MGIDI)[1:ngs])
       cat("\n-------------------------------------------------------------------------------\n")
     }
   }
@@ -257,13 +215,11 @@ mtsi <- function(.data,
                         canonical.loadings = data.frame(canonical.loadings) %>% rownames_to_column("VAR") %>% as_tibble(),
                         scores.gen = data.frame(scores) %>% rownames_to_column("GEN") %>% as_tibble(),
                         scores.ide = data.frame(ideotypes.scores) %>% rownames_to_column("GEN") %>% as_tibble(),
-                        MTSI = as_tibble(MTSI, rownames = NA) %>% rownames_to_column("Genotype") %>% rename(MTSI = value),
+                        MGIDI = as_tibble(MGIDI, rownames = NA) %>% rownames_to_column("Genotype") %>% rename(MGIDI = value),
                         contri.fac = contr.factor,
-                        sel.dif = sel.dif,
-                        mean.sd = mean_sd_ind,
-                        sel.dif.var = sel.dif.mean,
-                        Selected = names(MTSI)[1:ngs]),
-                   class = "mtsi"))
+                        sel.dif = sel.dif.mean,
+                        Selected = names(MGIDI)[1:ngs]),
+                   class = "mgidi"))
 }
 
 
@@ -274,13 +230,12 @@ mtsi <- function(.data,
 
 
 
-#' Plot the multi-trait stability index
+#' Plot the multi-trait genotype-ideotype distance index
 #'
-#' Makes a radar plot showing the multitrait stability index proposed by Olivoto
-#' et al. (2019)
+#' Makes a radar plot showing the multi-trait genotype-ideotype distance index
 #'
 #'
-#' @param x An object of class \code{mtsi}
+#' @param x An object of class \code{mgidi}
 #' @param SI An integer [0-100]. The selection intensity in percentage of the
 #'   total number of genotypes.
 #' @param radar Logical argument. If true (default) a radar plot is generated
@@ -295,35 +250,37 @@ mtsi <- function(.data,
 #' @param ... Other arguments to be passed from ggplot2::theme().
 #' @return An object of class \code{gg, ggplot}.
 #' @author Tiago Olivoto \email{tiagoolivoto@@gmail.com}
-#' @method plot mtsi
+#' @method plot mgidi
 #' @export
-#' @references Olivoto, T., A.D.C. L{\'{u}}cio, J.A.G. da silva, B.G. Sari, and M.I. Diel. 2019. Mean performance and stability in multi-environment trials II: Selection based on multiple traits. Agron. J. (in press).
 #' @examples
 #' \donttest{
 #' library(metan)
-#' mtsi_model <- waasb(data_ge, ENV, GEN, REP, resp = c(GY, HM))
-#' mtsi_index <- mtsi(mtsi_model)
-#' plot(mtsi_index)
+#' model <- gamem(data_g,
+#'                gen = GEN,
+#'                rep = REP,
+#'                resp = c(KW, NR, NKE, NKR))
+#' mgidi_index <- mgidi(model)
+#' plot(mgidi_index)
 #'}
 #'
 #'
-plot.mtsi <- function(x, SI = 15, radar = TRUE, arrange.label = FALSE, size.point = 2.5,
+plot.mgidi <- function(x, SI = 15, radar = TRUE, arrange.label = FALSE, size.point = 2.5,
                       col.sel = "red", col.nonsel = "black", size.text = 10, ...) {
-  if (!class(x) == "mtsi") {
-    stop("The object 'x' is not of class 'mtsi'")
+  if (!class(x) == "mgidi") {
+    stop("The object 'x' is not of class 'mgidi'")
   }
-  data <- x$MTSI %>%
+  data <- x$MGIDI %>%
     add_cols(sel = "Selected")
   data[["sel"]][(round(nrow(data) * (SI/100), 0) + 1):nrow(data)] <- "Nonselected"
-  cutpoint <- max(subset(data, sel == "Selected")$MTSI)
-  p <- ggplot(data = data, aes(x = reorder(Genotype, -MTSI),
-                               y = MTSI)) + geom_hline(yintercept = cutpoint, col = col.sel) +
+  cutpoint <- max(subset(data, sel == "Selected")$MGIDI)
+  p <- ggplot(data = data, aes(x = reorder(Genotype, -MGIDI),
+                               y = MGIDI)) + geom_hline(yintercept = cutpoint, col = col.sel) +
     geom_path(colour = "black", group = 1) + geom_point(size = size.point,
                                                         aes(fill = sel), shape = 21, colour = "black") + scale_x_discrete() +
     scale_y_reverse() + theme_minimal() + theme(legend.position = "bottom",
                                                 legend.title = element_blank(), axis.title.x = element_blank(),
                                                 panel.border = element_blank(), axis.text = element_text(colour = "black"),
-                                                text = element_text(size = size.text)) + labs(y = "Multitrait stability index") +
+                                                text = element_text(size = size.text)) + labs(y = "Multi-trait genotype-ideotype distance index") +
     scale_fill_manual(values = c(col.nonsel, col.sel))
   if (radar == TRUE) {
     if(arrange.label == TRUE){
@@ -344,12 +301,14 @@ plot.mtsi <- function(x, SI = 15, radar = TRUE, arrange.label = FALSE, size.poin
 
 
 
-#' Print an object of class mtsi
-#'
-#' Print a \code{mtsi} object in two ways. By default, the results are shown in
+
+
+
+#' Print an object of class mgidi
+#' Print a \code{mgidi} object in two ways. By default, the results are shown in
 #' the R console. The results can also be exported to the directory.
 #'
-#' @param x An object of class \code{mtsi}.
+#' @param x An object of class \code{mgidi}.
 #' @param export A logical argument. If \code{TRUE|T}, a *.txt file is exported
 #'   to the working directory
 #' @param file.name The name of the file if \code{export = TRUE}
@@ -357,62 +316,60 @@ plot.mtsi <- function(x, SI = 15, radar = TRUE, arrange.label = FALSE, size.poin
 #' @param ... Options used by the tibble package to format the output. See
 #'   \code{\link[tibble:formatting]{tibble::print()}} for more details.
 #' @author Tiago Olivoto \email{tiagoolivoto@@gmail.com}
-#' @method print mtsi
+#' @method print mgidi
 #' @export
 #' @examples
 #' \donttest{
 #' library(metan)
-#' # Based on stability only
-#' MTSI_MODEL <- waasb(data_ge,
-#'   resp = c(GY, HM),
-#'   gen = GEN,
-#'   env = ENV,
-#'   rep = REP
-#' )
-#'
-#' MTSI_index <- mtsi(MTSI_MODEL)
-#' print(MTSI_index)
+#' model <- gamem(data_g,
+#'                gen = GEN,
+#'                rep = REP,
+#'                resp = c(KW, NR, NKE, NKR))
+#' mgidi_index <- mgidi(model)
+#' print(mgidi_index)
 #' }
-print.mtsi <- function(x, export = FALSE, file.name = NULL, digits = 4, ...) {
-  if (!class(x) == "mtsi") {
-    stop("The object must be of class 'mtsi'")
+print.mgidi <- function(x, export = FALSE, file.name = NULL, digits = 4, ...) {
+  if (!class(x) == "mgidi") {
+    stop("The object must be of class 'mgidi'")
   }
   if (export == TRUE) {
-    file.name <- ifelse(is.null(file.name) == TRUE, "mtsi print", file.name)
+    file.name <- ifelse(is.null(file.name) == TRUE, "mgidi print", file.name)
     sink(paste0(file.name, ".txt"))
   }
   opar <- options(pillar.sigfig = digits)
   on.exit(options(opar))
-  cat("-------------------- Correlation matrix used used in factor analysis -----------------\n")
+  cat("-------------------------------------------------------------------------------\n")
+  cat("Correlation matrix used used in factor analysis \n")
+  cat("-------------------------------------------------------------------------------\n")
   print(x$cormat)
-  cat("\n")
-  cat("---------------------------- Principal component analysis -----------------------------\n")
+  cat("-------------------------------------------------------------------------------\n")
+  cat("Principal component analysis \n")
+  cat("-------------------------------------------------------------------------------\n")
   print(x$PCA)
-  cat("\n")
-  cat("--------------------------------- Initial loadings -----------------------------------\n")
+  cat("-------------------------------------------------------------------------------\n")
+  cat("Initial loadings \n")
+  cat("-------------------------------------------------------------------------------\n")
   print(x$initial.loadings)
-  cat("\n")
-  cat("-------------------------- Loadings after varimax rotation ---------------------------\n")
+  cat("-------------------------------------------------------------------------------\n")
+  cat("Loadings after varimax rotation \n")
+  cat("-------------------------------------------------------------------------------\n")
   print(x$finish.loadings)
-  cat("\n")
-  cat("--------------------------- Scores for genotypes-ideotype -----------------------------\n")
+  cat("-------------------------------------------------------------------------------\n")
+  cat("Scores for genotypes-ideotype \n")
+  cat("-------------------------------------------------------------------------------\n")
   print(rbind(x$scores.gen, x$scores.ide))
-  cat("\n")
-  cat("---------------------------- Multitrait stability index ------------------------------\n")
-  print(x$MTSI)
-  cat("\n")
-  cat("--------------------------- Selection differential (index) ----------------------------\n")
+  cat("-------------------------------------------------------------------------------\n")
+  cat("Multi-trait genotype-ideotype distance index \n")
+  cat("-------------------------------------------------------------------------------\n")
+  print(x$MGIDI)
+  cat("-------------------------------------------------------------------------------\n")
+  cat("Selection differential \n")
+  cat("-------------------------------------------------------------------------------\n")
   print(x$sel.dif)
-  cat("\n")
-  cat("-------------------------- Mean of Selection differential -----------------------------\n")
-  print(x$mean.sd)
-  cat("\n")
-  cat("------------------------- Selection differential (variables) --------------------------\n")
-  print(x$sel.dif.var)
-  cat("\n")
-  cat("-------------------------------- Selected genotypes -----------------------------------\n")
+  cat("-------------------------------------------------------------------------------\n")
+  cat("Selected genotypes \n")
+  cat("-------------------------------------------------------------------------------\n")
   cat(x$Selected)
-  cat("\n")
   if (export == TRUE) {
     sink()
   }

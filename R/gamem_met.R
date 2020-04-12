@@ -174,14 +174,14 @@
 #' }
 #'
 gamem_met <- function(.data,
-                  env,
-                  gen,
-                  rep,
-                  resp,
-                  block = NULL,
-                  random = "gen",
-                  prob = 0.05,
-                  verbose = TRUE) {
+                      env,
+                      gen,
+                      rep,
+                      resp,
+                      block = NULL,
+                      random = "gen",
+                      prob = 0.05,
+                      verbose = TRUE) {
   if (!random %in% c("env", "gen", "all")) {
     stop("The argument 'random' must be one of the 'gen', 'env', or 'all'.")
   }
@@ -243,12 +243,13 @@ gamem_met <- function(.data,
   for (var in 1:nvar) {
     data <- factors %>%
       mutate(Y = vars[[var]])
+    check_labels(data)
     if(has_na(data)){
       data <- remove_rows_na(data)
       has_text_in_num(data)
     }
     if(!is_balanced_trial(data, ENV, GEN, Y) && random == "env"){
-      stop("A mixed-effect model with genotype as fixed cannot be fitted with unbalanced data.", call. = FALSE)
+      warning("Fitting a model with unbalanced data considering genotype as fixed effect is not suggested.", call. = FALSE)
     }
     Nenv <- nlevels(data$ENV)
     Ngen <- nlevels(data$GEN)
@@ -297,14 +298,19 @@ gamem_met <- function(.data,
     bups <- lme4::ranef(Complete)
     bINT <-
       data.frame(Names = rownames(bups$`GEN:ENV`)) %>%
-      separate(Names, into = c("GEN", "ENV")) %>%
+      separate(Names, into = c("GEN", "ENV"), sep = ":") %>%
       add_cols(BLUPge = bups[[1]][[1]]) %>%
       to_factor(1:2)
-     Details <- ge_details(data, ENV, GEN, Y) %>%
-      add_rows(Parameters = "Ngen", Y = Ngen, .before = 1) %>%
-      add_rows(Parameters = "Nenv", Y = Nenv, .before = 1) %>%
+    Details <-
+      rbind(ge_details(data, ENV, GEN, Y),
+            tribble(~Parameters,  ~Y,
+                    "Ngen", Ngen,
+                    "Nenv", Nenv)) %>%
       rename(Values = Y)
     if(mod1){
+      ran_ef <- c("GEN, GEN:ENV")
+      fix_ef <- c("ENV, REP(ENV)")
+      rand_ef <-
       data_factors <- data %>% select_non_numeric_cols()
       BLUPgen <-
         means_by(data, GEN) %>%
@@ -316,13 +322,17 @@ gamem_met <- function(.data,
         arrange(-Predicted) %>%
         column_to_first(Rank)
       BLUPint <-
-        left_join(data_factors, bINT, by = c("ENV", "GEN")) %>%
-        left_join(BLUPgen, by = "GEN") %>%
-        select(ENV, GEN, REP, BLUPg, BLUPge) %>%
-        add_cols(`BLUPg+ge` = BLUPge + BLUPg,
-                 Predicted = predict(Complete))
+        suppressWarnings(
+          left_join(data_factors, bINT, by = c("ENV", "GEN")) %>%
+            left_join(BLUPgen, by = "GEN") %>%
+            select(ENV, GEN, REP, BLUPg, BLUPge) %>%
+            add_cols(`BLUPg+ge` = BLUPge + BLUPg,
+                     Predicted = predict(Complete))
+        )
       BLUPenv <- NULL
     } else if(mod2){
+      ran_ef <- c("GEN, BLOCK(ENV:REP), GEN:ENV")
+      fix_ef <- c("ENV, REP(ENV)")
       data_factors <- data %>% select_non_numeric_cols()
       BLUPgen <-
         means_by(data, GEN) %>%
@@ -335,18 +345,22 @@ gamem_met <- function(.data,
         column_to_first(Rank)
       blupBRE <-
         data.frame(Names = rownames(bups$`BLOCK:(REP:ENV)`)) %>%
-        separate(Names, into = c("BLOCK", "REP", "ENV")) %>%
+        separate(Names, into = c("BLOCK", "REP", "ENV"), sep = ":") %>%
         add_cols(BLUPbre = bups$`BLOCK:(REP:ENV)`[[1]]) %>%
         to_factor(1:3)
       BLUPint <-
-        left_join(data_factors, bINT, by = c("ENV", "GEN")) %>%
-        left_join(BLUPgen, by = "GEN") %>%
-        left_join(blupBRE, by = c("ENV", "REP", "BLOCK")) %>%
-        select(ENV, REP, BLOCK, GEN, BLUPg, BLUPge, BLUPbre) %>%
-        add_cols(`BLUPg+ge+bre` = BLUPge + BLUPg + BLUPbre,
-                 Predicted = `BLUPg+ge+bre` + left_join(data_factors, data %>% means_by(ENV, REP), by = c("ENV", "REP"))$Y)
+        suppressWarnings(
+          left_join(data_factors, bINT, by = c("ENV", "GEN")) %>%
+            left_join(BLUPgen, by = "GEN") %>%
+            left_join(blupBRE, by = c("ENV", "REP", "BLOCK")) %>%
+            select(ENV, REP, BLOCK, GEN, BLUPg, BLUPge, BLUPbre) %>%
+            add_cols(`BLUPg+ge+bre` = BLUPge + BLUPg + BLUPbre,
+                     Predicted = `BLUPg+ge+bre` + left_join(data_factors, data %>% means_by(ENV, REP), by = c("ENV", "REP"))$Y)
+        )
       BLUPenv <- NULL
     } else if (mod3){
+      ran_ef <- c("REP(ENV), ENV, GEN:ENV")
+      fix_ef <- c("GEN")
       data_factors <- data %>% select_non_numeric_cols()
       BLUPgen <- NULL
       BLUPenv <-
@@ -358,17 +372,21 @@ gamem_met <- function(.data,
         column_to_first(Rank)
       blupRWE <-
         data.frame(Names = rownames(bups$`REP:ENV`)) %>%
-        separate(Names, into = c("REP", "ENV")) %>%
+        separate(Names, into = c("REP", "ENV"), sep = ":") %>%
         add_cols(BLUPre = bups$`REP:ENV`[[1]]) %>%
         to_factor(1:2)
       BLUPint <-
-        left_join(data_factors, bINT, by = c("ENV", "GEN")) %>%
-        left_join(BLUPenv, by = "ENV") %>%
-        left_join(blupRWE, by = c("ENV", "REP")) %>%
-        select(ENV, GEN, REP, BLUPe, BLUPge, BLUPre) %>%
-        add_cols(`BLUPge+e+re` = BLUPge + BLUPe + BLUPre,
-                 Predicted = `BLUPge+e+re` + left_join(data_factors, means_by(data, GEN), by = c("GEN"))$Y)
+        suppressWarnings(
+          left_join(data_factors, bINT, by = c("ENV", "GEN")) %>%
+            left_join(BLUPenv, by = "ENV") %>%
+            left_join(blupRWE, by = c("ENV", "REP")) %>%
+            select(ENV, GEN, REP, BLUPe, BLUPge, BLUPre) %>%
+            add_cols(`BLUPge+e+re` = BLUPge + BLUPe + BLUPre,
+                     Predicted = `BLUPge+e+re` + left_join(data_factors, means_by(data, GEN), by = c("GEN"))$Y)
+        )
     } else if (mod4){
+      ran_ef <- c("BLOCK(ENV:REP), REP(ENV), ENV, GEN:ENV")
+      fix_ef <- c("GEN")
       data_factors <- data %>% select_non_numeric_cols()
       BLUPgen <- NULL
       BLUPenv <-
@@ -380,12 +398,12 @@ gamem_met <- function(.data,
         column_to_first(Rank)
       blupRWE <-
         data.frame(Names = rownames(bups$`REP:ENV`)) %>%
-        separate(Names, into = c("REP", "ENV")) %>%
+        separate(Names, into = c("REP", "ENV"), sep = ":") %>%
         add_cols(BLUPre = bups$`REP:ENV`[[1]]) %>%
         to_factor(1:2)
       blupBRE <-
         data.frame(Names = rownames(bups$`BLOCK:(REP:ENV)`)) %>%
-        separate(Names, into = c("BLOCK", "REP", "ENV")) %>%
+        separate(Names, into = c("BLOCK", "REP", "ENV"), sep = ":") %>%
         add_cols(BLUPbre = bups$`BLOCK:(REP:ENV)`[[1]]) %>%
         to_factor(1:3)
       genCOEF <- summary(Complete)[["coefficients"]] %>%
@@ -395,14 +413,18 @@ gamem_met <- function(.data,
         rename(Y = Estimate) %>%
         to_factor(1)
       BLUPint <-
-        left_join(data_factors, bINT, by = c("ENV", "GEN")) %>%
-        left_join(BLUPenv, by = "ENV") %>%
-        left_join(blupRWE, by = c("ENV", "REP")) %>%
-        left_join(blupBRE, by = c("ENV", "REP", "BLOCK")) %>%
-        select(ENV, REP, BLOCK, GEN, BLUPe, BLUPge, BLUPre, BLUPbre) %>%
-        add_cols(`BLUPe+ge+re+bre` = BLUPge + BLUPe + BLUPre + BLUPbre,
-                 Predicted = `BLUPe+ge+re+bre` + left_join(data_factors, genCOEF, by = "GEN")$Y)
+        suppressWarnings(
+          left_join(data_factors, bINT, by = c("ENV", "GEN")) %>%
+            left_join(BLUPenv, by = "ENV") %>%
+            left_join(blupRWE, by = c("ENV", "REP")) %>%
+            left_join(blupBRE, by = c("ENV", "REP", "BLOCK")) %>%
+            select(ENV, REP, BLOCK, GEN, BLUPe, BLUPge, BLUPre, BLUPbre) %>%
+            add_cols(`BLUPe+ge+re+bre` = BLUPge + BLUPe + BLUPre + BLUPbre,
+                     Predicted = `BLUPe+ge+re+bre` + left_join(data_factors, genCOEF, by = "GEN")$Y)
+        )
     } else if (mod5){
+      ran_ef <- c("GEN, REP(ENV), ENV, GEN:ENV")
+      fix_ef <- c("-")
       data_factors <- data %>% select_non_numeric_cols()
       BLUPgen <-
         means_by(data, GEN) %>%
@@ -421,19 +443,23 @@ gamem_met <- function(.data,
         arrange(-Predicted) %>%
         column_to_first(Rank)
       blupRWE <- data.frame(Names = rownames(bups$`REP:ENV`)) %>%
-        separate(Names, into = c("REP", "ENV")) %>%
+        separate(Names, into = c("REP", "ENV"), sep = ":") %>%
         add_cols(BLUPre = bups$`REP:ENV`[[1]]) %>%
         arrange(ENV) %>%
         to_factor(1:2)
       BLUPint <-
-        left_join(data_factors, bINT, by = c("ENV", "GEN")) %>%
-        left_join(BLUPgen, by = "GEN") %>%
-        left_join(BLUPenv, by = "ENV") %>%
-        left_join(blupRWE, by = c("ENV", "REP")) %>%
-        select(GEN, ENV, REP, BLUPe, BLUPg, BLUPge, BLUPre) %>%
-        add_cols(`BLUPg+e+ge+re` = BLUPge + BLUPe + BLUPg + BLUPre,
-                 Predicted = `BLUPg+e+ge+re` + ovmean)
+        suppressWarnings(
+          left_join(data_factors, bINT, by = c("ENV", "GEN")) %>%
+            left_join(BLUPgen, by = "GEN") %>%
+            left_join(BLUPenv, by = "ENV") %>%
+            left_join(blupRWE, by = c("ENV", "REP")) %>%
+            select(GEN, ENV, REP, BLUPe, BLUPg, BLUPge, BLUPre) %>%
+            add_cols(`BLUPg+e+ge+re` = BLUPge + BLUPe + BLUPg + BLUPre,
+                     Predicted = `BLUPg+e+ge+re` + ovmean)
+        )
     } else if (mod6){
+      ran_ef <- c("GEN, BLOCK(ENV:REP), REP(ENV), ENV, GEN:ENV")
+      fix_ef <- c("-")
       data_factors <- data %>% select_non_numeric_cols()
       BLUPgen <-
         means_by(data, GEN) %>%
@@ -452,24 +478,26 @@ gamem_met <- function(.data,
         arrange(-Predicted) %>%
         column_to_first(Rank)
       blupRWE <- data.frame(Names = rownames(bups$`REP:ENV`)) %>%
-        separate(Names, into = c("REP", "ENV")) %>%
+        separate(Names, into = c("REP", "ENV"), sep = ":") %>%
         add_cols(BLUPre = bups$`REP:ENV`[[1]]) %>%
         arrange(ENV) %>%
         to_factor(1:2)
       blupBRE <-
         data.frame(Names = rownames(bups$`BLOCK:(REP:ENV)`)) %>%
-        separate(Names, into = c("BLOCK", "REP", "ENV")) %>%
+        separate(Names, into = c("BLOCK", "REP", "ENV"), sep = ":") %>%
         add_cols(BLUPbre = bups$`BLOCK:(REP:ENV)`[[1]]) %>%
         to_factor(1:3)
       BLUPint <-
-        left_join(data_factors, bINT, by = c("ENV", "GEN")) %>%
-        left_join(BLUPgen, by = "GEN") %>%
-        left_join(BLUPenv, by = "ENV") %>%
-        left_join(blupRWE, by = c("ENV", "REP")) %>%
-        left_join(blupBRE, by = c("ENV", "REP", "BLOCK")) %>%
-        select(GEN, ENV, REP, BLOCK, BLUPg, BLUPe, BLUPge, BLUPre, BLUPbre) %>%
-        add_cols(`BLUPg+e+ge+re+bre` = BLUPg + BLUPge + BLUPe + BLUPre + BLUPbre,
-                 Predicted = `BLUPg+e+ge+re+bre` + ovmean)
+        suppressWarnings(
+          left_join(data_factors, bINT, by = c("ENV", "GEN")) %>%
+            left_join(BLUPgen, by = "GEN") %>%
+            left_join(BLUPenv, by = "ENV") %>%
+            left_join(blupRWE, by = c("ENV", "REP")) %>%
+            left_join(blupBRE, by = c("ENV", "REP", "BLOCK")) %>%
+            select(GEN, ENV, REP, BLOCK, BLUPg, BLUPe, BLUPge, BLUPre, BLUPbre) %>%
+            add_cols(`BLUPg+e+ge+re+bre` = BLUPg + BLUPge + BLUPe + BLUPre + BLUPbre,
+                     Predicted = `BLUPg+e+ge+re+bre` + ovmean)
+        )
     }
     residuals <- data.frame(fortify.merMod(Complete))
     residuals$reff <- BLUPint$BLUPge
@@ -490,7 +518,10 @@ gamem_met <- function(.data,
     listres[[paste(names(vars[var]))]] <- temp
   }
   if (verbose == TRUE) {
-    cat("Model: ", model_formula, "\n")
+    message("Method: REML/BLUP\n", appendLF = FALSE)
+    message("Random effects: ", ran_ef, "\n", appendLF = FALSE)
+    message("Fixed effects: ", fix_ef, "\n", appendLF = FALSE)
+    message("Denominador DF: Satterthwaite's method\n", appendLF = FALSE)
     cat("---------------------------------------------------------------------------\n")
     cat("P-values for Likelihood Ratio Test of the analyzed traits\n")
     cat("---------------------------------------------------------------------------\n")
