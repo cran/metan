@@ -20,6 +20,7 @@
 #'   console.
 #' @return An object of class \code{fai_blup} with the following items:
 #' * \strong{data} The data (BLUPS) used to compute the index.
+#' * \strong{eigen} The eigenvalues and explained variance for each axis.
 #' * \strong{FA} The results of the factor analysis.
 #' * \strong{canonical.loadings} The canonical loadings for each factor retained.
 #' * \strong{FAI} A list with the FAI-BLUP index for each ideotype design.
@@ -65,7 +66,7 @@ fai_blup <- function(.data, DI, UI, SI = NULL, mineval = 1, verbose = TRUE) {
     stop("The length of DI and UI must be the same length of data.")
   }
   if(has_class(.data, c("gamem", "waasb"))){
-    means <- gmd(.data, "blupg") %>%
+    means <- gmd(.data, "blupg", verbose = verbose) %>%
       column_to_rownames("GEN")
   } else {
     if(has_class(.data, c("data.frame", "matrix")) & !has_rownames(.data)){
@@ -250,9 +251,10 @@ fai_blup <- function(.data, DI, UI, SI = NULL, mineval = 1, verbose = TRUE) {
     }
   }
   return(structure(list(data = means,
-                        FA = data.frame(fa),
-                        canonical.loadings = data.frame(canonical.loadings),
-                        FAI = data.frame(ideotype.rank) %>% rownames_to_column("Genotype"),
+                        eigen = data.frame(pca) %>% rownames_to_column("PC") %>% as_tibble(),
+                        FA = data.frame(fa) %>% rownames_to_column("Variable") %>% as_tibble(),
+                        canonical.loadings = data.frame(canonical.loadings) %>% rownames_to_column("Variable") %>% as_tibble(),
+                        FAI = data.frame(ideotype.rank) %>% rownames_to_column("Genotype") %>% as_tibble(),
                         selection.diferential = selection.diferential),
                    class = "fai_blup"))
 }
@@ -296,11 +298,15 @@ fai_blup <- function(.data, DI, UI, SI = NULL, mineval = 1, verbose = TRUE) {
 #' \donttest{
 #' library(metan)
 #'
-#' FAI = data_ge2 %>%
-#'       waasb(ENV, GEN, REP, c(KW, NKE, PH, EH)) %>%
-#'       fai_blup(DI = c('max, max, max, min'),
-#'                UI = c('min, min, min, max'),
-#'                SI = 15)
+#' mod <- waasb(data_ge,
+#'              env = ENV,
+#'              gen = GEN,
+#'              rep = REP,
+#'              resp = c(GY, HM))
+#'
+#' FAI <- fai_blup(mod,
+#'                 DI = c('max, max'),
+#'                 UI = c('min, min'))
 #' plot(FAI)
 #' }
 #'

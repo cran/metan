@@ -20,11 +20,14 @@
 #'   \code{.data}. Use \code{order = "asce"} or \code{order = "desc"} to reorder
 #'   the labels to ascending or descending order, respectively, based on the
 #'   values of the variable \code{y}.
-#' @param y.expand A multiplication range expansion factor. Defaults to
-#'   \code{0.05}.
+#' @param y.lim The range of y axis. Defaults to \code{NULL} (maximum and
+#'   minimum values of the data set). New values can be inserted as \code{y.lim
+#'   = c(y.min, y.max)}.
 #' @param y.breaks The breaks to be plotted in the y-axis. Defaults to waiver().
 #'   \code{authomatic breaks}. The same arguments than \code{x.breaks} can be
 #'   used.
+#' @param y.expand A multiplication range expansion factor. Defaults to
+#'   \code{0.05}.
 #' @param xlab,ylab The labels of the axes x and y, respectively. Defaults to
 #'   \code{NULL}.
 #' @param n.dodge The number of rows that should be used to render the x labels.
@@ -52,8 +55,9 @@
 #' @param width.erbar The width of the error bar. Defaults to 30% of
 #'   \code{width.bar}.
 #' @param level The confidence level
-#' @param invert Logical argument. If \code{TRUE}, the order of the factors
-#'   entered in changes in the graph
+#' @param invert Logical argument. If \code{TRUE}, rotate the plot in
+#'   \code{plot_bars()} and invert the order of the factors in
+#'   \code{plot_factbars()}.
 #' @param color.bar,fill.bar Argument valid for \code{plot_bars()}. The color and
 #'   fill values of the bars.
 #' @param col Logical argument valid for \code{plot_factbars()}. If
@@ -105,8 +109,9 @@ plot_bars <- function(.data,
                       x,
                       y,
                       order = NULL,
-                      y.expand = 0.05,
+                      y.lim = NULL,
                       y.breaks = waiver(),
+                      y.expand = 0.05,
                       xlab = NULL,
                       ylab = NULL,
                       n.dodge = 1,
@@ -127,7 +132,6 @@ plot_bars <- function(.data,
                       level = 0.95,
                       invert = FALSE,
                       width.bar = 0.9,
-                      legend.position = "bottom",
                       size.line = 0.5,
                       size.text = 12,
                       fontfam = "sans",
@@ -139,12 +143,25 @@ plot_bars <- function(.data,
   }
   width.erbar <- ifelse(missing(width.erbar), width.bar/3, width.erbar)
   cl <- match.call()
-  datac <- .data %>%
-  to_factor({{x}}) %>%
+  datac <-
+    .data %>%
+    to_factor({{x}}) %>%
     select({{x}}, {{y}}) %>%
     group_by({{x}}) %>%
-    desc_stat({{y}}, stats = c("n, mean, sd.amo, ci, se"), level = level) %>%
-    add_cols(max = mean + ci)
+    desc_stat({{y}}, stats = c("n, mean, sd.amo, ci, se"), level = level)
+  if(errorbar == TRUE){
+    if(stat.erbar == "ci"){
+      datac %<>% add_cols(max = mean + ci)
+    }
+    if(stat.erbar == "sd"){
+      datac %<>% add_cols(max = mean + sd.amo)
+    }
+    if(stat.erbar == "se"){
+      datac %<>% add_cols(max = mean + se)
+    }
+  } else{
+    datac %<>% add_cols(max = mean)
+  }
   ylab <- ifelse(is.null(ylab), cl$y, ylab)
   xlab <- ifelse(is.null(xlab), cl$x, xlab)
   if(!missing(order)){
@@ -158,11 +175,11 @@ plot_bars <- function(.data,
     p <- ggplot(datac, aes(x = {{x}}, y = mean))
   }
   p <- p +
-      geom_bar(stat = "identity",
-               width = width.bar,
-               color = color.bar,
-               size = size.line,
-               fill = fill.bar)
+    geom_bar(stat = "identity",
+             width = width.bar,
+             color = color.bar,
+             size = size.line,
+             fill = fill.bar)
   if (errorbar == TRUE) {
     if (stat.erbar == "ci") {
       p <- p + geom_errorbar(aes(ymin = mean - ci,
@@ -188,7 +205,7 @@ plot_bars <- function(.data,
       stop("The labels must be either length 1 or the same as the levels of ",
            paste(xlab), " (", nrow(datac), ")", call. = FALSE)
     }
-    p <- p + geom_text(aes(label = lab.bar),
+    p <- p + geom_text(aes(label = lab.bar, y = max),
                        vjust = lab.bar.vjust,
                        hjust = lab.bar.hjust,
                        size = size.text.bar,
@@ -199,16 +216,21 @@ plot_bars <- function(.data,
     plot_theme %+replace%
     theme(axis.ticks.length = unit(0.2, "cm"),
           axis.text = element_text(size = size.text, family = fontfam, colour = "black"),
+          axis.text.x = element_text(angle = lab.x.angle, vjust = lab.x.vjust, hjust = lab.x.hjust),
           axis.title = element_text(size = size.text, family = fontfam, colour = "black"),
           axis.ticks = element_line(colour = "black"),
           plot.margin = margin(0.2, 0.2, 0.2, 0.2, "cm")) +
     labs(y = ylab, x = xlab) +
-    scale_y_continuous(breaks = y.breaks,
+    scale_y_continuous(limits = y.lim,
+                       breaks = y.breaks,
                        expand = expansion(mult = c(0, y.expand))) +
     scale_x_discrete(guide = guide_axis(n.dodge = n.dodge, check.overlap = check.overlap))
 
   if (verbose == TRUE) {
     print(datac)
+  }
+  if(invert == TRUE){
+    return(p + coord_flip())
   }
   return(p)
 }
@@ -220,8 +242,9 @@ plot_bars <- function(.data,
 plot_factbars <- function(.data,
                           ...,
                           resp,
-                          y.expand = 0.05,
+                          y.lim = NULL,
                           y.breaks = waiver(),
+                          y.expand = 0.05,
                           xlab = NULL,
                           ylab = NULL,
                           n.dodge = 1,
@@ -251,16 +274,29 @@ plot_factbars <- function(.data,
                           plot_theme = theme_metan()) {
   width.erbar <- ifelse(missing(width.erbar), width.bar/3, width.erbar)
   cl <- match.call()
-  datac <- .data %>%
+  datac <-
+    .data %>%
     mutate_at(quos(...), as.factor) %>%
     select(..., Y = {{resp}}) %>%
     group_by(...) %>%
     summarise(N = n(),
               mean_var = mean(Y, na.rm = na.rm),
               sd = sd(Y, na.rm = na.rm), se = sd/sqrt(n()),
-              ci = se * qt(level/2 + 0.5, n() - 1),
-              max = mean_var + ci)
+              ci = se * qt(level/2 + 0.5, n() - 1))
   nam <- names(select(.data, ...))
+  if(errorbar == TRUE){
+    if(stat.erbar == "ci"){
+      datac %<>% add_cols(max = mean_var + ci)
+    }
+    if(stat.erbar == "sd"){
+      datac %<>% add_cols(max = mean_var + sd.amo)
+    }
+    if(stat.erbar == "se"){
+      datac %<>% add_cols(max = mean_var + se)
+    }
+  } else{
+    datac %<>% add_cols(max = mean_var)
+  }
   if (length(nam) > 1) {
     names(datac) <- c("x", "y", "N", "mean_var", "sd", "se", "ci", "max")
   } else {
@@ -345,7 +381,7 @@ plot_factbars <- function(.data,
       stop("The labels must be either length 1 or the same as the levels of ",
            paste(quos(...)), " (", nrow(datac), ")")
     }
-    p <- p + geom_text(aes(label = lab.bar),
+    p <- p + geom_text(aes(label = lab.bar, y = max),
                        position = pd,
                        vjust = lab.bar.vjust,
                        hjust = lab.bar.hjust,
@@ -357,6 +393,7 @@ plot_factbars <- function(.data,
     plot_theme %+replace%
     theme(axis.ticks.length = unit(0.2, "cm"),
           axis.text = element_text(size = size.text, family = fontfam, colour = "black"),
+          axis.text.x = element_text(angle = lab.x.angle, vjust = lab.x.vjust, hjust = lab.x.hjust),
           axis.title = element_text(size = size.text, family = fontfam, colour = "black"),
           axis.ticks = element_line(colour = "black"),
           plot.margin = margin(0.2, 0.2, 0.2, 0.2, "cm"),
@@ -364,7 +401,8 @@ plot_factbars <- function(.data,
           legend.position = legend.position,
           legend.text = element_text(size = size.text, family = fontfam)) +
     labs(y = ylab, x = xlab) +
-    scale_y_continuous(breaks = y.breaks,
+    scale_y_continuous(limits = y.lim,
+                       breaks = y.breaks,
                        expand = expansion(mult = c(0, y.expand))) +
     scale_x_discrete(guide = guide_axis(n.dodge = n.dodge, check.overlap = check.overlap))
   if (verbose == TRUE) {
