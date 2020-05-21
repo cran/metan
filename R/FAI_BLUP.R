@@ -11,9 +11,10 @@
 #'   desirable (DI) and undesirable (UI) ideotypes. For each element of the
 #'   vector, allowed values are \code{'max'}, \code{'min'}, \code{'mean'}, or a
 #'   numeric value. Use a comma-separated vector of text. For example, \code{DI
-#'   = c("max, max, min, min")}.
+#'   = c("max, max, min, min")}. By default, DI is set to \code{"max"} for all
+#'   traits and UI is set to \code{"min"} for all traits.
 #' @param SI An integer (0-100). The selection intensity in percentage of the
-#'   total number of genotypes.
+#'   total number of genotypes. Defaults to 15.
 #' @param mineval The minimum value so that an eigenvector is retained in the
 #'   factor analysis.
 #' @param verbose Logical value. If \code{TRUE} some results are shown in
@@ -22,9 +23,12 @@
 #' * \strong{data} The data (BLUPS) used to compute the index.
 #' * \strong{eigen} The eigenvalues and explained variance for each axis.
 #' * \strong{FA} The results of the factor analysis.
-#' * \strong{canonical.loadings} The canonical loadings for each factor retained.
+#' * \strong{canonical_loadings} The canonical loadings for each factor retained.
 #' * \strong{FAI} A list with the FAI-BLUP index for each ideotype design.
-#' * \strong{selection.diferential} A list with the selection differential for each ideotype design.
+#' * \strong{selection_diferential} A list with the selection differential for each ideotype design.
+#' * \strong{sel_gen} The selected genotypes.
+#' * \strong{ideotype_construction} A list with the construction of the ideotypes.
+#' * \strong{total_gain} A list with the total gain for variables to be increased or decreased.
 #' @md
 #' @author Tiago Olivoto \email{tiagoolivoto@@gmail.com}
 #' @references Rocha, J.R.A.S.C.R, J.C. Machado, and P.C.S. Carneiro. 2018.
@@ -49,9 +53,12 @@
 #'                 DI = c('max, max'),
 #'                 UI = c('min, min'))
 #'}
-fai_blup <- function(.data, DI, UI, SI = NULL, mineval = 1, verbose = TRUE) {
-  ideotype.D <- unlist(strsplit(DI, split=", "))
-  ideotype.U <- unlist(strsplit(UI, split=", "))
+fai_blup <- function(.data,
+                     DI = NULL,
+                     UI = NULL,
+                     SI = 15,
+                     mineval = 1,
+                     verbose = TRUE) {
   if (!has_class(.data, c("data.frame", "tbl_df", "tbl", "waasb", "gamem"))) {
     stop("The .data must be an object of class 'waasb', 'gamem' or a data.frame/tbl_df.")
   }
@@ -62,11 +69,21 @@ fai_blup <- function(.data, DI, UI, SI = NULL, mineval = 1, verbose = TRUE) {
   if (nvar == 1) {
     stop("The multitrait stability index cannot be computed with one single variable.")
   }
+  ifelse(missing(DI),
+         ideotype.D <- rep("max", nvar),
+         ifelse(is.character(DI),
+                ideotype.D <- unlist(strsplit(DI, split=", ")),
+                ideotype.D <- DI))
+  ifelse(missing(UI),
+         ideotype.U <- rep("min", nvar),
+         ifelse(is.character(UI),
+                ideotype.U <- unlist(strsplit(UI, split=", ")),
+                ideotype.U <- UI))
   if (length(ideotype.D) != nvar || length(ideotype.U) != nvar) {
     stop("The length of DI and UI must be the same length of data.")
   }
   if(has_class(.data, c("gamem", "waasb"))){
-    means <- gmd(.data, "blupg", verbose = verbose) %>%
+    means <- gmd(.data, "blupg", verbose = FALSE) %>%
       column_to_rownames("GEN")
   } else {
     if(has_class(.data, c("data.frame", "matrix")) & !has_rownames(.data)){
@@ -80,55 +97,45 @@ fai_blup <- function(.data, DI, UI, SI = NULL, mineval = 1, verbose = TRUE) {
     ngs <- round(nrow(means) * (SI/100), 0)
   }
   if (any(apply(means, 2, function(x) sd(x) == 0) == TRUE)) {
-    nam <- paste(names(means[, apply(means, 2, function(x) sd(x) ==
-                                       0)]), collapse = " ")
+    nam <- paste(names(means[, apply(means, 2, function(x) sd(x) == 0)]), collapse = " ")
     stop("The genotype effect was not significant for the variables ",
          nam, ". Please, remove them and try again.")
   }
-  normalize.means <- scale(means, center = FALSE, scale = apply(means,
-                                                                2, sd))
+  normalize.means <- scale(means, center = FALSE, scale = apply(means, 2, sd))
   cor.means <- cor(normalize.means)
   eigen.decomposition <- eigen(cor.means)
   eigen.values <- eigen.decomposition$values
   eigen.vectors <- eigen.decomposition$vectors
-  colnames(eigen.vectors) <- paste("PC", 1:ncol(cor.means),
-                                   sep = "")
+  colnames(eigen.vectors) <- paste("PC", 1:ncol(cor.means), sep = "")
   rownames(eigen.vectors) <- colnames(means)
   if (length(eigen.values[eigen.values >= mineval]) == 1) {
-    eigen.values.factors <- as.vector(c(as.matrix(sqrt(eigen.values[eigen.values >=
-                                                                      mineval]))))
-    initial.loadings <- cbind(eigen.vectors[, eigen.values >=
-                                              mineval] * eigen.values.factors)
+    eigen.values.factors <- as.vector(c(as.matrix(sqrt(eigen.values[eigen.values >= mineval]))))
+    initial.loadings <- cbind(eigen.vectors[, eigen.values >= mineval] * eigen.values.factors)
     finish.loadings <- initial.loadings
   } else {
-    eigen.values.factors <- t(replicate(ncol(cor.means),
-                                        c(as.matrix(sqrt(eigen.values[eigen.values >= mineval])))))
-    initial.loadings <- eigen.vectors[, eigen.values >= mineval] *
-      eigen.values.factors
+    eigen.values.factors <-
+      t(replicate(ncol(cor.means), c(as.matrix(sqrt(eigen.values[eigen.values >= mineval])))))
+    initial.loadings <- eigen.vectors[, eigen.values >= mineval] * eigen.values.factors
     finish.loadings <- varimax(initial.loadings)[[1]][]
   }
-  colnames(finish.loadings) <- paste("FA", 1:ncol(initial.loadings),
-                                     sep = "")
+  colnames(finish.loadings) <- paste("FA", 1:ncol(initial.loadings), sep = "")
   rownames(finish.loadings) <- colnames(means)
   comunalits <- rowSums(finish.loadings^2)
-  cumulative.var <- cumsum(eigen.values/sum(eigen.values)) *
-    100
+  cumulative.var <- cumsum(eigen.values/sum(eigen.values)) * 100
   pca <- cbind(eigen.values, cumulative.var)
   rownames(pca) <- paste("PC", 1:ncol(means), sep = "")
   fa <- cbind(finish.loadings, comunalits)
-  canonical.loadings <- t(t(finish.loadings) %*% solve(cor.means))
+  canonical.loadings <- t(t(finish.loadings) %*% solve_svd(cor.means))
   rownames(canonical.loadings) <- colnames(means)
   scores <- t(t(canonical.loadings) %*% t(normalize.means))
   colnames(scores) <- paste("SC", 1:ncol(scores), sep = "")
   rownames(scores) <- rownames(means)
   IN <- 2^ncol(finish.loadings)
-  pos.var.factor <- which(abs(finish.loadings) == apply(abs(finish.loadings),
-                                                        1, max), arr.ind = T)
+  pos.var.factor <- which(abs(finish.loadings) == apply(abs(finish.loadings), 1, max), arr.ind = T)
   var.factor <- lapply(1:ncol(finish.loadings), function(i) {
     rownames(pos.var.factor)[pos.var.factor[, 2] == i]
   })
-  names(var.factor) <- paste("FA", 1:ncol(finish.loadings),
-                             sep = "")
+  names(var.factor) <- paste("FA", 1:ncol(finish.loadings), sep = "")
   names.pos.var.factor <- rownames(pos.var.factor)
   names(ideotype.D) <- colnames(means)
   names(ideotype.U) <- colnames(means)
@@ -138,8 +145,7 @@ fai_blup <- function(.data, DI, UI, SI = NULL, mineval = 1, verbose = TRUE) {
   names(ideotype.U.test) <- colnames(means)
   ideotype.D.test <- ideotype.D.test[names.pos.var.factor]
   ideotype.U.test <- ideotype.U.test[names.pos.var.factor]
-  canonical.loadings.factor <- canonical.loadings[names.pos.var.factor,
-                                                  ]
+  canonical.loadings.factor <- canonical.loadings[names.pos.var.factor, ]
   ideotype.factor.D <- ideotype.D[names.pos.var.factor]
   ideotype.factor.U <- ideotype.U[names.pos.var.factor]
   id.D <- rev(paste("D", 1:ncol(finish.loadings), sep = ""))
@@ -149,8 +155,7 @@ fai_blup <- function(.data, DI, UI, SI = NULL, mineval = 1, verbose = TRUE) {
     D.U[, i]
   })
   construction.ideotypes <- as.matrix(rev(expand.grid(groups.factor)))
-  colnames(construction.ideotypes) <- paste("Factor", 1:ncol(construction.ideotypes),
-                                            sep = "")
+  colnames(construction.ideotypes) <- paste("Factor", 1:ncol(construction.ideotypes), sep = "")
   D <- numeric(0)
   U <- numeric(0)
   normalize.means.factor <- normalize.means[, names.pos.var.factor]
@@ -197,19 +202,18 @@ fai_blup <- function(.data, DI, UI, SI = NULL, mineval = 1, verbose = TRUE) {
   comb.U.D <- c(Di, Ui)
   ideotypes.matrix <- matrix(0, IN, ncol(means))
   for (i in 1:IN) {
-    ideotypes.matrix[i, ] <- unlist(comb.U.D[construction.ideotypes[i,
-                                                                    ]])
+    ideotypes.matrix[i, ] <- unlist(comb.U.D[construction.ideotypes[i, ]])
   }
   rownames(ideotypes.matrix) <- paste("ID", 1:IN, sep = "")
   colnames(ideotypes.matrix) <- colnames(normalize.means.factor)
   ideotypes.scores <- ideotypes.matrix %*% canonical.loadings.factor
-  sd.scores <- scale(rbind(scores, ideotypes.scores), center = FALSE,
+  sd.scores <- scale(rbind(scores, ideotypes.scores),
+                     center = FALSE,
                      scale = apply(rbind(scores, ideotypes.scores), 2, sd))
   DE <- dist(sd.scores)
   DEM <- as.matrix(sqrt((1/ncol(scores)) * ((DE)^2)))
   GID <- DEM[1:nrow(scores), (nrow(scores) + 1):nrow(sd.scores)]
-  spatial.prob <- (1/GID)/(replicate(IN, c(as.numeric(apply((1/GID),
-                                                            1, sum)))))
+  spatial.prob <- (1/GID)/(replicate(IN, c(as.numeric(apply((1/GID), 1, sum)))))
   ideotype.rank <- lapply(1:IN, function(i) {
     sort(spatial.prob[, i], decreasing = TRUE)
   })
@@ -217,14 +221,53 @@ fai_blup <- function(.data, DI, UI, SI = NULL, mineval = 1, verbose = TRUE) {
   means.factor <- means[, names.pos.var.factor]
   if (!is.null(ngs)) {
     selection.diferential <- lapply(1:IN, function(i) {
-      data.frame(cbind(Factor = pos.var.factor[, 2], Xo = colMeans(means.factor),
-                       Xs = colMeans(means.factor[names(ideotype.rank[[i]])[1:ngs],
-                                                  ]), SD = colMeans(means.factor[names(ideotype.rank[[i]])[1:ngs],
-                                                                                 ]) - colMeans(means.factor), SDperc = (colMeans(means.factor[names(ideotype.rank[[i]])[1:ngs],
-                                                                                                                                              ]) - colMeans(means.factor))/colMeans(means.factor) *
-                         100))
+      data.frame(cbind(Factor = pos.var.factor[, 2],
+                       Xo = colMeans(means.factor),
+                       Xs = colMeans(means.factor[names(ideotype.rank[[i]])[1:ngs],]),
+                       SD = colMeans(means.factor[names(ideotype.rank[[i]])[1:ngs],]) - colMeans(means.factor),
+                       SDperc = (colMeans(means.factor[names(ideotype.rank[[i]])[1:ngs], ]) - colMeans(means.factor))/colMeans(means.factor) * 100)) %>%
+        rownames_to_column("VAR")
     })
     names(selection.diferential) <- paste("ID", 1:IN, sep = "")
+
+    if(has_class(.data, "gamem")){
+      h2 <-
+        gmd(.data, verbose = FALSE) %>%
+        subset(Parameters == "H2mg") %>%
+        remove_cols(1) %>%
+        t() %>%
+        as.data.frame() %>%
+        rownames_to_column("VAR") %>%
+        set_names("VAR", "h2")
+      selection.diferential <-
+        lapply(selection.diferential, function(x){
+          left_join(x, h2, by = "VAR") %>%
+            add_cols(SG = SD * h2,
+                     SGperc = SG / Xo * 100)
+        })
+    }
+    if(is.character(DI)){
+      vars <-
+        tibble(VAR = colnames(means),
+               sense = DI) %>%
+        mutate(sense = case_when(sense == "max" ~ "increase",
+                                 sense == "min" ~ "decrease",
+                                 sense == "mean" ~ "keep",
+                                 !sense  %in% c("max", "min", "mean") ~ "none"))
+      selection.diferential <-
+        lapply(selection.diferential, function(x){
+          left_join(x, vars, by = "VAR")
+        })
+      total_gain <-
+        lapply(selection.diferential, function(x){
+          desc_stat(x,
+                    by = sense,
+                    any_of(c("SDperc", "SGperc")),
+                    stats = c("min, mean, max, sum"))
+        })
+    } else{
+      total_gain <- NULL
+    }
   }
   if (is.null(ngs)) {
     selection.diferential <- NULL
@@ -253,9 +296,12 @@ fai_blup <- function(.data, DI, UI, SI = NULL, mineval = 1, verbose = TRUE) {
   return(structure(list(data = means,
                         eigen = data.frame(pca) %>% rownames_to_column("PC") %>% as_tibble(),
                         FA = data.frame(fa) %>% rownames_to_column("Variable") %>% as_tibble(),
-                        canonical.loadings = data.frame(canonical.loadings) %>% rownames_to_column("Variable") %>% as_tibble(),
+                        canonical_loadings = data.frame(canonical.loadings) %>% rownames_to_column("Variable") %>% as_tibble(),
                         FAI = data.frame(ideotype.rank) %>% rownames_to_column("Genotype") %>% as_tibble(),
-                        selection.diferential = selection.diferential),
+                        selection_diferential = selection.diferential,
+                        sel_gen = names(ideotype.rank[[1]])[1:ngs],
+                        construction_ideotypes = construction.ideotypes,
+                        total_gain = total_gain),
                    class = "fai_blup"))
 }
 
@@ -279,10 +325,11 @@ fai_blup <- function(.data, DI, UI, SI = NULL, mineval = 1, verbose = TRUE) {
 #' @param arrange.label Logical argument. If \code{TRUE}, the labels are
 #'   arranged to avoid text overlapping. This becomes useful when the number of
 #'   genotypes is large, say, more than 30.
-#' @param size.point The size of the point in graphic.
-#' @param col.sel The colour for selected genotypes.
-#' @param col.nonsel The colour for nonselected genotypes.
+#' @param size.point The size of the point in graphic. Defaults to 2.5.
+#' @param size.line The size of the line in graphic. Defaults to 0.7.
 #' @param size.text The size for the text in the plot. Defaults to 10.
+#' @param col.sel The colour for selected genotypes. Defaults to \code{"red"}.
+#' @param col.nonsel The colour for nonselected genotypes. Defaults to \code{"black"}.
 #' @param ... Other arguments to be passed from ggplot2::theme().
 #' @author Tiago Olivoto \email{tiagoolivoto@@gmail.com}
 #' @references Rocha, J.R.A.S.C.R, J.C. Machado, and P.C.S. Carneiro. 2018.
@@ -310,8 +357,16 @@ fai_blup <- function(.data, DI, UI, SI = NULL, mineval = 1, verbose = TRUE) {
 #' plot(FAI)
 #' }
 #'
-plot.fai_blup <- function(x, ideotype = 1, SI = 15, radar = TRUE, arrange.label = FALSE,
-                          size.point = 2, col.sel = "red", col.nonsel = "black", size.text = 10,
+plot.fai_blup <- function(x,
+                          ideotype = 1,
+                          SI = 15,
+                          radar = TRUE,
+                          arrange.label = FALSE,
+                          size.point = 2.5,
+                          size.line = 0.7,
+                          size.text = 10,
+                          col.sel = "red",
+                          col.nonsel = "black",
                           ...) {
 
   if (!class(x) == "fai_blup") {
@@ -323,18 +378,19 @@ plot.fai_blup <- function(x, ideotype = 1, SI = 15, radar = TRUE, arrange.label 
     set_names("Genotype", "FAI", "sel")
   data[["sel"]][(round(nrow(data) * (SI/100), 0) + 1):nrow(data)] <- "Nonselected"
   cutpoint <- min(subset(data, sel == "Selected")$FAI)
-  p <- ggplot(data = data, aes(x = reorder(Genotype, FAI),
-                               y = FAI)) +
-    geom_hline(yintercept = cutpoint, col = "red") +
-    geom_path(colour = "black", group = 1) +
-    geom_point(size = size.point, aes(fill = sel), shape = 21, colour = "black") +
+  p <- ggplot(data = data, aes(x = reorder(Genotype, FAI), y = FAI)) +
+    geom_hline(yintercept = cutpoint, col = col.sel, size = size.line) +
+    geom_path(colour = "black", group = 1, size = size.line) +
+    geom_point(size = size.point, aes(fill = sel), shape = 21, colour = "black", stroke  = size.point / 10) +
     scale_x_discrete() +
-    theme_metan() +
-    theme(legend.title = element_blank(),
+    theme_minimal() +
+    theme(legend.position = "bottom",
+          legend.title = element_blank(),
           axis.title.x = element_blank(),
           panel.border = element_blank(),
           axis.text = element_text(colour = "black"),
-          text = element_text(size = size.text)) +
+          text = element_text(size = size.text),
+          ...) +
     labs(x = "", y = "FAI-BLUP") +
     scale_fill_manual(values = c(col.nonsel, col.sel))
   if (radar == TRUE) {
@@ -346,17 +402,10 @@ plot.fai_blup <- function(x, ideotype = 1, SI = 15, radar = TRUE, arrange.label 
       sang <- c(-90 - 180/length(sseq) * sseq)
       p <- p +
         coord_polar() +
-        theme_minimal()+
-        theme(legend.position = "bottom",
-              legend.title = element_blank(),
-              axis.text.x = element_text(angle = c(fang, sang)),
+        theme(axis.text.x = element_text(angle = c(fang, sang)),
               legend.margin = margin(-120, 0, 0, 0), ...)
     } else{
-      p <- p +
-        coord_polar() +
-        theme_minimal() +
-        theme(legend.position = "bottom",
-              legend.title = element_blank(), ...)
+      p <- p + coord_polar()
     }
   }
   return(p)

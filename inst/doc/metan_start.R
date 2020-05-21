@@ -30,16 +30,19 @@ get_model_data(mge, what = "gen_means") %>% round_cols()
 ammi_model <- performs_ammi(data_ge, ENV, GEN, REP, resp = c(GY, HM))
 waas_index <- waas(data_ge, ENV, GEN, REP, GY, verbose = FALSE)
 
-## ---- fig.height=8, fig.width=5,  message=FALSE, warning=FALSE----------------
+## ---- fig.height=12, fig.width=5,  message=FALSE, warning=FALSE---------------
 a <- plot_scores(ammi_model)
 b <- plot_scores(ammi_model,
+                 type = 2,
+                 second = "PC3")
+c <- plot_scores(ammi_model,
                  type = 2,
                  polygon = TRUE,
                  col.gen = "black",
                  col.env = "gray70",
                  col.segm.env = "gray70",
                  axis.expand = 1.5)
-arrange_ggplot(a, b, labels = letters[1:2], ncol = 1)
+arrange_ggplot(a, b, c, labels = letters[1:3], ncol = 1)
 
 ## -----------------------------------------------------------------------------
 predicted <- predict(ammi_model, naxis = c(4, 6))
@@ -61,12 +64,12 @@ get_model_data(model2) %>% round_cols(digits = 3)
 
 ## ---- fig.height=8, fig.width=4-----------------------------------------------
 library(ggplot2)
-c <- plot_blup(model2)
-d <- plot_blup(model2,
+d <- plot_blup(model2)
+e <- plot_blup(model2,
                prob = 0.1,
                col.shape  =  c("gray20", "gray80")) +
       coord_flip()
-arrange_ggplot(c, d,labels = letters[3:4], ncol = 1)
+arrange_ggplot(d, e, labels = letters[4:5], ncol = 1)
 
 ## -----------------------------------------------------------------------------
 get_model_data(model2, what = "blupge") %>% 
@@ -86,9 +89,9 @@ gge_model <- gge(data_ge, ENV, GEN, GY)
 
 
 ## ----echo = TRUE, fig.width = 4, fig.height=8, message=F, warning=F-----------
-e <- plot(gge_model)
-f <- plot(gge_model, type = 2)
-arrange_ggplot(e, f, labels = letters[5:6], ncol = 1)
+f <- plot(gge_model)
+g <- plot(gge_model, type = 2)
+arrange_ggplot(e, f, labels = letters[6:7], ncol = 1)
 
 ## -----------------------------------------------------------------------------
 stat_ge <- ge_stats(data_ge, ENV, GEN, REP, GY)
