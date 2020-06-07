@@ -25,6 +25,12 @@ plot_bars(
   lab.bar.vjust = -0.5,
   lab.bar.angle = 0,
   size.text.bar = 5,
+  values = FALSE,
+  values.hjust = 0.5,
+  values.vjust = 1.5,
+  values.angle = 0,
+  values.digits = 2,
+  values.size = 4,
   lab.x.hjust = 0.5,
   lab.x.vjust = 1,
   lab.x.angle = 0,
@@ -58,6 +64,12 @@ plot_factbars(
   lab.bar.vjust = -0.5,
   lab.bar.angle = 0,
   size.text.bar = 5,
+  values = FALSE,
+  values.hjust = 0.5,
+  values.vjust = 1.5,
+  values.angle = 0,
+  values.digits = 2,
+  values.size = 4,
   lab.x.hjust = 0.5,
   lab.x.vjust = 1,
   lab.x.angle = 0,
@@ -124,6 +136,23 @@ fit the labels in the plot.}
 
 \item{size.text.bar}{The size of the text in the bar labels.}
 
+\item{values}{Logical argument. Shows the values in the plot bar?
+Defaults to \code{FALSE}}
+
+\item{values.hjust, values.vjust}{The horizontal and vertical adjust
+for the values in the bar. Defaults to 0.5 and 1.5, respectively. If
+\code{values = TRUE} the values are shown bellow the error bar.}
+
+\item{values.angle}{The angle for the labels in the plot. Defaults to 0.
+Use in combination with \code{values.hjust} and \code{values.vjust}
+to best fit the values in the plot bar.}
+
+\item{values.digits}{The significant digits to show if \code{values
+= TRUE}. Defaults to \code{2}.}
+
+\item{values.size}{The size of the text for values shown in the bars.
+Defaults to \code{3}.}
+
 \item{lab.x.hjust, lab.x.vjust}{The horizontal and vertical adjust for the
 labels in the bar. Defaults to 0.5 and 1, respectively.}
 
@@ -139,7 +168,7 @@ the \code{stat.erbar = "se"} (standard error, default), \code{stat.erbar =
   "sd"} (standard deviation), or \code{stat.erbar = "ci"} (confidence
 interval), based on the confidence level in the argument \code{level}.}
 
-\item{width.erbar}{The width of the error bar. Defaults to 30\% of
+\item{width.erbar}{The width of the error bar. Defaults to 25\% of
 \code{width.bar}.}
 
 \item{level}{The confidence level}

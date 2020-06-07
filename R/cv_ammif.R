@@ -74,11 +74,8 @@
 #'                   gen = GEN,
 #'                   rep = REP,
 #'                   resp = GY,
-#'                   nboot = 10)
-#'
-#' # Alternatively (and more intuitively) using the pipe operator %>%
-#' model <- data_ge %>%
-#'          cv_ammif(ENV, GEN, REP, GY, 10)
+#'                   nboot = 5)
+#' plot(model)
 #' }
 #'
 cv_ammif <- function(.data, env, gen, rep, resp, nboot = 200, block, design = "RCBD", verbose = TRUE) {
@@ -157,14 +154,13 @@ cv_ammif <- function(.data, env, gen, rep, resp, nboot = 200, block, design = "R
         testing <- anti_join(data, modeling, by = c("ENV", "GEN", "REP", "Y", "rowid")) %>%
           arrange(ENV, GEN) %>%
           as.data.frame()
-        MEDIAS <- modeling %>%
-          group_by(ENV, GEN) %>%
-          summarise(Y = mean(Y)) %>%
+        MEDIAS <-
+          modeling %>%
+          means_by(ENV, GEN) %>%
           as.data.frame()
-        residual <- modeling %>%
-          group_by(ENV, GEN) %>%
-          summarise(Y = mean(Y)) %>%
-          ungroup() %>%
+        residual <-
+          modeling %>%
+          means_by(ENV, GEN) %>%
           mutate(residuals = residuals(lm(Y ~ ENV + GEN, data = .))) %>%
           pull(residuals)
         s <- svd(t(matrix(residual, Nenv, byrow = T)))
@@ -199,7 +195,8 @@ cv_ammif <- function(.data, env, gen, rep, resp, nboot = 200, block, design = "R
                 sd = sd(RMSPD),
                 se = sd(RMSPD)/sqrt(n()),
                 Q2.5 = quantile(RMSPD, 0.025),
-                Q97.5 = quantile(RMSPD, 0.975)) %>%
+                Q97.5 = quantile(RMSPD, 0.975),
+                .groups = "drop") %>%
       arrange(mean)
     return(
       structure(
@@ -281,15 +278,13 @@ cv_ammif <- function(.data, env, gen, rep, resp, nboot = 200, block, design = "R
         testing <- anti_join(data, modeling, by = c("ENV", "GEN", "REP", "BLOCK", "Y", "rowid")) %>%
           arrange(ENV, GEN) %>%
           as.data.frame()
-        MEDIAS <- modeling %>%
-          group_by(ENV, GEN) %>%
-          summarise(Y = mean(Y)) %>%
+        MEDIAS <-
+          modeling %>%
+          means_by(ENV, GEN) %>%
           as.data.frame()
         residual <- modeling %>%
           mutate(residuals = residuals(lm(Y ~ ENV/REP + REP:BLOCK + ENV +  GEN, data = .))) %>%
-          group_by(ENV, GEN) %>%
-          summarise(residuals = mean(residuals)) %>%
-          ungroup() %>%
+          means_by(ENV, GEN) %>%
           pull(residuals)
         s <- svd(t(matrix(residual, Nenv, byrow = T)))
         MGEN <- model.matrix(~factor(testing$GEN) - 1)
@@ -323,7 +318,8 @@ cv_ammif <- function(.data, env, gen, rep, resp, nboot = 200, block, design = "R
                 sd = sd(RMSPD),
                 se = sd(RMSPD)/sqrt(n()),
                 Q2.5 = quantile(RMSPD, 0.025),
-                Q97.5 = quantile(RMSPD, 0.975)) %>%
+                Q97.5 = quantile(RMSPD, 0.975),
+                .groups = "drop") %>%
       arrange(mean)
     return(
       structure(

@@ -20,6 +20,10 @@
 #'   two-way table with BLUPs for genotypes in each trait (genotypes in rows and
 #'   traits in columns). In the last case, row names must contain the genotypes
 #'   names.
+#' @param SI An integer (0-100). The selection intensity in percentage of the
+#' total number of genotypes.
+#' @param mineval The minimum value so that an eigenvector is retained in the
+#' factor analysis.
 #' @param ideotype A vector of length \code{nvar} where \code{nvar} is the
 #'   number of variables used to plan the ideotype. Use \code{'h'} to indicate
 #'   the traits in which higher values are desired or \code{'l'} to indicate the
@@ -28,10 +32,9 @@
 #'   the first four traits and lower values for the last trait. If \code{.data}
 #'   is a model fitted with the function \code{\link{gamem}}, the order of the
 #'   traits will be the declared in the argument \code{resp} in that function.
-#' @param SI An integer (0-100). The selection intensity in percentage of the
-#' total number of genotypes.
-#' @param mineval The minimum value so that an eigenvector is retained in the
-#' factor analysis.
+#' @param use The method for computing covariances in the presence of missing
+#'   values. Defaults to \code{complete.obs}, i.e., missing values are handled
+#'   by casewise deletion.
 #' @param verbose If \code{verbose = TRUE} (Default) then some results are
 #' shown in the console.
 #' @return An object of class \code{mgidi} with the following items:
@@ -86,6 +89,7 @@ mgidi <- function(.data,
                   SI = 15,
                   mineval = 1,
                   ideotype = NULL,
+                  use = "complete.obs",
                   verbose = TRUE) {
   d <- match.call()
   if(has_class(.data, c("gamem", "waasb"))){
@@ -129,10 +133,13 @@ mgidi <- function(.data,
                  sense = rescaled) %>%
     mutate(sense = ifelse(sense == 0, "decrease", "increase"))
   for (i in 1:ncol(data)) {
-    means[i] <- resca(values = data[i], new_max = rescaled[i], new_min = 100 - rescaled[i])
+     means[i] <- resca(values = data[i], new_max = rescaled[i], new_min = 100 - rescaled[i])
     colnames(means) <- colnames(data)
   }
-  cor.means <- cor(means)
+  if(has_na(means)){
+    warning("Missing values observed in the table of means. Using complete observations to compute the correlation matrix.", call. = FALSE)
+  }
+  cor.means <- cor(means, use = use)
   eigen.decomposition <- eigen(cor.means)
   eigen.values <- eigen.decomposition$values
   eigen.vectors <- eigen.decomposition$vectors
@@ -173,7 +180,7 @@ mgidi <- function(.data,
   Communality <- diag(A %*% t(A))
   Uniquenesses <- 1 - Communality
   fa <- cbind(A, Communality, Uniquenesses) %>% as_tibble(rownames = NA) %>%  rownames_to_column("VAR")
-  z <- scale(means, center = FALSE, scale = apply(means, 2, sd))
+  z <- scale(means, center = FALSE, scale = apply(means, 2, sd, na.rm = TRUE))
   canonical_loadings <- t(t(A) %*% solve_svd(cor.means))
   scores <- z %*% canonical_loadings
   colnames(scores) <- paste("FA", 1:ncol(scores), sep = "")
@@ -184,7 +191,7 @@ mgidi <- function(.data,
   })
   names(var.factor) <- paste("FA", 1:ncol(A), sep = "")
   names.pos.var.factor <- rownames(pos.var.factor)
-  ideotypes.matrix <- t(as.matrix(ideotype.D))/apply(means, 2, sd)
+  ideotypes.matrix <- t(as.matrix(ideotype.D))/apply(means, 2, sd, na.rm = TRUE)
   rownames(ideotypes.matrix) <- "ID1"
   ideotypes.scores <- ideotypes.matrix %*% canonical_loadings
   gen_ide <- sweep(scores, 2, ideotypes.scores, "-")
@@ -196,12 +203,14 @@ mgidi <- function(.data,
   observed <- means[, names.pos.var.factor]
   if (!is.null(ngs)) {
     data_order <- data[colnames(observed)]
-    sel_dif_mean <- tibble(VAR = names(pos.var.factor[, 2]),
-                           Factor = paste("FA", as.numeric(pos.var.factor[, 2])),
-                           Xo = colMeans(data_order),
-                           Xs = colMeans(data_order[names(MGIDI)[1:ngs], ]),
-                           SD = Xs - colMeans(data_order),
-                           SDperc = (Xs - colMeans(data_order)) / colMeans(data_order) * 100)
+    sel_dif_mean <-
+      tibble(VAR = names(pos.var.factor[, 2]),
+             Factor = paste("FA", as.numeric(pos.var.factor[, 2])),
+             Xo = colMeans(data_order, na.rm = TRUE),
+             Xs = colMeans(data_order[names(MGIDI)[1:ngs], ], na.rm = TRUE),
+             SD = Xs - colMeans(data_order, na.rm = TRUE),
+             SDperc = (Xs - colMeans(data_order, na.rm = TRUE)) / colMeans(data_order, na.rm = TRUE) * 100)
+
     if(has_class(.data, "gamem")){
       h2 <-
         gmd(.data, verbose = FALSE) %>%
@@ -288,6 +297,15 @@ mgidi <- function(.data,
 #' @param type The type of the plot. Defaults to \code{"index"}. Use \code{type
 #'   = "contribution"} to show the contribution of each factor to the MGIDI
 #'   index of the selected genotypes.
+#' @param genotypes When \code{type = "contribution"} defines the genotypes to
+#'   be shown in the plot. By default (\code{genotypes = "selected"} only
+#'   selected genotypes are shown. Use \code{genotypes = "all"} to plot the
+#'   contribution for all genotypes.)
+#' @param n.dodge The number of rows that should be used to render the x labels.
+#'   This is useful for displaying labels that would otherwise overlap.
+#' @param check.overlap Silently remove overlapping labels, (recursively)
+#'   prioritizing the first, last, and middle labels.
+#' @param invert Logical argument. If \code{TRUE}, rotate the plot.
 #' @param x.lab,y.lab The labels for the axes x and y, respectively. x label is
 #'   set to null when a radar plot is produced.
 #' @param arrange.label Logical argument. If \code{TRUE}, the labels are
@@ -321,6 +339,10 @@ plot.mgidi <- function(x,
                        SI = 15,
                        radar = TRUE,
                        type = "index",
+                       genotypes = "selected",
+                       n.dodge = 1,
+                       check.overlap = FALSE,
+                       invert = FALSE,
                        x.lab = NULL,
                        y.lab = NULL,
                        arrange.label = FALSE,
@@ -333,6 +355,9 @@ plot.mgidi <- function(x,
                        ...) {
   if(!type %in% c("index", "contribution")){
     stop("The argument index must be one of the 'index' or 'contribution'", call. = FALSE)
+  }
+  if(!genotypes %in% c("selected", "all")){
+    stop("The argument 'genotypes' must be one of the 'selected' or 'all'", call. = FALSE)
   }
   if(type == "index"){
   if (!class(x) == "mgidi") {
@@ -380,28 +405,35 @@ plot.mgidi <- function(x,
   } else{
     x.lab <- ifelse(!missing(x.lab), x.lab, "Selected genotypes")
     y.lab <- ifelse(!missing(y.lab), y.lab, "Proportion")
+    if(genotypes == "selected"){
     data <-
       x$contri_fac %>%
       subset(Gen %in% x$sel_gen)
     data$Gen <-
       factor(data$Gen, levels = x$sel_gen)
-    data <-
-      data %>%
-      pivot_longer(-Gen)
+    } else{
+      data <- x$contri_fac
+    }
+    data %<>% pivot_longer(-Gen)
     p <-
       ggplot(data, aes(Gen, value, fill = name))+
       geom_bar(stat = "identity",
                position = "fill",
                color = "black",
-               size = 0.3,
+               size = size.line,
                width = width.bar) +
         scale_y_continuous(expand = expansion(c(0, 0.05)))+
         theme_metan()+
-        theme(legend.position = "bottom")+
-        labs(x = x.lab,
-             y = y.lab)+
+        theme(legend.position = "bottom",
+              axis.ticks = element_line(size = size.line),
+              panel.border = element_rect(size = size.line))+
+        scale_x_discrete(guide = guide_axis(n.dodge = n.dodge, check.overlap = check.overlap))+
+        labs(x = x.lab, y = y.lab)+
         guides(guide_legend(nrow = 1)) +
         ggtitle("Contribution of each factor to the MGIDI index")
+    if(invert == TRUE){
+      p <- p + coord_flip()
+    }
   }
   return(p)
 }
@@ -431,7 +463,11 @@ plot.mgidi <- function(x,
 #' mgidi_index <- mgidi(model)
 #' print(mgidi_index)
 #' }
-print.mgidi <- function(x, export = FALSE, file.name = NULL, digits = 4, ...) {
+print.mgidi <- function(x,
+                        export = FALSE,
+                        file.name = NULL,
+                        digits = 4,
+                        ...) {
   if (!class(x) == "mgidi") {
     stop("The object must be of class 'mgidi'")
   }

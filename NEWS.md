@@ -1,3 +1,9 @@
+# metan 1.6.1
+* `plot.mgidi()` can now plot the contribution for all genotypes.
+* `plot_bars()` and `plot_factbars()` now shows the values with `values = TRUE`
+* Update the functions by using the new `dplyr::across()`
+* Update citation field by including number and version of the published paper.
+
 # metan 1.6.0
 ## New functions
 * `Smith_Hazel()` and `print.sh()` and `plot.sh()` for computing the Smith and Hazel selection index.

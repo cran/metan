@@ -78,12 +78,8 @@
 #'                 gen = GEN,
 #'                 rep = REP,
 #'                 resp = GY,
-#'                 nboot = 10,
+#'                 nboot = 5,
 #'                 naxis = 2)
-#'
-#' # Alternatively using the pipe operator %>%
-#' model <- data_ge %>%
-#'          cv_ammi(ENV, GEN, REP, GY)
 #' }
 #'
 #'
@@ -159,13 +155,13 @@ cv_ammi <- function(.data, env, gen, rep, resp, block = NULL, naxis = 2, nboot =
       testing <- anti_join(data, modeling, by = c("ENV", "GEN", "REP", "Y", "rowid")) %>%
         arrange(ENV, GEN) %>%
         as.data.frame()
-      MEDIAS <- modeling %>%
-        group_by(ENV, GEN) %>%
-        summarise(Y = mean(Y)) %>%
+      MEDIAS <-
+        modeling %>%
+        means_by(ENV, GEN) %>%
         as.data.frame()
-      residual <- modeling %>%
-        group_by(ENV, GEN) %>%
-        summarise(Y = mean(Y)) %>%
+      residual <-
+        modeling %>%
+        means_by(ENV, GEN) %>%
         ungroup() %>%
         mutate(residuals = residuals(lm(Y ~ ENV + GEN, data = .))) %>%
         pull(residuals)
