@@ -78,7 +78,7 @@ with the larger.
 "gen"} or \code{random = "all"}) with the following columns: \code{Phenotypic
 variance} the phenotypic variance; \code{Heritability} the broad-sense
 heritability; \code{GEr2} the coefficient of determination of the interaction
-effects; \code{Heribatility of means} the heritability on the mean basis;
+effects; \code{h2mg} the heritability on the mean basis;
 \code{Accuracy} the selective accuracy; \code{rge} the genotype-environment
 correlation; \code{CVg} the genotypic coefficient of variation; \code{CVr}
 the residual coefficient of variation; \code{CV ratio} the ratio between
@@ -182,7 +182,6 @@ recover or not to recover it? TAG. Theor. Appl. Genet. 128:1541-54.
 
 Patterson, H.D., and E.R. Williams. 1976. A new class of resolvable
 incomplete block designs. Biometrika 63:83-92.
-\href{https://doi.org/10.1093/biomet/63.1.83}{doi:10.1093/biomet/63.1.83}
 }
 \seealso{
 \code{\link{mtsi}} \code{\link{waas}}

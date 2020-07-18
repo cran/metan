@@ -231,14 +231,7 @@ fai_blup <- function(.data,
     names(selection.diferential) <- paste("ID", 1:IN, sep = "")
 
     if(has_class(.data, "gamem")){
-      h2 <-
-        gmd(.data, verbose = FALSE) %>%
-        subset(Parameters == "H2mg") %>%
-        remove_cols(1) %>%
-        t() %>%
-        as.data.frame() %>%
-        rownames_to_column("VAR") %>%
-        set_names("VAR", "h2")
+      h2 <- gmd(.data, "h2", verbose = FALSE)
       selection.diferential <-
         lapply(selection.diferential, function(x){
           left_join(x, h2, by = "VAR") %>%
@@ -276,11 +269,11 @@ fai_blup <- function(.data,
     cat("\n-----------------------------------------------------------------------------------\n")
     cat("Principal Component Analysis\n")
     cat("-----------------------------------------------------------------------------------\n")
-    print(pca)
+    print(round_cols(pca, digits = 2))
     cat("\n-----------------------------------------------------------------------------------\n")
     cat("Factor Analysis\n")
     cat("-----------------------------------------------------------------------------------\n")
-    print(fa)
+    print(round_cols(fa, digits = 2))
     cat("\n-----------------------------------------------------------------------------------\n")
     cat("Comunalit Mean:", mean(comunalits), "\n")
     if (!is.null(ngs)) {

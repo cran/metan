@@ -58,7 +58,7 @@
 #'
 #'   Eberhart, S.A., and W.A. Russell. 1966. Stability parameters for
 #'   comparing Varieties. Crop Sci. 6:36-40.
-#'   \href{https://www.crops.org/publications/cs/abstracts/6/1/CS0060010036}{doi:10.2135/cropsci1966.0011183X000600010011x}
+#'   \href{https://doi.org/10.2135/cropsci1966.0011183X000600010011x}{doi:10.2135/cropsci1966.0011183X000600010011x}
 #'
 #'   Fox, P.N., B. Skovmand, B.K. Thompson, H.J. Braun, and R.
 #'   Cormier. 1990. Yield and adaptation of hexaploid spring triticale.
@@ -119,7 +119,7 @@ ge_stats = function(.data,
   factors  <-
     .data %>%
     select({{env}}, {{gen}}, {{rep}}) %>%
-    mutate_all(as.factor)
+    mutate(across(everything(), as.factor))
   vars <- .data %>%
     select({{resp}}, -names(factors)) %>%
     select_numeric_cols()

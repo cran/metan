@@ -6,6 +6,7 @@
 #' The half-width confidence interval is computed according to the following
 #' equation:
 #' \loadmathjax
+#'
 #' \mjsdeqn{CI_w = 0.45304^r \times 2.25152 \times n^{-0.50089}}
 #'
 #' where \mjseqn{n} is the sample size and \mjseqn{r} is the correlation coefficient.
@@ -32,7 +33,7 @@
 #'   interval width for Pearson's correlation coefficient: a
 #'   Gaussian-independent estimator based on sample size and strength of
 #'   association. Agron. J. 110:1-8.
-#'   \href{https://dl.sciencesocieties.org/publications/aj/abstracts/109/1/131}{10.2134/agronj2016.04.0196}
+#'   \href{https://doi.org/10.2134/agronj2016.04.0196}{10.2134/agronj2016.04.0196}
 #'
 #' @export
 #' @examples
@@ -82,20 +83,24 @@ corr_ci <- function(.data = NA,
     internal <- function(x) {
       if (is.matrix(x)) {
         cor.x <- x
+        n <- n
       }
       if (is.data.frame(x)) {
         cor.x <- cor(x)
         n <- nrow(x)
       }
       m <- as.matrix(cor.x)
-      results <- tibble(Pair = names(sapply(combn(colnames(x),
-                                                  2, paste, collapse = " x "), names)), Corr = as.vector(t(m)[lower.tri(m,
-                                                                                                                        diag = F)]), CI = (0.45304^abs(Corr)) * 2.25152 *
-                          (n^-0.50089), LL = Corr - CI, UL = Corr + CI)
+
+      results <- tibble(Pair = names(sapply(combn(colnames(x), 2, paste, collapse = " x "), names)),
+                        Corr = as.vector(t(m)[lower.tri(m, diag = F)]),
+                        n = n,
+                        CI = (0.45304^abs(Corr)) * 2.25152 * (n^-0.50089),
+                        LL = Corr - CI,
+                        UL = Corr + CI)
       return(results)
     }
     if (is.matrix(.data)) {
-      out <- internal(.data)
+      return(as_tibble(internal(.data)))
     }
     if (is.data.frame(.data)) {
       if (missing(...)) {

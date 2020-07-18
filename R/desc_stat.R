@@ -36,6 +36,7 @@
 #'  * \code{"median"}: median.
 #'  * \code{"min"}: minimum value.
 #'  * \code{"n"}: the length of the data.
+#'  * \code{"ps"}: the pseudo-sigma (iqr / 1.35).
 #'  * \code{"q2.5", "q25", "q75", "q97.5"}: the percentile 2.5\%, first
 #'  quartile, third quartile, and percentile 97.5\%, respectively.
 #'  * \code{range}: The range of data).
@@ -153,12 +154,12 @@ desc_stat <- function(.data = NULL,
           plot_theme = plot_theme)
     return(results)
   }
-  all <- c("av.dev", "ci", "cv", "gmean", "hmean", "iqr", "kurt", "mad", "max", "mean", "median", "min", "n", "q2.5", "q25", "q75", "q97.5", "range", "sd.amo", "sd.pop", "se", "skew", "sum", "sum.dev", "sum.sq.dev", "valid.n", "var.amo", "var.pop")
+  all <- c("av.dev", "ci", "cv", "gmean", "hmean", "iqr", "kurt", "mad", "max", "mean", "median", "min", "n", "ps", "q2.5", "q25", "q75", "q97.5", "range", "sd.amo", "sd.pop", "se", "skew", "sum", "sum.dev", "sum.sq.dev", "valid.n", "var.amo", "var.pop")
   stats <- strsplit(
     case_when(
       all_lower_case(stats) == "main" ~ c("cv, max, mean, median, min, sd.amo, se, ci"),
-      all_lower_case(stats) == "all" ~ c("av.dev, ci, cv, gmean, hmean, iqr, kurt, mad, max, mean, median, min, n, q2.5, q25, q75, q97.5, range, sd.amo, sd.pop, se, skew, sum, sum.dev, sum.sq.dev, valid.n, var.amo, var.pop"),
-      all_lower_case(stats) == "robust" ~ c("n, median, iqr"),
+      all_lower_case(stats) == "all" ~ c("av.dev, ci, cv, gmean, hmean, iqr, kurt, mad, max, mean, median, min, n, ps, q2.5, q25, q75, q97.5, range, sd.amo, sd.pop, se, skew, sum, sum.dev, sum.sq.dev, valid.n, var.amo, var.pop"),
+      all_lower_case(stats) == "robust" ~ c("n, median, iqr, ps"),
       all_lower_case(stats) == "quantile" ~ c("n, min, q25, median, q75, max"),
       TRUE ~ all_lower_case(stats)
     ), "\\s*(\\s|,)\\s*")[[1]]
@@ -198,43 +199,47 @@ desc_stat <- function(.data = NULL,
     data %>%
     pivot_longer(everything(), names_to = "variable", values_to = "value") %>%
     group_by(variable) %>%
-    summarise_all(list(n = ~n(),
-                       valid.n = ~valid_n(., na.rm = na.rm),
-                       mean = ~mean(., na.rm = na.rm),
-                       gmean = ~gmean(., na.rm = na.rm),
-                       hmean = ~hmean(., na.rm = na.rm),
-                       range = ~range_data(., na.rm = na.rm),
-                       min = ~min(., na.rm = na.rm),
-                       q2.5 = ~quantile(., 0.025, na.rm = na.rm),
-                       q25 = ~quantile(., 0.25, na.rm = na.rm),
-                       median = ~median(., na.rm = na.rm),
-                       q75 = ~quantile(., 0.75, na.rm = na.rm),
-                       q97.5 = ~quantile(., 0.975, na.rm = na.rm),
-                       max = ~max(., na.rm = na.rm),
-                       iqr = ~IQR(., na.rm = na.rm),
-                       av.dev = ~av_dev(., na.rm = na.rm),
-                       mad = ~mad(., na.rm = na.rm),
-                       var.pop = ~var_pop(., na.rm = na.rm),
-                       var.amo = ~var_amo(., na.rm = na.rm),
-                       sd.pop = ~sd_pop(., na.rm = na.rm),
-                       sd.amo = ~sd_amo(., na.rm = na.rm),
-                       se = ~sem(., na.rm = na.rm),
-                       ci = ~ci_mean(., na.rm = na.rm, level = level),
-                       skew = ~skew(., na.rm = na.rm),
-                       kurt = ~kurt(., na.rm = na.rm),
-                       cv = ~cv(., na.rm = na.rm),
-                       sum = ~sum(., na.rm = na.rm),
-                       sum.dev = ~sum_dev(., na.rm = na.rm),
-                       sum.sq.dev = ~sum_sq_dev(., na.rm = na.rm))) %>%
+    summarise(across(value,
+                     list(n = ~n(),
+                          valid.n = ~valid_n(., na.rm = na.rm),
+                          mean = ~mean(., na.rm = na.rm),
+                          gmean = ~gmean(., na.rm = na.rm),
+                          hmean = ~hmean(., na.rm = na.rm),
+                          range = ~range_data(., na.rm = na.rm),
+                          min = ~min(., na.rm = na.rm),
+                          q2.5 = ~quantile(., 0.025, na.rm = na.rm),
+                          q25 = ~quantile(., 0.25, na.rm = na.rm),
+                          median = ~median(., na.rm = na.rm),
+                          q75 = ~quantile(., 0.75, na.rm = na.rm),
+                          q97.5 = ~quantile(., 0.975, na.rm = na.rm),
+                          max = ~max(., na.rm = na.rm),
+                          iqr = ~IQR(., na.rm = na.rm),
+                          av.dev = ~av_dev(., na.rm = na.rm),
+                          mad = ~mad(., na.rm = na.rm),
+                          ps = ~pseudo_sigma(., na.rm = na.rm),
+                          var.pop = ~var_pop(., na.rm = na.rm),
+                          var.amo = ~var_amo(., na.rm = na.rm),
+                          sd.pop = ~sd_pop(., na.rm = na.rm),
+                          sd.amo = ~sd_amo(., na.rm = na.rm),
+                          se = ~sem(., na.rm = na.rm),
+                          ci = ~ci_mean(., na.rm = na.rm, level = level),
+                          skew = ~skew(., na.rm = na.rm),
+                          kurt = ~kurt(., na.rm = na.rm),
+                          cv = ~cv(., na.rm = na.rm),
+                          sum = ~sum(., na.rm = na.rm),
+                          sum.dev = ~sum_dev(., na.rm = na.rm),
+                          sum.sq.dev = ~sum_sq_dev(., na.rm = na.rm)),
+                     .names = "{fn}"),
+              .groups = "drop") %>%
     select(group_cols(), variable, {{stats}}) %>%
-    mutate_if(is.numeric, round, digits = digits)
+    round_cols(digits = digits)
   return(results)
 }
 #'@name desc_stat
 #'@export
 desc_wider <- function(.data, which) {
-  factors = .data %>% select_non_numeric_cols()
-  numeric = .data %>% select({{which}})
+  factors <- .data %>% select_non_numeric_cols()
+  numeric <- .data %>% select({{which}})
   cbind(factors, numeric) %>%
     pivot_wider(values_from = {{which}}, names_from = variable)
 }

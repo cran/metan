@@ -82,7 +82,6 @@
 #'
 #' Patterson, H.D., and E.R. Williams. 1976. A new class of resolvable
 #' incomplete block designs. Biometrika 63:83-92.
-#' \href{https://doi.org/10.1093/biomet/63.1.83}{doi:10.1093/biomet/63.1.83}
 #'
 #'
 #' @return An object of class \code{waasb} with the following items for each
@@ -124,7 +123,7 @@
 #' "gen"} or \code{random = "all"}) with the following columns: \code{Phenotypic
 #' variance} the phenotypic variance; \code{Heritability} the broad-sense
 #' heritability; \code{GEr2} the coefficient of determination of the interaction
-#' effects; \code{Heribatility of means} the heritability on the mean basis;
+#' effects; \code{h2mg} the heritability on the mean basis;
 #' \code{Accuracy} the selective accuracy; \code{rge} the genotype-environment
 #' correlation; \code{CVg} the genotypic coefficient of variation; \code{CVr}
 #' the residual coefficient of variation; \code{CV ratio} the ratio between
@@ -194,13 +193,13 @@ gamem_met <- function(.data,
              {{gen}},
              {{rep}},
              {{block}}) %>%
-      mutate_all(as.factor)
+      mutate(across(everything(), as.factor))
   } else{
     factors  <- .data %>%
       select({{env}},
              {{gen}},
              {{rep}}) %>%
-      mutate_all(as.factor)
+      mutate(across(everything(), as.factor))
   }
   vars <- .data %>% select({{resp}}, -names(factors))
   vars %<>% select_numeric_cols()
@@ -259,10 +258,6 @@ gamem_met <- function(.data,
     minimo <- min(Nenv, Ngen) - 1
     vin <- vin + 1
     ovmean <- mean(data$Y)
-    if (minimo < 2) {
-      cat("\nWarning. The analysis is not possible.")
-      cat("\nThe number of environments and number of genotypes must be greater than 2\n")
-    }
     Complete <- suppressWarnings(suppressMessages(lmerTest::lmer(model_formula, data = data)))
     LRT <- suppressWarnings(suppressMessages(lmerTest::ranova(Complete, reduce.terms = FALSE) %>%
                                                mutate(model = lrt_groups) %>%
@@ -291,7 +286,7 @@ gamem_met <- function(.data,
       PROB <- ((1 - (1 - prob))/2) + (1 - prob)
       t <- qt(PROB, 100)
       Limits <- t * sqrt(((1 - AccuGen) * GV))
-      genpar <- tibble(Parameters = c("Phenotypic variance", "Heritability", "GEIr2", "Heribatility of means",
+      genpar <- tibble(Parameters = c("Phenotypic variance", "Heritability", "GEIr2", "h2mg",
                                       "Accuracy", "rge", "CVg", "CVr", "CV ratio"),
                        Values = c(FV, h2g, GEr2, h2mg, AccuGen, rge, CVg, CVr, CVratio))
     } else{
@@ -299,9 +294,9 @@ gamem_met <- function(.data,
     }
     bups <- lme4::ranef(Complete)
     bINT <-
-      data.frame(Names = rownames(bups$`GEN:ENV`)) %>%
+      data.frame(Names = rownames(bups[["GEN:ENV"]])) %>%
       separate(Names, into = c("GEN", "ENV"), sep = ":") %>%
-      add_cols(BLUPge = bups[[1]][[1]]) %>%
+      add_cols(BLUPge = bups[["GEN:ENV"]][[1]]) %>%
       to_factor(1:2)
     Details <-
       rbind(ge_details(data, ENV, GEN, Y),

@@ -74,6 +74,8 @@ alpha lattice design only).
 
 \strong{Objects of class \code{anova_joint} or \code{gafem}:}
 \itemize{
+\item \code{"Y"} The observed values.
+\item \code{"h2"} The broad-sense heritability.
 \item \code{"Sum Sq"} Sum of squares.
 \item \code{"Mean Sq"} Mean Squares.
 \item \code{"F value"} F-values.
@@ -208,6 +210,7 @@ objects of class \code{waas}).
 \item \code{"details"} The details of the trial.
 \item \code{"genpar"} Genetic parameters (default).
 \item \code{"gcov"} The genotypic variance-covariance matrix.
+\item \code{"h2"} The broad-sense heritability.
 \item \code{"lrt"} The likelihood-ratio test for random effects.
 \item \code{"pcov"} The phenotypic variance-covariance matrix.
 \item \code{"vcomp"} The variance components for random effects.
@@ -315,7 +318,7 @@ adaptability and genotypic stability. PLoS One 13:e0199880.
 
 Eberhart, S.A., and W.A. Russell. 1966. Stability parameters for comparing
 Varieties. Crop Sci. 6:36-40.
-\href{https://www.crops.org/publications/cs/abstracts/6/1/CS0060010036}{doi:10.2135/cropsci1966.0011183X000600010011x}.
+\href{https://doi.org/10.2135/cropsci1966.0011183X000600010011x}{doi:10.2135/cropsci1966.0011183X000600010011x}.
 
 Fox, P.N., B. Skovmand, B.K. Thompson, H.J. Braun, and R. Cormier. 1990.
 Yield and adaptation of hexaploid spring triticale. Euphytica 47:57-64.
@@ -346,7 +349,7 @@ melhoramento genetico. Embrapa Florestas, Colombo
 
 Sneller, C.H., L. Kilgore-Norquest, and D. Dombek. 1997. Repeatability of
 Yield Stability Statistics in Soybean. Crop Sci. 37:383-390.
-\href{http://doi.org/10.2135/cropsci1997.0011183X003700020013x}{doi:10.2135/cropsci1997.0011183X003700020013x}
+\href{https://onlinelibrary.wiley.com/doi/abs/10.2135/cropsci1997.0011183X003700020013x}{doi:10.2135/cropsci1997.0011183X003700020013x}
 
 Shahbazi, E. 2019. Genotype selection and stability analysis for seed yield
 of Nigella sativa using parametric and non-parametric statistics. Sci.

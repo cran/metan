@@ -85,7 +85,6 @@
 #'
 #' @references Patterson, H.D., and E.R. Williams. 1976. A new class of
 #' resolvable incomplete block designs. Biometrika 63:83-92.
-#' \href{https://doi.org/10.1093/biomet/63.1.83}{doi:10.1093/biomet/63.1.83}
 #'
 #' @references Mohring, J., E. Williams, and H.-P. Piepho. 2015. Inter-block
 #'   information: to recover or not to recover it? TAG. Theor. Appl. Genet.
@@ -127,7 +126,7 @@ cv_blup <- function(.data,
                           GEN = {{gen}},
                           REP = {{rep}},
                           Y = {{resp}}) %>%
-            mutate_at(1:3, as.factor)
+            mutate(across(1:3, as.factor))
         data <- tibble::rowid_to_column(data)
         Nbloc <- nlevels(data$REP)
         nrepval <- Nbloc - 1

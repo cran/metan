@@ -9,6 +9,7 @@
 \alias{hmean}
 \alias{gmean}
 \alias{kurt}
+\alias{pseudo_sigma}
 \alias{range_data}
 \alias{sd_amo}
 \alias{sd_pop}
@@ -26,6 +27,7 @@
 \alias{n_by}
 \alias{sd_by}
 \alias{sem_by}
+\alias{sum_by}
 \title{Useful functions for computing descriptive statistics}
 \usage{
 av_dev(.data, ..., na.rm = FALSE)
@@ -41,6 +43,8 @@ hmean(.data, ..., na.rm = FALSE)
 gmean(.data, ..., na.rm = FALSE)
 
 kurt(.data, ..., na.rm = FALSE)
+
+pseudo_sigma(.data, ..., na.rm = FALSE)
 
 range_data(.data, ..., na.rm = FALSE)
 
@@ -75,6 +79,8 @@ n_by(.data, ..., na.rm = FALSE)
 sd_by(.data, ..., na.rm = FALSE)
 
 sem_by(.data, ..., na.rm = FALSE)
+
+sum_by(.data, ..., na.rm = FALSE)
 }
 \arguments{
 \item{.data}{A data frame or a numeric vector.}

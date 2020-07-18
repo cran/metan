@@ -45,7 +45,6 @@
 #'   Default is \code{TRUE}.
 #' @references Patterson, H.D., and E.R. Williams. 1976. A new class of
 #' resolvable incomplete block designs. Biometrika 63:83-92.
-#' \href{https://doi.org/10.1093/biomet/63.1.83}{doi:10.1093/biomet/63.1.83}
 #'
 #' @return
 #' An object of class \code{cv_ammif} with the following items:
@@ -88,7 +87,7 @@ cv_ammif <- function(.data, env, gen, rep, resp, nboot = 200, block, design = "R
                     GEN = {{gen}},
                     REP = {{rep}},
                     Y = {{resp}})%>%
-      mutate_at(1:3, as.factor)
+      mutate(across(1:3, as.factor))
     RMSPDres <- data.frame(RMSPD = matrix(0, nboot, 1))
     data <- tibble::rowid_to_column(data)
     Nenv <- length(unique(data$ENV))

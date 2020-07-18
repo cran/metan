@@ -1,9 +1,9 @@
 #' @import ggplot2
 #' @import stats
-#' @importFrom dplyr  select  everything  mutate  group_by  group_by_if  group_keys
-#'             group_split  left_join  sample_n  anti_join pull  summarise_all
-#'             select_if arrange slice contains top_n summarise ungroup rename
-#'             is_grouped_df mutate_at desc n summarise_if funs
+#' @importFrom dplyr  select  everything  mutate  group_by  group_by_if
+#'   group_keys group_split  left_join  sample_n  anti_join pull select_if
+#'   arrange slice contains top_n summarise ungroup rename is_grouped_df desc n
+#'   funs
 #' @importFrom tibble rownames_to_column column_to_rownames tibble as_tibble
 #' @importFrom grid grobTree textGrob
 #' @importFrom ggrepel  geom_text_repel geom_label_repel
@@ -155,7 +155,7 @@ NULL
 NULL
 
 .onAttach <- function(libname, pkgname) {
-  vers <-  "v1.6.1"
+  vers <-  "v1.7.0"
   packageStartupMessage("[]=====================================================[]")
   packageStartupMessage("[] Multi-Environment Trial Analysis (metan) ", vers, "     []")
   packageStartupMessage("[] Author: Tiago Olivoto                               []")

@@ -49,7 +49,6 @@
 #'
 #' @references Patterson, H.D., and E.R. Williams. 1976. A new class of
 #' resolvable incomplete block designs. Biometrika 63:83-92.
-#' \href{https://doi.org/10.1093/biomet/63.1.83}{doi:10.1093/biomet/63.1.83}
 #'
 #' @author Tiago Olivoto \email{tiagoolivoto@@gmail.com}
 #' @md
@@ -82,13 +81,13 @@ anova_ind <- function(.data,
              {{gen}},
              {{rep}},
              {{block}}) %>%
-      mutate_all(as.factor)
+      mutate(across(everything(), as.factor))
   } else{
     factors  <- .data %>%
       select({{env}},
              {{gen}},
              {{rep}}) %>%
-      mutate_all(as.factor)
+      mutate(across(everything(), as.factor))
   }
   vars <- .data %>% select({{resp}}, -names(factors))
   vars %<>% select_numeric_cols()

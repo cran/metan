@@ -52,6 +52,8 @@
 #'
 #'
 #'  \strong{Objects of class \code{anova_joint} or \code{gafem}:}
+#' * \code{"Y"} The observed values.
+#' * \code{"h2"} The broad-sense heritability.
 #' * \code{"Sum Sq"} Sum of squares.
 #' * \code{"Mean Sq"} Mean Squares.
 #' * \code{"F value"} F-values.
@@ -161,6 +163,7 @@
 #' * \code{"details"} The details of the trial.
 #' * \code{"genpar"} Genetic parameters (default).
 #' * \code{"gcov"} The genotypic variance-covariance matrix.
+#' * \code{"h2"} The broad-sense heritability.
 #' * \code{"lrt"} The likelihood-ratio test for random effects.
 #' * \code{"pcov"} The phenotypic variance-covariance matrix.
 #' * \code{"vcomp"} The variance components for random effects.
@@ -195,7 +198,7 @@
 #'
 #' Eberhart, S.A., and W.A. Russell. 1966. Stability parameters for comparing
 #' Varieties. Crop Sci. 6:36-40.
-#' \href{https://www.crops.org/publications/cs/abstracts/6/1/CS0060010036}{doi:10.2135/cropsci1966.0011183X000600010011x}.
+#' \href{https://doi.org/10.2135/cropsci1966.0011183X000600010011x}{doi:10.2135/cropsci1966.0011183X000600010011x}.
 #'
 #' Fox, P.N., B. Skovmand, B.K. Thompson, H.J. Braun, and R. Cormier. 1990.
 #' Yield and adaptation of hexaploid spring triticale. Euphytica 47:57-64.
@@ -226,7 +229,7 @@
 #'
 #' Sneller, C.H., L. Kilgore-Norquest, and D. Dombek. 1997. Repeatability of
 #' Yield Stability Statistics in Soybean. Crop Sci. 37:383-390.
-#' \href{http://doi.org/10.2135/cropsci1997.0011183X003700020013x}{doi:10.2135/cropsci1997.0011183X003700020013x}
+#' \href{https://onlinelibrary.wiley.com/doi/abs/10.2135/cropsci1997.0011183X003700020013x}{doi:10.2135/cropsci1997.0011183X003700020013x}
 #'
 #' Shahbazi, E. 2019. Genotype selection and stability analysis for seed yield
 #' of Nigella sativa using parametric and non-parametric statistics. Sci.
@@ -345,11 +348,12 @@ get_model_data <- function(x,
   }
   check <- c(
     "blupg", "blupge", "Y", "WAASB", "PctResp", "PctWAASB", "wRes", "wWAASB", "OrResp", "OrWAASB",
-    "OrPC1", "WAASBY", "OrWAASBY", "vcomp", "lrt", "details", "genpar", "ranef", "data", "gcov", "pcov", "fixed")
+    "OrPC1", "WAASBY", "OrWAASBY", "vcomp", "lrt", "details", "genpar", "ranef", "data", "gcov",
+    "pcov", "fixed", "h2")
   check1 <- c("Y", "WAAS", "PctResp", "PctWAAS", "wRes", "wWAAS", "OrResp", "OrWAAS", "OrPC1", "WAASY", "OrWAASY")
   check2 <- paste("PC", 1:200, sep = "")
   check3 <- c("blupg", "blupge", "vcomp", "lrt", "genpar", "details", "ranef", "data", "gcov", "pcov", "fixed")
-  check3.1 <- c("blupg", "vcomp", "lrt", "genpar", "details", "ranef", "data", "gcov", "pcov", "fixed")
+  check3.1 <- c("h2", "blupg", "vcomp", "lrt", "genpar", "details", "ranef", "data", "gcov", "pcov", "fixed")
   check4 <- c("Y", "WAASB", "PctResp", "PctWAASB", "wRes", "wWAASB",
               "OrResp", "OrWAASB", "OrPC1", "WAASBY", "OrWAASBY")
   check5 <- c("ipca_ss", "ipca_ms", "ipca_fval", "ipca_pval", "ipca_expl", "ipca_accum")
@@ -367,7 +371,7 @@ get_model_data <- function(x,
   check17 <- c("Mean_rp", "Sd_rp", "Wi", "rank")
   check18 <- c("Mean_rp", "Sem_rp", "Wi", "rank")
   check19 <- c("ge_means", "env_means", "gen_means")
-  check20 <- c("Sum Sq", "Mean Sq", "F value", "Pr(>F)", "fitted", "resid", "stdres", "se.fit", "details")
+  check20 <- c("Y", "h2", "Sum Sq", "Mean Sq", "F value", "Pr(>F)", "fitted", "resid", "stdres", "se.fit", "details")
   check21 <- c("MEAN", "MSG", "FCG", "PFG", "MSB", "FCB", "PFB", "MSCR", "FCR", "PFCR", "MSIB_R", "FCIB_R", "PFIB_R", "MSE", "CV", "h2", "AS")
   if (!is.null(what) && what %in% check3 && !class(x) %in% c("waasb", "gamem", "gafem", "anova_joint")) {
     stop("Invalid argument 'what'. It can only be used with an oject of class 'waasb' or 'gamem', 'gafem, or 'anova_joint'. Please, check and fix.")
@@ -399,6 +403,16 @@ get_model_data <- function(x,
         dplyr::filter(type == {{type}}) %>%
         remove_cols(type) %>%
         column_to_first(gen)
+    }
+    if(what == "h2"){
+      bind <-
+        gmd(x, verbose = FALSE) %>%
+        subset(Parameters == "h2mg") %>%
+        remove_cols(1) %>%
+        t() %>%
+        as.data.frame() %>%
+        rownames_to_column("VAR") %>%
+        set_names("VAR", "h2")
     }
     if (what == "data") {
       factors <- x[[1]][["residuals"]] %>% select_non_numeric_cols()
@@ -565,7 +579,7 @@ get_model_data <- function(x,
                                   " ")[[1]]
             temp <-
               temp %>%
-              select(var_names, last_col()) %>%
+              select(all_of(var_names), last_col()) %>%
               distinct_all(.keep_all = TRUE)
             fact_nam <- sapply(colnames(temp %>% select_non_numeric_cols()), paste) %>%
               paste(., collapse = '_')
@@ -585,7 +599,8 @@ get_model_data <- function(x,
                    set_names(dfs[[j]][[i]], var_names, names(dfs)[j])
                  }) %>%
           reduce(full_join, by = var_names) %>%
-          arrange_if(~!is.numeric(.x))
+          arrange(across(where(~!is.numeric(.x))))
+          # arrange_if(~!is.numeric(.x))
         bind[[names(dfs[[1]])[i]]] <- num
       }
     }
@@ -621,7 +636,17 @@ get_model_data <- function(x,
       bind <- cbind(x[[1]][["anova"]] %>% select_non_numeric_cols(), bind) %>%
         remove_rows_na(verbose = FALSE)
     }
-    if(what %in% c("fitted", "resid", "stdres", "se.fit")){
+    if(what  == "h2"){
+      bind <- sapply(x, function(x){
+        MSG <- as.numeric(x[["anova"]][which(x[["anova"]][["Source"]] == "GEN"), 4])
+        MSE <- as.numeric(x[["anova"]][which(x[["anova"]][["Source"]] == "Residuals"), 4])
+        (MSG - MSE) / MSG
+      }) %>%
+        as.data.frame() %>%
+        rownames_to_column("VAR") %>%
+        set_names("VAR", "h2")
+    }
+    if(what %in% c("Y", "fitted", "resid", "stdres", "se.fit")){
       bind <- sapply(x, function(x){
         x[["augment"]][[what]]
       }) %>%  as_tibble()

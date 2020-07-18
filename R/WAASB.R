@@ -96,8 +96,8 @@
 #'   assumed depending on the experimental design of the trials.
 #' @param prob The probability for estimating confidence interval for BLUP's
 #'   prediction.
-#' @param ind_anova Logical argument set to \code{TRUE}. If \code{FALSE} the
-#'   within-environment ANOVA is not performed.
+#' @param ind_anova Logical argument set to \code{FALSE}. If \code{TRUE} an
+#'   within-environment ANOVA is performed.
 #' @param verbose Logical argument. If \code{verbose = FALSE} the code will run
 #'   silently.
 #' @param ... Arguments passed to the function
@@ -117,7 +117,6 @@
 #'
 #' Patterson, H.D., and E.R. Williams. 1976. A new class of resolvable
 #' incomplete block designs. Biometrika 63:83-92.
-#' \href{https://doi.org/10.1093/biomet/63.1.83}{doi:10.1093/biomet/63.1.83}
 #'
 #'
 #' @return An object of class \code{waasb} with the following items for each
@@ -170,7 +169,7 @@
 #' "gen"} or \code{random = "all"}) with the following columns: \code{Phenotypic
 #' variance} the phenotypic variance; \code{Heritability} the broad-sense
 #' heritability; \code{GEr2} the coefficient of determination of the interaction
-#' effects; \code{Heribatility of means} the heritability on the mean basis;
+#' effects; \code{h2mg} the heritability on the mean basis;
 #' \code{Accuracy} the selective accuracy; \code{rge} the genotype-environment
 #' correlation; \code{CVg} the genotypic coefficient of variation; \code{CVr}
 #' the residual coefficient of variation; \code{CV ratio} the ratio between
@@ -262,7 +261,7 @@ waasb <- function(.data,
                   wresp = NULL,
                   random = "gen",
                   prob = 0.05,
-                  ind_anova = TRUE,
+                  ind_anova = FALSE,
                   verbose = TRUE,
                   ...) {
     if (!random %in% c("env", "gen", "all")) {
@@ -275,13 +274,13 @@ waasb <- function(.data,
                    {{gen}},
                    {{rep}},
                    {{block}}) %>%
-            mutate_all(as.factor)
+            mutate(across(everything(), as.factor))
     } else{
         factors  <- .data %>%
             select({{env}},
                    {{gen}},
                    {{rep}}) %>%
-            mutate_all(as.factor)
+            mutate(across(everything(), as.factor))
     }
     vars <- .data %>% select({{resp}}, -names(factors))
     vars %<>% select_numeric_cols()
@@ -414,7 +413,7 @@ waasb <- function(.data,
             PROB <- ((1 - (1 - prob))/2) + (1 - prob)
             t <- qt(PROB, Nrep)
             Limits <- t * sqrt(((1 - AccuGen) * GV))
-            genpar <- tibble(Parameters = c("Phenotypic variance", "Heritability", "GEIr2", "Heribatility of means",
+            genpar <- tibble(Parameters = c("Phenotypic variance", "Heritability", "GEIr2", "h2mg",
                                             "Accuracy", "rge", "CVg", "CVr", "CV ratio"),
                              Values = c(FV, h2g, GEr2, h2mg, AccuGen, rge, CVg, CVr, CVratio))
         } else{
@@ -422,9 +421,9 @@ waasb <- function(.data,
         }
         bups <- lme4::ranef(Complete)
         bINT <-
-            data.frame(Names = rownames(bups$`GEN:ENV`)) %>%
+            data.frame(Names = rownames(bups[["GEN:ENV"]])) %>%
             separate(Names, into = c("GEN", "ENV"), sep = ":") %>%
-            add_cols(BLUPge = bups[[1]][[1]]) %>%
+            add_cols(BLUPge = bups[["GEN:ENV"]][[1]]) %>%
             to_factor(1:2)
         intmatrix <- as.matrix(make_mat(bINT, GEN, ENV, BLUPge))
         if(has_na(intmatrix)){
@@ -783,7 +782,7 @@ waasb <- function(.data,
 #'   \code{\link[cowplot]{plot_grid}}
 #' @author Tiago Olivoto \email{tiagoolivoto@@gmail.com}
 #' @importFrom cowplot plot_grid
-#' @importFrom dplyr distinct_all arrange_at
+#' @importFrom dplyr distinct_all
 #' @importFrom tibble tribble
 #' @method plot waasb
 #' @export
@@ -1037,7 +1036,7 @@ plot.waasb <- function(x,
                 data.frame(blups[i]) %>%
                 distinct_all() %>%
                 rowid_to_column(var = "id") %>%
-                arrange_at(2)
+                arrange(across(2))
             P <- ppoints(nrow(df))
             df$z <- qnorm(P)
             n <- nrow(df)

@@ -16,10 +16,10 @@
 #' genotype with the lowest MGIDI is then closer to the ideotype and therefore
 #' presents desired values for all the analyzed traits.
 #'
-#' @param .data An object fitted with the function \code{\link{gamem}} or a
-#'   two-way table with BLUPs for genotypes in each trait (genotypes in rows and
-#'   traits in columns). In the last case, row names must contain the genotypes
-#'   names.
+#' @param .data An object fitted with the function \code{\link{gafem}()},
+#'   \code{\link{gamem}()} or a two-way table with BLUPs for genotypes in each
+#'   trait (genotypes in rows and traits in columns). In the last case, row
+#'   names must contain the genotypes names.
 #' @param SI An integer (0-100). The selection intensity in percentage of the
 #' total number of genotypes.
 #' @param mineval The minimum value so that an eigenvector is retained in the
@@ -30,8 +30,9 @@
 #'   variables in which lower values are desired. For example, \code{ideotype =
 #'   c("h, h, h, h, l")} will consider that the ideotype has higher values for
 #'   the first four traits and lower values for the last trait. If \code{.data}
-#'   is a model fitted with the function \code{\link{gamem}}, the order of the
-#'   traits will be the declared in the argument \code{resp} in that function.
+#'   is a model fitted with the functions \code{\link{gafem}()} or
+#'   \code{\link{gamem}()}, the order of the traits will be the declared in the
+#'   argument \code{resp} in those functions.
 #' @param use The method for computing covariances in the presence of missing
 #'   values. Defaults to \code{complete.obs}, i.e., missing values are handled
 #'   by casewise deletion.
@@ -51,11 +52,13 @@
 #' * \strong{canonical_loadings} The canonical loadings.
 #' * \strong{scores_gen} The scores for genotypes in all retained factors.
 #' * \strong{scores_ide} The scores for the ideotype in all retained factors.
-#' * \strong{gen_ide} The distance between the scores of each genotype with the ideotype.
+#' * \strong{gen_ide} The distance between the scores of each genotype with the
+#' ideotype.|
 #' * \strong{MGIDI} The multi-trait genotype-ideotype distance index.
-#' * \strong{contri_fac} The relative contribution of each factor on the MGIDI value.
-#' The lower the contribution of a factor, the close of the ideotype the variables in such
-#' factor are.
+#' * \strong{contri_fac} The relative contribution of each factor on the MGIDI
+#' value.
+#' The lower the contribution of a factor, the close of the ideotype the
+#' variables in such factor are.
 #' * \strong{sel_dif} The selection differential for the variables.
 #' * \strong{total_gain} The selection differential for the variables.
 #' * \strong{sel_gen} The selected genotypes.
@@ -93,7 +96,11 @@ mgidi <- function(.data,
                   verbose = TRUE) {
   d <- match.call()
   if(has_class(.data, c("gamem", "waasb"))){
-    data <- gmd(.data, "blupg", verbose = FALSE) %>%
+    data <- gmd(.data, "blupg", verbose = FALSE) %>% column_to_rownames("GEN")
+  } else if(has_class(.data, "gafem")){
+    data <-
+      gmd(.data, "Y", verbose = FALSE) %>%
+      means_by(GEN) %>%
       column_to_rownames("GEN")
   } else{
     if(has_class(.data, c("data.frame", "matrix")) & !has_rownames(.data)){
@@ -211,15 +218,8 @@ mgidi <- function(.data,
              SD = Xs - colMeans(data_order, na.rm = TRUE),
              SDperc = (Xs - colMeans(data_order, na.rm = TRUE)) / colMeans(data_order, na.rm = TRUE) * 100)
 
-    if(has_class(.data, "gamem")){
-      h2 <-
-        gmd(.data, verbose = FALSE) %>%
-        subset(Parameters == "H2mg") %>%
-        remove_cols(1) %>%
-        t() %>%
-        as.data.frame() %>%
-        rownames_to_column("VAR") %>%
-        set_names("VAR", "h2")
+    if(has_class(.data, c("gamem", "gafem"))){
+      h2 <- gmd(.data, "h2", verbose = FALSE)
       sel_dif_mean <-
         left_join(sel_dif_mean, h2, by = "VAR") %>%
         add_cols(SG = SD * h2,
@@ -233,7 +233,6 @@ mgidi <- function(.data,
                 by = sense,
                 any_of(c("SDperc", "SGperc")),
                 stats = c("min, mean, max, sum"))
-
   } else{
     sel_dif_mean <- NULL
   }
@@ -241,11 +240,11 @@ mgidi <- function(.data,
     cat("\n-------------------------------------------------------------------------------\n")
     cat("Principal Component Analysis\n")
     cat("-------------------------------------------------------------------------------\n")
-    print(pca)
+    print(round_cols(pca))
     cat("-------------------------------------------------------------------------------\n")
     cat("Factor Analysis - factorial loadings after rotation-\n")
     cat("-------------------------------------------------------------------------------\n")
-    print(fa)
+    print(round_cols(fa))
     cat("-------------------------------------------------------------------------------\n")
     cat("Comunalit Mean:", mean(Communality), "\n")
     cat("-------------------------------------------------------------------------------\n")
@@ -422,12 +421,14 @@ plot.mgidi <- function(x,
                color = "black",
                size = size.line,
                width = width.bar) +
-        scale_y_continuous(expand = expansion(c(0, 0.05)))+
+        scale_y_continuous(expand = expansion(0))+
         theme_metan()+
         theme(legend.position = "bottom",
               axis.ticks = element_line(size = size.line),
+              plot.margin = margin(0.5, 0.5, 0, 0, "cm"),
               panel.border = element_rect(size = size.line))+
-        scale_x_discrete(guide = guide_axis(n.dodge = n.dodge, check.overlap = check.overlap))+
+        scale_x_discrete(guide = guide_axis(n.dodge = n.dodge, check.overlap = check.overlap),
+                         expand = expansion(0))+
         labs(x = x.lab, y = y.lab)+
         guides(guide_legend(nrow = 1)) +
         ggtitle("Contribution of each factor to the MGIDI index")

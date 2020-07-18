@@ -39,6 +39,7 @@ the nonparametric method proposed by Olivoto et al. (2018).
 The half-width confidence interval is computed according to the following
 equation:
 \loadmathjax
+
 \mjsdeqn{CI_w = 0.45304^r \times 2.25152 \times n^{-0.50089}}
 
 where \mjseqn{n} is the sample size and \mjseqn{r} is the correlation coefficient.
@@ -63,7 +64,7 @@ Olivoto, T., A.D.C. Lucio, V.Q. Souza, M. Nardino, M.I. Diel,
   interval width for Pearson's correlation coefficient: a
   Gaussian-independent estimator based on sample size and strength of
   association. Agron. J. 110:1-8.
-  \href{https://dl.sciencesocieties.org/publications/aj/abstracts/109/1/131}{10.2134/agronj2016.04.0196}
+  \href{https://doi.org/10.2134/agronj2016.04.0196}{10.2134/agronj2016.04.0196}
 }
 \author{
 Tiago Olivoto \email{tiagoolivoto@gmail.com}
