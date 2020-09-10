@@ -1,7 +1,12 @@
 #' Geometric adaptability index
 #'
-#' Performs a stability analysis based on the geometric mean (GAI), according to the following model:
-#'  \deqn{GAI = \sqrt[E]{{{{\bar Y}_{1.}} \cdot {{\bar Y}_{2.}} \cdot ... \cdot {{\bar Y}_{i.}}}}}
+#' Performs a stability analysis based on the geometric mean (GAI), according to
+#' the following model (Mohammadi and Amri, 2008):
+#' \loadmathjax
+#'  \mjsdeqn{GAI = \sqrt[E]{{\mathop {\bar Y}\nolimits_1  + \mathop {\bar Y}\nolimits_2  + ... + \mathop {\bar Y}\nolimits_i }}}
+#'  where \mjseqn{\bar Y_1}, \mjseqn{\bar Y_2}, and \mjseqn{\bar Y_i} are
+#'  the mean yields of the first, second and \emph{i}-th genotypes across
+#'  environments, and E is the number of environments
 #'
 #'
 #' @param .data The dataset containing the columns related to Environments,
@@ -23,10 +28,11 @@
 #' * \strong{GAI_R} The rank for the GAI value.
 #' @md
 #' @author Tiago Olivoto \email{tiagoolivoto@@gmail.com}
-#' @references Shahbazi, E. 2019. Genotype selection and stability analysis for
-#'   seed yield of Nigella sativa using parametric and non-parametric
-#'   statistics. Sci. Hortic. (Amsterdam). 253:172-179.
-#'   \href{https://www.sciencedirect.com/science/article/pii/S0304423819303012}{doi:10.1016/j.scienta.2019.04.047}.
+#' @references
+#' Mohammadi, R., & Amri, A. (2008). Comparison of parametric and non-parametric
+#' methods for selecting stable and adapted durum wheat genotypes in variable
+#' environments. Euphytica, 159(3), 419-432.
+#' \doi{10.1007/s10681-007-9600-6}.
 #'
 #' @export
 #' @examples

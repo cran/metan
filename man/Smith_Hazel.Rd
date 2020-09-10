@@ -4,12 +4,24 @@
 \alias{Smith_Hazel}
 \title{Smith-Hazel index}
 \usage{
-Smith_Hazel(.data, pcov = NULL, gcov = NULL, SI = 15, weights = NULL)
+Smith_Hazel(
+  .data,
+  use_data = "blup",
+  pcov = NULL,
+  gcov = NULL,
+  SI = 15,
+  weights = NULL
+)
 }
 \arguments{
 \item{.data}{The input data. It can be either a two-way table with genotypes
 in rows and traits in columns, or an object fitted with the function
 \code{\link{gamem}()}. Please, see \strong{Details} for more details.}
+
+\item{use_data}{Define which data to use If \code{.data} is an object of
+class \code{gamem}. Defaults to \code{"blup"} (the BLUPs for genotypes).
+Use \code{"pheno"} to use phenotypic means instead BLUPs for computing the
+index.}
 
 \item{pcov, gcov}{The phenotypic and genotypic variance-covariance matrix,
 respectively. Defaults to \code{NULL}. If a two-way table is informed in
@@ -18,7 +30,7 @@ respectively. Defaults to \code{NULL}. If a two-way table is informed in
 \item{SI}{The selection intensity (percentage). Defaults to \code{20}}
 
 \item{weights}{The vector of economic weights. Defaults to a vector of 1s
-with the same lenth of the number of traits.}
+with the same length of the number of traits.}
 }
 \value{
 An object of class \code{hz} containing:
@@ -70,11 +82,11 @@ index <- Smith_Hazel(means, pcov = pcov, gcov = gcov, weights = rep(1, 15))
 \references{
 Smith, H.F. 1936. A discriminant function for plant selection. Ann. Eugen.
 7:240-250.
-\href{https://doi.org/10.1111/j.1469-1809.1936.tb02143.x}{doi:10.1111/j.1469-1809.1936.tb02143.x}
+\doi{10.1111/j.1469-1809.1936.tb02143.x}
 
 Hazel, L.N. 1943. The genetic basis for constructing selection indexes.
 Genetics 28:476-90.
-\href{https://www.ncbi.nlm.nih.gov/pubmed/17247099}{PMID:17247099}
+\href{https://pubmed.ncbi.nlm.nih.gov/17247099/}{PMID:17247099}
 }
 \seealso{
 \code{\link{mtsi}}, \code{\link{mgidi}}, \code{\link{fai_blup}}

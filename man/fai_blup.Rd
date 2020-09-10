@@ -4,12 +4,25 @@
 \alias{fai_blup}
 \title{Multi-trait selection index}
 \usage{
-fai_blup(.data, DI = NULL, UI = NULL, SI = 15, mineval = 1, verbose = TRUE)
+fai_blup(
+  .data,
+  use_data = "blup",
+  DI = NULL,
+  UI = NULL,
+  SI = 15,
+  mineval = 1,
+  verbose = TRUE
+)
 }
 \arguments{
 \item{.data}{An object of class \code{waasb} or a two-way table with
 genotypes in the rows and traits in columns. In the last case the row names
 must contain the genotypes names.}
+
+\item{use_data}{Define which data to use If \code{.data} is an object of
+class \code{gamem}. Defaults to \code{"blup"} (the BLUPs for genotypes).
+Use \code{"pheno"} to use phenotypic means instead BLUPs for computing the
+index.}
 
 \item{DI, UI}{A vector of the same length of \code{.data} to construct the
 desirable (DI) and undesirable (UI) ideotypes. For each element of the
@@ -62,11 +75,10 @@ FAI <- fai_blup(mod,
 }
 }
 \references{
-Rocha, J.R.A.S.C.R, J.C. Machado, and P.C.S. Carneiro. 2018.
-Multitrait index based on factor analysis and ideotype-design: proposal and
-application on elephant grass breeding for bioenergy. GCB Bioenergy
-10:52-60. doi:
-\href{https://onlinelibrary.wiley.com/doi/full/10.1111/gcbb.12443}{doi:10.1111/gcbb.12443}
+Rocha, J.R.A.S.C.R, J.C. Machado, and P.C.S. Carneiro. 2018. Multitrait index
+based on factor analysis and ideotype-design: proposal and application on
+elephant grass breeding for bioenergy. GCB Bioenergy 10:52-60.
+\doi{10.1111/gcbb.12443}
 }
 \author{
 Tiago Olivoto \email{tiagoolivoto@gmail.com}

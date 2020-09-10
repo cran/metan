@@ -6,6 +6,7 @@
 \usage{
 mgidi(
   .data,
+  use_data = "blup",
   SI = 15,
   mineval = 1,
   ideotype = NULL,
@@ -18,6 +19,11 @@ mgidi(
 \code{\link{gamem}()} or a two-way table with BLUPs for genotypes in each
 trait (genotypes in rows and traits in columns). In the last case, row
 names must contain the genotypes names.}
+
+\item{use_data}{Define which data to use if \code{.data} is an object of
+class \code{gamem}. Defaults to \code{"blup"} (the BLUPs for genotypes).
+Use \code{"pheno"} to use phenotypic means instead BLUPs for computing the
+index.}
 
 \item{SI}{An integer (0-100). The selection intensity in percentage of the
 total number of genotypes.}
@@ -109,7 +115,7 @@ plot(mgidi_model, type = "contribution")
 Olivoto, T., A.D.C. L{\'{u}}cio, J.A.G. da silva, B.G. Sari, and
 M.I. Diel. 2019. Mean performance and stability in multi-environment trials
 II: Selection based on multiple traits. Agron. J. 111:2961-2969.
-\href{https://acsess.onlinelibrary.wiley.com/doi/full/10.2134/agronj2019.03.0221}{doi:10.2134/agronj2019.03.0220}
+\doi{10.2134/agronj2019.03.0220}
 }
 \author{
 Tiago Olivoto \email{tiagoolivoto@gmail.com}

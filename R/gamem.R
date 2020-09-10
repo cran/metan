@@ -25,7 +25,7 @@
 #' silently.
 #' @references Mohring, J., E. Williams, and H.-P. Piepho. 2015. Inter-block information:
 #' to recover or not to recover it? TAG. Theor. Appl. Genet. 128:1541-54.
-#'  \href{http://www.ncbi.nlm.nih.gov/pubmed/25972114}{doi:10.1007/s00122-015-2530-0}
+#'  \doi{10.1007/s00122-015-2530-0}
 
 #' @return An object of class \code{gamem}, which is a list with the following items for each
 #' element (variable):
@@ -59,21 +59,22 @@
 #'
 #' @details \code{gamem} analyses data from a one-way genotype testing experiment.
 #' By default, a randomized complete block design is used according to the following model:
-#' \deqn{Y_{ij} = m + g_i + r_j + e_{ij}}
-#' where \eqn{Y_{ij}} is the response variable of the ith genotype in the \emph{j}th block;
-#'  \emph{m} is the grand mean (fixed); \eqn{g_i} is the effect of the \emph{i}th genotype
-#'  (assumed to be random); \eqn{r_j} is the effect of the \emph{j}th replicate (assumed to be fixed);
-#'  and \eqn{e_{ij}} is the random error.
+#' \loadmathjax
+#' \mjsdeqn{Y_{ij} = m + g_i + r_j + e_{ij}}
+#' where \mjseqn{Y_{ij}} is the response variable of the ith genotype in the \emph{j}th block;
+#'  \emph{m} is the grand mean (fixed); \mjseqn{g_i} is the effect of the \emph{i}th genotype
+#'  (assumed to be random); \mjseqn{r_j} is the effect of the \emph{j}th replicate (assumed to be fixed);
+#'  and \mjseqn{e_{ij}} is the random error.
 #'
 #' When \code{block} is informed, then a resolvable alpha design is implemented, according to the following model:
 #'
-#' \deqn{Y_{ijk} = m + g_i + r_j + b_{jk} + e_{ijk}}
-#' where where \eqn{y_{ijk}} is the response variable of the \emph{i}th genotype in the
-#' \emph{k}th block of the \emph{j}th replicate; \emph{m} is the intercept, \eqn{t_i} is
-#'  the effect for the \emph{i}th genotype \eqn{r_j} is the effect of the \emph{j}th
-#'  replicate, \eqn{b_{jk}} is the effect of the \emph{k}th incomplete block of
-#'  the \emph{j}th replicate, and \eqn{e_{ijk}} is the plot error effect
-#'  corresponding to \eqn{y_{ijk}}.
+#' \mjsdeqn{Y_{ijk} = m + g_i + r_j + b_{jk} + e_{ijk}}
+#' where where \mjseqn{y_{ijk}} is the response variable of the \emph{i}th genotype in the
+#' \emph{k}th block of the \emph{j}th replicate; \emph{m} is the intercept, \mjseqn{t_i} is
+#'  the effect for the \emph{i}th genotype \mjseqn{r_j} is the effect of the \emph{j}th
+#'  replicate, \mjseqn{b_{jk}} is the effect of the \emph{k}th incomplete block of
+#'  the \emph{j}th replicate, and \mjseqn{e_{ijk}} is the plot error effect
+#'  corresponding to \mjseqn{y_{ijk}}.
 #'
 #' @md
 #' @importFrom cowplot draw_label ggdraw
@@ -544,8 +545,16 @@ predict.gamem <- function(object, ...) {
 #' @param x An object of class \code{gamem}.
 #' @param var The variable to plot. Defaults to \code{var = 1} the first
 #'   variable of \code{x}.
-#' @param type If \code{type = 're'}, normal Q-Q plots for the random effects
-#' are obtained.
+#' @param type One of the \code{"res"} to plot the model residuals (default),
+#'   \code{type = 're'} to plot normal Q-Q plots for the random effects, or
+#'   \code{"vcomp"} to create a bar plot with the variance components.
+#' @param position The position adjustment when \code{type = "vcomp"}. Defaults
+#'   to \code{"fill"}, which shows relative proportions at each trait by
+#'   stacking the bars and then standardizing each bar to have the same height.
+#'   Use \code{position = "stack"} to plot the phenotypic variance for each
+#'   trait.
+#' @param rotate Logical argument. If \code{rotate = TRUE} the plot is rotated,
+#'   i.e., traits in y axis and value in the x axis.
 #' @param conf Level of confidence interval to use in the Q-Q plot (0.95 by
 #' default).
 #' @param out How the output is returned. Must be one of the 'print' (default)
@@ -567,6 +576,9 @@ predict.gamem <- function(object, ...) {
 #' @param col.point The color of the points in the graphic. Default is 'black'.
 #' @param col.line The color of the lines in the graphic. Default is 'red'.
 #' @param col.lab.out The color of the labels for the 'outlying' points.
+#' @param size.line The size of the line in graphic. Defaults to 0.7.
+#' @param size.text The size for the text in the plot. Defaults to 10.
+#' @param width.bar The width of the bars if \code{type = "contribution"}.
 #' @param size.lab.out The size of the labels for the 'outlying' points.
 #' @param size.tex.lab The size of the text in axis text and labels.
 #' @param size.shape The size of the shape in the plots.
@@ -596,6 +608,8 @@ predict.gamem <- function(object, ...) {
 plot.gamem <- function(x,
                        var = 1,
                        type = "res",
+                       position = "fill",
+                       rotate = FALSE,
                        conf = 0.95,
                        out = "print",
                        n.dodge = 1,
@@ -608,6 +622,9 @@ plot.gamem <- function(x,
                        col.point = "black",
                        col.line = "red",
                        col.lab.out = "red",
+                       size.line = 0.7,
+                       size.text = 10,
+                       width.bar = 0.75,
                        size.lab.out = 2.5,
                        size.tex.lab = 10,
                        size.shape = 1.5,
@@ -648,13 +665,27 @@ plot.gamem <- function(x,
     p1 <-
       ggplot(vcomp, aes(x = name, y = value, fill = Group)) +
       geom_bar(stat = "identity",
-               position = "fill",
-               col = "black")  +
-      scale_y_continuous(expand = expansion(c(0, 0.05)))+
-      scale_x_discrete(guide = guide_axis(n.dodge = n.dodge, check.overlap = check.overlap))+
-      theme_metan()+
-      theme(legend.position = "bottom")+
-      labs(x = "Traits", y = "Proportion of phenotypic variance")
+               position = position,
+               color = "black",
+               size = size.line,
+               width = width.bar) +
+      scale_y_continuous(expand = expansion(c(0, ifelse(position == "fill", 0, 0.05)))) +
+      scale_x_discrete(guide = guide_axis(n.dodge = n.dodge, check.overlap = check.overlap)) +
+      theme_bw()+
+      theme(legend.position = "bottom",
+            axis.ticks = element_line(size = size.line),
+            axis.ticks.length = unit(0.2, "cm"),
+            panel.grid = element_blank(),
+            legend.title = element_blank(),
+            strip.background = element_rect(fill = NA),
+            text = element_text(size = size.text, colour = "black"),
+            axis.text = element_text(size = size.text, colour = "black")) +
+      theme(legend.position = "bottom") +
+      labs(x = "Traits",
+      y = ifelse(position == "fill", "Proportion of phenotypic variance", "Phenotypic variance"))
+    if(rotate == TRUE){
+      p1 <- p1 + coord_flip()
+    }
     return(p1)
   }
   if (type == "res") {

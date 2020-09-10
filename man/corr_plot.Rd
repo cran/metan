@@ -7,8 +7,10 @@
 corr_plot(
   .data,
   ...,
+  col.by = NULL,
   upper = "corr",
   lower = "scatter",
+  decimal.mark = ".",
   axis.labels = FALSE,
   show.labels.in = "show",
   size.axis.label = 12,
@@ -54,6 +56,9 @@ with a warning message.}
 \item{...}{Variables to use in the correlation. If no variable is informed
 all the numeric variables from \code{.data} are used.}
 
+\item{col.by}{A categorical variable to map the color of the points by.
+Defaults to \code{NULL}.}
+
 \item{upper}{The visualization method for the upper triangular correlation
 matrix. Must be one of \code{'corr'} (numeric values), \code{'scatter'}
 (the scatterplot for each pairwise combination), or \code{NULL} to set a
@@ -63,6 +68,8 @@ blank diagonal.}
 matrix. Must be one of \code{'corr'} (numeric values), \code{'scatter'}
 (the scatterplot for each pairwise combination), or \code{NULL} to set a
 blank diagonal.}
+
+\item{decimal.mark}{The decimal mark. Defaults to \code{"."}.}
 
 \item{axis.labels}{Should the axis labels be shown in the plot? Set to
 \code{FALSE}.}

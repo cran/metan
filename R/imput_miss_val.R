@@ -74,7 +74,7 @@
 #' @references
 #' Gauch, H. G., & Zobel, R. W. (1990). Imputing missing yield trial data.
 #' Theoretical and Applied Genetics, 79(6), 753-761.
-#' \href{https://link.springer.com/article/10.1007%2FBF00224240}{doi:10.1007/BF00224240}
+#' \doi{10.1007/BF00224240}
 #'
 #' Troyanskaya, O., Cantor, M., Sherlock, G., Brown, P., Hastie, T., Tibshirani,
 #' R., . Altman, R. B. (2001). Missing value estimation methods for DNA
@@ -153,7 +153,7 @@ impute_missing_val <- function(.data,
     }
   }
   if(algorithm == "EM-SVD"){
-    data_in <- as.matrix(replace_na(data.frame(.data),  replace = "colmeans"))
+    data_in <- as.matrix(replace_na(data.frame(.data),  replacement = "colmean"))
     max_ipc <- min(nrow(data_in), ncol(data_in)) - 1
     axis_used <- ifelse(max_ipc < naxis, max_ipc, naxis)
     iter <- 1
@@ -174,7 +174,7 @@ impute_missing_val <- function(.data,
     }
   }
   if(algorithm == "colmeans"){
-    new_data <- as.matrix(replace_na(data.frame(.data),  replace = "colmeans"))
+    new_data <- as.matrix(replace_na(data.frame(.data),  replacement = "colmean"))
     pc_ss <- NULL
     iter <- NULL
     final_tol <- NULL

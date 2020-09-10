@@ -9,12 +9,15 @@
   SI = 15,
   radar = TRUE,
   type = "index",
+  position = "fill",
+  rotate = FALSE,
   genotypes = "selected",
   n.dodge = 1,
   check.overlap = FALSE,
-  invert = FALSE,
+  invert = NULL,
   x.lab = NULL,
   y.lab = NULL,
+  title = NULL,
   arrange.label = FALSE,
   size.point = 2.5,
   size.line = 0.7,
@@ -36,7 +39,16 @@ after using \code{coord_polar()}.}
 
 \item{type}{The type of the plot. Defaults to \code{"index"}. Use \code{type
 = "contribution"} to show the contribution of each factor to the MGIDI
-index of the selected genotypes.}
+index of the selected genotypes/treatments.}
+
+\item{position}{The position adjustment when \code{type = "contribution"}.
+Defaults to \code{"fill"}, which shows relative proportions at each trait
+by stacking the bars and then standardizing each bar to have the same
+height. Use \code{position = "stack"} to plot the MGIDI index for each
+genotype/treatment.}
+
+\item{rotate}{Logical argument. If \code{rotate = TRUE} the plot is rotated,
+i.e., traits in y axis and value in the x axis.}
 
 \item{genotypes}{When \code{type = "contribution"} defines the genotypes to
 be shown in the plot. By default (\code{genotypes = "selected"} only
@@ -49,10 +61,12 @@ This is useful for displaying labels that would otherwise overlap.}
 \item{check.overlap}{Silently remove overlapping labels, (recursively)
 prioritizing the first, last, and middle labels.}
 
-\item{invert}{Logical argument. If \code{TRUE}, rotate the plot.}
+\item{invert}{Deprecated argument as of 1.8.0. Use \code{rotate} instead.}
 
 \item{x.lab, y.lab}{The labels for the axes x and y, respectively. x label is
 set to null when a radar plot is produced.}
+
+\item{title}{The plot title when \code{type = "contribution"}.}
 
 \item{arrange.label}{Logical argument. If \code{TRUE}, the labels are
 arranged to avoid text overlapping. This becomes useful when the number of

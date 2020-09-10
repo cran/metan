@@ -58,11 +58,11 @@
 #' variables.
 #' @md
 #' @author Tiago Olivoto \email{tiagoolivoto@@gmail.com}
-#' @references Olivoto, T., V.Q. Souza, M. Nardino, I.R. Carvalho, M. Ferrari,
-#'   A.J. Pelegrin, V.J. Szareski, and D. Schmidt. 2017. Multicollinearity in
-#'   path analysis: a simple method to reduce its effects. Agron. J.
-#'   109:131-142. doi:10.2134/agronj2016.04.0196.
-#'   \href{https://doi.org/10.2134/agronj2016.04.0196}{10.2134/agronj2016.04.0196}
+#' @references
+#' Olivoto, T., V.Q. Souza, M. Nardino, I.R. Carvalho, M. Ferrari, A.J.
+#' Pelegrin, V.J. Szareski, and D. Schmidt. 2017. Multicollinearity in path
+#' analysis: a simple method to reduce its effects. Agron. J. 109:131-142.
+#' \doi{10.2134/agronj2016.04.0196}
 #'
 #' @export
 #' @examples
@@ -111,7 +111,7 @@ can_corr <- function(.data,
           stdscores = stdscores,
           verbose = verbose,
           collinearity = collinearity)
-    return(results)
+    return(set_class(results, c("tbl_df",  "can_cor_group", "tbl",  "data.frame")))
   }
   FG <- as.data.frame(select(.data, {{FG}}) %>% select_numeric_cols())
   SG <- as.data.frame(select(.data, {{SG}}) %>% select_numeric_cols())
@@ -302,11 +302,13 @@ can_corr <- function(.data,
     cat("---------------------------------------------------------------------------\n")
     print(Rvy)
   }
-  invisible(structure(list(Matrix = MC, MFG = S11, MSG = S22,
-                           MFG_SG = S12, Coef_FG = Coef_FG, Coef_SG = Coef_SG, Loads_FG = Rux,
-                           Loads_SG = Rvy, Score_FG = FG_SC, Score_SG = SG_SC, Crossload_FG = FG_CL,
-                           Crossload_SG = SG_CL, Sigtest = results, collinearity = colin),
-                      class = "can_cor"))
+
+  out <- list(Matrix = MC, MFG = S11, MSG = S22,
+              MFG_SG = S12, Coef_FG = Coef_FG, Coef_SG = Coef_SG, Loads_FG = Rux,
+              Loads_SG = Rvy, Score_FG = FG_SC, Score_SG = SG_SC, Crossload_FG = FG_CL,
+              Crossload_SG = SG_CL, Sigtest = results, collinearity = colin) %>%
+    add_class(class = "can_cor")
+  invisible(out)
 }
 
 
@@ -405,7 +407,7 @@ plot.can_cor <- function(x,
                          size.bor.tick = 0.3,
                          labels = FALSE,
                          main = NULL, ...) {
-  if(!class(x) ==  "can_cor"){
+  if(has_class(x, "can_cor_group")){
     stop("The object 'x' must be of class 'can_cor'.")
   }
   if(type == 1){
@@ -581,7 +583,7 @@ plot.can_cor <- function(x,
 #' print(cc)
 #' }
 print.can_cor <- function(x, export = FALSE, file.name = NULL, digits = 3, ...) {
-  if (!class(x) == "can_cor") {
+  if (has_class(x, "can_cor_group")) {
     stop("The object must be of class 'can_cor'")
   }
   if (export == TRUE) {

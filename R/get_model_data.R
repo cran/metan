@@ -7,13 +7,13 @@
 #' * \code{gmd()} Is a shortcut to \code{get_model_data}.
 #' @name get_model_data
 #'
-#' @param x An object created with the functions \code{\link{AMMI_indexes}},
-#'   \code{\link{anova_ind}}, \code{\link{anova_joint}},
-#'   \code{\link{ecovalence}},  \code{\link{Fox}}, \code{\link{gai}},
-#'   \code{\link{gamem}},\code{\link{gafem}}, \code{\link{ge_means}},
-#'   \code{\link{ge_reg}}, \code{\link{performs_ammi}},
-#'   \code{\link{Resende_indexes}}, \code{\link{Shukla}},
-#'   \code{\link{superiority}}, \code{\link{waas}} or \code{\link{waasb}}.
+#' @param x An object created with the functions \code{\link{AMMI_indexes}()},
+#'   \code{\link{anova_ind}()}, \code{\link{anova_joint}()}, \code{\link{can_corr}()}
+#'   \code{\link{ecovalence}()},  \code{\link{Fox}()}, \code{\link{gai}()},
+#'   \code{\link{gamem}()},\code{\link{gafem}()}, \code{\link{ge_means}()},
+#'   \code{\link{ge_reg}()}, \code{\link{gytb}()}, \code{\link{performs_ammi}()},
+#'   \code{\link{Resende_indexes}()}, \code{\link{Shukla}()},
+#'   \code{\link{superiority}()}, \code{\link{waas}()} or \code{\link{waasb}()}.
 #' @param what What should be captured from the model. See more in section
 #'   \strong{Details}.
 #' @param type Chose if the statistics must be show by genotype (\code{type =
@@ -70,6 +70,12 @@
 #' * \code{"rank"} The rank for genotypic confidence index.
 #' * \code{"Wi"} The genotypic confidence index.
 #'
+#'  \strong{Objects of class \code{can_corr}:}
+#' * \code{"coefs"} The canonical coefficients (default).
+#' * \code{"loads"} The canonical loadings.
+#' * \code{"crossloads"} The canonical cross-loadings.
+#' * \code{"canonical"} The canonical correlations and hypothesis testing.
+#'
 #'  \strong{Objects of class \code{ecovalence}:}
 #' * \code{"Ecoval"} Ecovalence value (default).
 #' * \code{"Ecov_perc"} Ecovalence in percentage value.
@@ -89,6 +95,17 @@
 #' * \code{"ge_means"} Genotype-environment interaction means (default).
 #' * \code{"env_means"} Environment means.
 #' * \code{"gen_means"} Genotype means.
+#'
+#'  \strong{Objects of class \code{gge}:}
+#' * \code{"scores"} The scores for genotypes and environments for all the
+#' analyzed traits (default).
+#' * \code{"exp_var"} The eigenvalues and explained variance.
+#'
+#'  \strong{Objects of class \code{gytb}:}
+#' * \code{"gyt"} Genotype by yield*trait table (Default).
+#' * \code{"stand_gyt"} The standardized (zero mean and unit variance) Genotype by yield*trait table.
+#' * \code{"si"} The superiority index (sum standardized value across all yield*trait combinations).
+#'
 #'
 #'  \strong{Objects of class \code{Shukla}:}
 #' * \code{"rMean"} Rank for the mean.
@@ -189,20 +206,20 @@
 #' R.A. Estopa. 2018. Genetic evaluation of Pinus taeda clones from somatic
 #' embryogenesis and their genotype x environment interaction. Crop Breed. Appl.
 #' Biotechnol. 18:55-64.
-#' \href{http://www.scielo.br/scielo.php?script=sci_arttext&pid=S1984-70332018000100055&lng=en&tlng=en}{doi:10.1590/1984-70332018v18n1a8}
+#' \doi{10.1590/1984-70332018v18n1a8}
 #'
 #' Azevedo Peixoto, L. de, P.E. Teodoro, L.A. Silva, E.V. Rodrigues, B.G.
 #' Laviola, and L.L. Bhering. 2018. Jatropha half-sib family selection with high
 #' adaptability and genotypic stability. PLoS One 13:e0199880.
-#' \href{https://dx.plos.org/10.1371/journal.pone.0199880}{doi:10.1371/journal.pone.0199880}
+#' \doi{10.1371/journal.pone.0199880}
 #'
 #' Eberhart, S.A., and W.A. Russell. 1966. Stability parameters for comparing
 #' Varieties. Crop Sci. 6:36-40.
-#' \href{https://doi.org/10.2135/cropsci1966.0011183X000600010011x}{doi:10.2135/cropsci1966.0011183X000600010011x}.
+#' \doi{10.2135/cropsci1966.0011183X000600010011x}
 #'
 #' Fox, P.N., B. Skovmand, B.K. Thompson, H.J. Braun, and R. Cormier. 1990.
 #' Yield and adaptation of hexaploid spring triticale. Euphytica 47:57-64.
-#' \href{https://link.springer.com/article/10.1007/BF00040364}{doi:10.1007/BF00040364}.
+#' \doi{10.1007/BF00040364}
 #'
 #' Huehn, V.M. 1979. Beitrage zur erfassung der phanotypischen stabilitat. EDV
 #' Med. Biol. 10:112.
@@ -211,30 +228,30 @@
 #' Souza, and E. Jost. 2019a. Mean performance and stability in
 #' multi-environment trials I: Combining features of AMMI and BLUP techniques.
 #' Agron. J. 111:2949-2960.
-#' \href{https://acsess.onlinelibrary.wiley.com/doi/abs/10.2134/agronj2019.03.0220}{doi:10.2134/agronj2019.03.0220}
+#' \doi{10.2134/agronj2019.03.0220}
 #'
 #' Olivoto, T., A.D.C. L{\'{u}}cio, J.A.G. da silva, B.G. Sari, and M.I. Diel.
 #' 2019b. Mean performance and stability in multi-environment trials II:
 #' Selection based on multiple traits. Agron. J. 111:2961-2969.
-#' \href{https://acsess.onlinelibrary.wiley.com/doi/full/10.2134/agronj2019.03.0221}{doi:10.2134/agronj2019.03.0221}
+#' \doi{10.2134/agronj2019.03.0221}
 #'
 #' Purchase, J.L., H. Hatting, and C.S. van Deventer. 2000.
 #' Genotype vs environment interaction of winter wheat (Triticum aestivum L.)
 #' in South Africa: II. Stability analysis of yield performance. South African
 #' J. Plant Soil 17:101-107.
-#' \href{http://doi.org/10.1080/02571862.2000.10634878}{doi:10.1080/02571862.2000.10634878}
+#' \doi{10.1080/02571862.2000.10634878}
 #'
 #' Resende MDV (2007) Matematica e estatistica na analise de experimentos e no
 #' melhoramento genetico. Embrapa Florestas, Colombo
 #'
 #' Sneller, C.H., L. Kilgore-Norquest, and D. Dombek. 1997. Repeatability of
 #' Yield Stability Statistics in Soybean. Crop Sci. 37:383-390.
-#' \href{https://onlinelibrary.wiley.com/doi/abs/10.2135/cropsci1997.0011183X003700020013x}{doi:10.2135/cropsci1997.0011183X003700020013x}
+#' \doi{10.2135/cropsci1997.0011183X003700020013x}
 #'
-#' Shahbazi, E. 2019. Genotype selection and stability analysis for seed yield
-#' of Nigella sativa using parametric and non-parametric statistics. Sci.
-#' Hortic. (Amsterdam). 253:172-179.
-#' \href{https://www.sciencedirect.com/science/article/pii/S0304423819303012}{doi:10.1016/j.scienta.2019.04.047}.
+#' Mohammadi, R., & Amri, A. (2008). Comparison of parametric and non-parametric
+#' methods for selecting stable and adapted durum wheat genotypes in variable
+#' environments. Euphytica, 159(3), 419-432.
+#' \doi{10.1007/s10681-007-9600-6}
 #'
 #' Wricke, G. 1965. Zur berechnung der okovalenz bei sommerweizen und hafer. Z.
 #' Pflanzenzuchtg 52:127-138.
@@ -330,11 +347,11 @@ get_model_data <- function(x,
                            type = "GEN",
                            verbose = TRUE) {
   call_f <- match.call()
-  if (!class(x) %in% c("waasb", "waas","waas_means", "gamem", "performs_ammi", "Res_ind",
-                       "AMMI_indexes", "ecovalence", "ge_reg", "Fox", "Shukla",
-                       "superiority", "ge_effects", "gai", "Huehn", "Thennarasu",
-                       "ge_stats", "Annicchiarico", "Schmildt", "ge_means", "anova_joint",
-                       "gafem", "anova_ind")) {
+  if (!has_class(x, c("waasb", "waas","waas_means", "gamem", "performs_ammi", "Res_ind",
+                      "AMMI_indexes", "ecovalence", "ge_reg", "Fox", "Shukla",
+                      "superiority", "ge_effects", "gai", "Huehn", "Thennarasu",
+                      "ge_stats", "Annicchiarico", "Schmildt", "ge_means", "anova_joint",
+                      "gafem", "anova_ind", "gge", "can_cor", "can_cor_group", "gytb"))) {
     stop("Invalid class in object ", call_f[["x"]], ". See ?get_model_data for more information.")
   }
   if (!is.null(what) && substr(what, 1, 2) == "PC") {
@@ -373,13 +390,152 @@ get_model_data <- function(x,
   check19 <- c("ge_means", "env_means", "gen_means")
   check20 <- c("Y", "h2", "Sum Sq", "Mean Sq", "F value", "Pr(>F)", "fitted", "resid", "stdres", "se.fit", "details")
   check21 <- c("MEAN", "MSG", "FCG", "PFG", "MSB", "FCB", "PFB", "MSCR", "FCR", "PFCR", "MSIB_R", "FCIB_R", "PFIB_R", "MSE", "CV", "h2", "AS")
-  if (!is.null(what) && what %in% check3 && !class(x) %in% c("waasb", "gamem", "gafem", "anova_joint")) {
+  check22 <- c("scores", "exp_var")
+  check23 <- c("coefs", "loads", "crossloads", "canonical")
+  check24 <- c("gyt", "stand_gyt", "si")
+  if (!is.null(what) && what %in% check3 && !has_class(x, c("waasb", "gamem", "gafem", "anova_joint"))) {
     stop("Invalid argument 'what'. It can only be used with an oject of class 'waasb' or 'gamem', 'gafem, or 'anova_joint'. Please, check and fix.")
   }
   if (!type %in% c("GEN", "ENV")) {
     stop("Argument 'type' invalid. It must be either 'GEN' or 'ENV'.")
   }
-  if (class(x)  %in% c("waasb", "gamem")) {
+
+
+  if(has_class(x,  "gge") & length(class(x)) == 1){
+    if (is.null(what)){
+      what <- "scores"
+    }
+    if(has_class(x,  "gge") && !what %in% check22){
+      stop("Invalid value in 'what' for an object of class '", class(x), "'. Allowed are ", paste(check22, collapse = ", "), call. = FALSE)
+    }
+    if(what == "scores"){
+      npc <- length(x[[1]]$varexpl)
+      bind <- lapply(x, function(x) {
+        rbind(x$ coordgen %>%
+                as.data.frame() %>%
+                set_names(paste("PC", 1:npc, sep = "")) %>%
+                add_cols(TYPE = "GEN",
+                         CODE = x$labelgen,
+                         .before = 1),
+              x$coordenv %>%
+                as.data.frame() %>%
+                set_names(paste("PC", 1:npc, sep = "")) %>%
+                add_cols(TYPE = "ENV",
+                         CODE = x$labelenv,
+                         .before = 1))
+      })
+    }
+    if(what == "exp_var"){
+      bind <- lapply(x, function(x) {
+        tibble(PC = x$labelaxes,
+               Eigenvalue = x$eigenvalues,
+               Variance = x$varexpl,
+               Accumulated = cumsum(Variance))
+      })
+    }
+  }
+
+  if(has_class(x, "gytb")){
+    if (is.null(what)){
+      what <- "gyt"
+    }
+    if(has_class(x, "gytb") && !what %in% check24){
+      stop("Invalid value in 'what' for an object of class '", class(x), "'. Allowed are ", paste(check24, collapse = ", "), call. = FALSE)
+    }
+
+    if(what == "gyt"){
+     bind <- x[["mod"]][["data"]]
+    }
+    if(what == "stand_gyt"){
+      bind <- x[["mod"]][["ge_mat"]]
+    }
+    if(what == "si"){
+      bind <-
+        x[["mod"]][["ge_mat"]] %>%
+        as.data.frame() %>%
+        add_cols(SI = rowSums(.)) %>%
+        rownames_to_column("GEN") %>%
+        select(GEN, SI) %>%
+        arrange(-SI)
+    }
+  }
+
+
+
+  if(has_class(x, c("can_cor", "can_cor_group"))){
+    if (is.null(what)){
+      what <- "coefs"
+    }
+    if(has_class(x, c("can_cor", "can_cor_group")) && !what %in% check23){
+      stop("Invalid value in 'what' for an object of class '", class(x), "'. Allowed are ", paste(check23, collapse = ", "), call. = FALSE)
+    }
+    fg_what <- case_when(
+      what == "coefs" ~ "Coef_FG",
+      what == "loads" ~ "Loads_FG",
+      what == "crossloads" ~ "Crossload_FG"
+    )
+    sg_what <- case_when(
+      what == "coefs" ~ "Coef_SG",
+      what == "loads" ~ "Loads_SG",
+      what == "crossloads" ~ "Crossload_SG"
+    )
+    if(has_class(x, "can_cor_group")){
+      npairs <- ncol(x[["data"]][[1]][["Coef_FG"]])
+      if(what == "canonical"){
+        bind <-
+          x %>%
+          mutate(test = map(data, ~.x %>% .[["Sigtest"]])) %>%
+          remove_cols(data) %>%
+          unnest(test)
+      } else{
+        bind <-
+          rbind(
+            x %>%
+              mutate(FG = map(data, ~.x %>% .[[fg_what]] %>%
+                                as_tibble(rownames = NA) %>%
+                                set_names(paste("CP", 1:npairs, sep = "")) %>%
+                                rownames_to_column("VAR"))) %>%
+              remove_cols(data) %>%
+              unnest(FG) %>%
+              add_cols(GROUP = "FG", .before = VAR),
+
+            x %>%
+              mutate(SG = map(data, ~.x %>% .[[sg_what]] %>%
+                                as_tibble(rownames = NA) %>%
+                                set_names(paste("CP", 1:npairs, sep = "")) %>%
+                                rownames_to_column("VAR"))) %>%
+              remove_cols(data) %>%
+              unnest(SG) %>%
+              add_cols(GROUP = "SG", .before = VAR)
+          )
+      }
+    } else{
+      npairs <- ncol(x[["Coef_FG"]])
+      if(what == "canonical"){
+        bind <-
+        x[["Sigtest"]] %>%
+          as_tibble(rownames = NA) %>%
+          rownames_to_column("GROUP")
+      } else{
+        bind <-
+          rbind(x[[fg_what]] %>%
+                  as_tibble(rownames = NA) %>%
+                  set_names(paste("CP", 1:npairs, sep = "")) %>%
+                  rownames_to_column("VAR") %>%
+                  add_cols(GROUP = "FG", .before = VAR),
+                x[[sg_what]] %>%
+                  as_tibble(rownames = NA) %>%
+                  set_names(paste("CP", 1:npairs, sep = "")) %>%
+                  rownames_to_column("VAR") %>%
+                  add_cols(GROUP = "SG", .before = VAR)
+          )
+    }
+    }
+  }
+
+
+
+  if (has_class(x, c("waasb", "gamem"))) {
     if (is.null(what)){
       what <- "genpar"
     }
@@ -387,13 +543,13 @@ get_model_data <- function(x,
       warning("Using what = 'genpar' is only possible for models fitted with random = 'gen' or random = 'all'\nSetting what to 'vcomp'.", call. = FALSE)
       what <- "vcomp"
     }
-    if(class(x) == "gamem" && !what %in% check3.1){
+    if(has_class(x,  "gamem") && !what %in% check3.1){
       stop("Invalid value in 'what' for an object of class '", class(x), "'. Allowed are ", paste(check3.1, collapse = ", "), call. = FALSE)
     }
-    if(class(x) == "waasb" && !what %in% check){
+    if(has_class(x,  "waasb") && !what %in% check){
       stop("Invalid value in 'what' for an object of class '", class(x), "'. Allowed are ", paste(check, collapse = ", "), call. = FALSE)
     }
-    if (class(x) == "waasb" & what %in% check4) {
+    if (has_class(x,  "waasb") & what %in% check4) {
       bind <- sapply(x, function(x) {
         x$model[[what]]
       }) %>%
@@ -553,7 +709,7 @@ get_model_data <- function(x,
     if (what == "ranef") {
       dfs<-
         lapply(x, function(x){
-          if(class(x) == "waasb"){
+          if(has_class(x,  "waasb")){
           int <- x[["BLUPint"]]
           } else{
             int <- x[["ranef"]]
@@ -606,7 +762,7 @@ get_model_data <- function(x,
     }
   }
 
-  if (class(x)  == "anova_ind") {
+  if (has_class(x, "anova_ind")) {
     if (is.null(what)){
       what <- "MEAN"
     }
@@ -621,7 +777,7 @@ get_model_data <- function(x,
       column_to_first(ENV)
   }
 
-  if (class(x)  %in% c("anova_joint", "gafem")) {
+  if (has_class(x, c("anova_joint", "gafem"))) {
     if (is.null(what)){
       what <- "fitted"
     }
@@ -663,7 +819,7 @@ get_model_data <- function(x,
     }
   }
 
-  if(class(x) == "ge_means"){
+  if(has_class(x,  "ge_means")){
     if (is.null(what)){
       what <- "ge_means"
     }
@@ -696,7 +852,7 @@ get_model_data <- function(x,
         column_to_first(GEN)
     }
   }
-  if (class(x) == "Annicchiarico") {
+  if (has_class(x,  "Annicchiarico")) {
     if (is.null(what)){
       what <- "Wi"
     }
@@ -710,7 +866,7 @@ get_model_data <- function(x,
       mutate(gen = x[[1]][["general"]][["GEN"]]) %>%
       column_to_first(gen)
   }
-  if (class(x) == "Schmildt") {
+  if (has_class(x,  "Schmildt")) {
     if (is.null(what)){
       what <- "Wi"
     }
@@ -724,7 +880,7 @@ get_model_data <- function(x,
       mutate(gen = x[[1]][["general"]][["GEN"]]) %>%
       column_to_first(gen)
   }
-  if (class(x) == "ge_stats") {
+  if (has_class(x,  "ge_stats")) {
     if (is.null(what)){
       what <- "stats"
     }
@@ -746,7 +902,7 @@ get_model_data <- function(x,
       column_to_first(var) %>%
       arrange(var)
   }
-  if (class(x) == "Thennarasu") {
+  if (has_class(x,  "Thennarasu")) {
     if (is.null(what)){
       what <- "N1"
     }
@@ -760,7 +916,7 @@ get_model_data <- function(x,
       mutate(gen = x[[1]][["GEN"]]) %>%
       column_to_first(gen)
   }
-  if (class(x) == "Huehn") {
+  if (has_class(x,  "Huehn")) {
     if (is.null(what)){
       what <- "S1"
     }
@@ -774,7 +930,7 @@ get_model_data <- function(x,
       mutate(gen = x[[1]][["GEN"]]) %>%
       column_to_first(gen)
   }
-  if (class(x) == "gai") {
+  if (has_class(x,  "gai")) {
     if (is.null(what)){
       what <- "GAI"
     }
@@ -788,7 +944,7 @@ get_model_data <- function(x,
       mutate(gen = x[[1]][["GEN"]]) %>%
       column_to_first(gen)
   }
-  if (class(x) == "ge_effects") {
+  if (has_class(x,  "ge_effects")) {
     bind <- sapply(x, function(x) {
       make_long(x)[[3]]
     }) %>%
@@ -798,7 +954,7 @@ get_model_data <- function(x,
       select(1:2)
     bind <- cbind(factors, bind)
   }
-  if (class(x) == "superiority") {
+  if (has_class(x,  "superiority")) {
     if (is.null(what)){
       what <- "Pi_a"
     }
@@ -812,7 +968,7 @@ get_model_data <- function(x,
       mutate(gen = x[[1]][["index"]][["GEN"]]) %>%
       column_to_first(gen)
   }
-  if (class(x) == "Shukla") {
+  if (has_class(x,  "Shukla")) {
     if (is.null(what)){
       what <- "ShuklaVar"
     }
@@ -826,7 +982,7 @@ get_model_data <- function(x,
       mutate(gen = x[[1]][["GEN"]]) %>%
       column_to_first(gen)
   }
-  if (class(x) == "Fox") {
+  if (has_class(x,  "Fox")) {
     if (is.null(what)){
       what <- "TOP"
     }
@@ -840,7 +996,7 @@ get_model_data <- function(x,
       mutate(gen = x[[1]][["GEN"]]) %>%
       column_to_first(gen)
   }
-  if (class(x) == "ge_reg") {
+  if (has_class(x,  "ge_reg")) {
     if (is.null(what)){
       what <- "slope"
     }
@@ -854,7 +1010,7 @@ get_model_data <- function(x,
       mutate(gen = x[[1]][["regression"]][["GEN"]]) %>%
       column_to_first(gen)
   }
-  if (class(x) == "ecovalence") {
+  if (has_class(x,  "ecovalence")) {
     if (is.null(what)){
       what <- "Ecoval"
     }
@@ -868,7 +1024,7 @@ get_model_data <- function(x,
       mutate(gen = x[[1]][["GEN"]]) %>%
       column_to_first(gen)
   }
-  if (class(x) == "AMMI_indexes") {
+  if (has_class(x,  "AMMI_indexes")) {
     if (is.null(what)){
       what <- "WAAS"
     }
@@ -882,7 +1038,7 @@ get_model_data <- function(x,
       mutate(gen = x[[1]][["GEN"]]) %>%
       column_to_first(gen)
   }
-  if (class(x) == "Res_ind") {
+  if (has_class(x,  "Res_ind")) {
     if (is.null(what)){
       what <- "HMRPGV"
     }
@@ -896,7 +1052,7 @@ get_model_data <- function(x,
       mutate(gen = x[[1]][["GEN"]]) %>%
       column_to_first(gen)
   }
-  if (class(x) == "performs_ammi") {
+  if (has_class(x,  "performs_ammi")) {
     if (is.null(what)){
       what <- "ipca_expl"
     }
@@ -959,9 +1115,8 @@ get_model_data <- function(x,
         column_to_first(Parameters)
     }
   }
-
   if(verbose == TRUE){
-    message("Class of the model: ", class(x))
+    message("Class of the model: ", paste(class(x), collapse = ", "))
     message("Variable extracted: ", what)
   }
   return(bind)

@@ -15,6 +15,7 @@ plot_blup(
   plot_theme = theme_metan(),
   width = 6,
   height = 6,
+  err.bar = TRUE,
   size.err.bar = 0.5,
   size.shape = 3.5,
   size.tex.lab = 12,
@@ -24,6 +25,8 @@ plot_blup(
   col.shape = c("blue", "red"),
   y.lab = "Genotypes",
   x.lab = NULL,
+  n.dodge = 1,
+  check.overlap = FALSE,
   panel.spacing = 0.15,
   resolution = 300,
   ...
@@ -58,6 +61,9 @@ exported. Default is \code{pdf}, Graphic can also be exported in
 
 \item{height}{The height "inch" of the plot. Default is \code{6}.}
 
+\item{err.bar}{Logical value to indicate if an error bar is shown. Defaults
+to \code{TRUE}.}
+
 \item{size.err.bar}{The size of the error bar for the plot. Default is
 \code{0.5}.}
 
@@ -85,6 +91,12 @@ genotypes above and below of the mean, respectively. Default is
 
 \item{x.lab}{The label of the x-axis in the plot. Default is \code{NULL},
 i.e., the name of the selected variable.}
+
+\item{n.dodge}{The number of rows that should be used to render the Y labels.
+This is useful for displaying labels that would otherwise overlap.}
+
+\item{check.overlap}{Silently remove overlapping labels, (recursively)
+prioritizing the first, last, and middle labels.}
 
 \item{panel.spacing}{Defines the spacing between panels when \code{which =
 "ge"}.}
