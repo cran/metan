@@ -1,9 +1,19 @@
+# metan 1.9.0
+* New functions `add_prefix()` and `add_suffix()` to add prefixes and suffixes to variable names, respectively.
+* New function `select_pred()` to selects a best subset of predictor variables.
+* New function `acv()` to compute the [adjusted coefficient of variation](https://linkinghub.elsevier.com/retrieve/pii/S1161030118301904) to account for the systematic dependence of $\sigma^2$ from $\mu$.
+* New function `ge_acv()` to compute yield stability index based on the adjusted coefficient of variation.
+* New function `ge_polar()` to compute yield stability index based on [Power Law Residuals (POLAR) statistics](https://linkinghub.elsevier.com/retrieve/pii/S0378429015300368).
+* New function `mantel_test()` to performs a Mantel test between two matrices. 
+* New arguments `prefix` and `suffix` in `concatenate()` to add prefixes and suffixes to concatenated values, respectively.
+* List packages providing the Rd macros in 'Imports' instead of 'Suggests' as suggested by the CRAN team.
+
 # metan 1.8.1
 * Use `\doi{}` markup in Rd files.
 
 # metan 1.8.0
 * New function `gytb()` to generate the Genotype by yield*trait biplot.
-* New functions `row_col_mean()` and `row_col_sum()`to add a row with the mean/sum of each variable and a column with the the mean/sum for each row of a matrix or data frame.
+* New functions `row_col_mean()` and `row_col_sum()`to add a row with the mean/sum of each variable and a column with the mean/sum for each row of a matrix or data frame.
 * New functions `has_zero()`, `remove_cols_zero()`, `remove_rows_zero()`, `select_cols_zero()`, `select_rows_zero()`, and `replace_zero()` to deal with 0s in a data frame.
 * Fix bug of inconsistent color legend when plotting objects of class `gge`.
 * Include class `gge` and `can_corr` in `get_model_data()`.
