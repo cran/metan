@@ -62,6 +62,10 @@
 #'   information, whereas the complete replicate effect is always taken as
 #'   fixed, as no inter-replicate information was to be recovered (Mohring et
 #'   al., 2015).
+#'@param by One variable (factor) to compute the function by. It is a shortcut
+#'  to \code{\link[dplyr]{group_by}()}.This is especially useful, for example,
+#'  when the researcher what to analyze environments within mega-environments.
+#'  In this case, an object of class waasb_grouped is returned.
 #' @param random The effects of the model assumed to be random. Defaults to
 #'   \code{random = "gen"}. See \strong{Details} to see the random effects
 #'   assumed depending on the experimental design of the trials.
@@ -180,11 +184,45 @@ gamem_met <- function(.data,
                       rep,
                       resp,
                       block = NULL,
+                      by = NULL,
                       random = "gen",
                       prob = 0.05,
                       verbose = TRUE) {
   if (!random %in% c("env", "gen", "all")) {
     stop("The argument 'random' must be one of the 'gen', 'env', or 'all'.")
+  }
+  if (!missing(by)){
+    if(length(as.list(substitute(by))[-1L]) != 0){
+      stop("Only one grouping variable can be used in the argument 'by'.\nUse 'group_by()' to pass '.data' grouped by more than one variable.", call. = FALSE)
+    }
+    .data <- group_by(.data, {{by}})
+  }
+  if(is_grouped_df(.data)){
+    if(!missing(block)){
+      results <-
+        .data %>%
+        doo(gamem_met,
+            env = {{env}},
+            gen = {{gen}},
+            rep = {{rep}},
+            resp = {{resp}},
+            block = {{block}},
+            random = random,
+            prob = prob,
+            verbose = verbose)
+    } else{
+      results <-
+        .data %>%
+        doo(gamem_met,
+            env = {{env}},
+            gen = {{gen}},
+            rep = {{rep}},
+            resp = {{resp}},
+            random = random,
+            prob = prob,
+            verbose = verbose)
+    }
+    return(set_class(results, c("tbl_df",  "waasb_group", "tbl",  "data.frame")))
   }
   block_test <- missing(block)
   if(!missing(block)){
@@ -297,7 +335,7 @@ gamem_met <- function(.data,
       data.frame(Names = rownames(bups[["GEN:ENV"]])) %>%
       separate(Names, into = c("GEN", "ENV"), sep = ":") %>%
       add_cols(BLUPge = bups[["GEN:ENV"]][[1]]) %>%
-      to_factor(1:2)
+      as_factor(1:2)
     Details <-
       rbind(ge_details(data, ENV, GEN, Y),
             tribble(~Parameters,  ~Y,
@@ -344,7 +382,7 @@ gamem_met <- function(.data,
         data.frame(Names = rownames(bups$`BLOCK:(REP:ENV)`)) %>%
         separate(Names, into = c("BLOCK", "REP", "ENV"), sep = ":") %>%
         add_cols(BLUPbre = bups$`BLOCK:(REP:ENV)`[[1]]) %>%
-        to_factor(1:3)
+        as_factor(1:3)
       BLUPint <-
         suppressWarnings(
           left_join(data_factors, bINT, by = c("ENV", "GEN")) %>%
@@ -371,7 +409,7 @@ gamem_met <- function(.data,
         data.frame(Names = rownames(bups$`REP:ENV`)) %>%
         separate(Names, into = c("REP", "ENV"), sep = ":") %>%
         add_cols(BLUPre = bups$`REP:ENV`[[1]]) %>%
-        to_factor(1:2)
+        as_factor(1:2)
       BLUPint <-
         suppressWarnings(
           left_join(data_factors, bINT, by = c("ENV", "GEN")) %>%
@@ -397,18 +435,18 @@ gamem_met <- function(.data,
         data.frame(Names = rownames(bups$`REP:ENV`)) %>%
         separate(Names, into = c("REP", "ENV"), sep = ":") %>%
         add_cols(BLUPre = bups$`REP:ENV`[[1]]) %>%
-        to_factor(1:2)
+        as_factor(1:2)
       blupBRE <-
         data.frame(Names = rownames(bups$`BLOCK:(REP:ENV)`)) %>%
         separate(Names, into = c("BLOCK", "REP", "ENV"), sep = ":") %>%
         add_cols(BLUPbre = bups$`BLOCK:(REP:ENV)`[[1]]) %>%
-        to_factor(1:3)
+        as_factor(1:3)
       genCOEF <- summary(Complete)[["coefficients"]] %>%
         as_tibble(rownames = NA) %>%
         rownames_to_column("GEN") %>%
         replace_string(GEN, pattern = "GEN", new_var = GEN) %>%
         rename(Y = Estimate) %>%
-        to_factor(1)
+        as_factor(1)
       BLUPint <-
         suppressWarnings(
           left_join(data_factors, bINT, by = c("ENV", "GEN")) %>%
@@ -443,7 +481,7 @@ gamem_met <- function(.data,
         separate(Names, into = c("REP", "ENV"), sep = ":") %>%
         add_cols(BLUPre = bups$`REP:ENV`[[1]]) %>%
         arrange(ENV) %>%
-        to_factor(1:2)
+        as_factor(1:2)
       BLUPint <-
         suppressWarnings(
           left_join(data_factors, bINT, by = c("ENV", "GEN")) %>%
@@ -478,12 +516,12 @@ gamem_met <- function(.data,
         separate(Names, into = c("REP", "ENV"), sep = ":") %>%
         add_cols(BLUPre = bups$`REP:ENV`[[1]]) %>%
         arrange(ENV) %>%
-        to_factor(1:2)
+        as_factor(1:2)
       blupBRE <-
         data.frame(Names = rownames(bups$`BLOCK:(REP:ENV)`)) %>%
         separate(Names, into = c("BLOCK", "REP", "ENV"), sep = ":") %>%
         add_cols(BLUPbre = bups$`BLOCK:(REP:ENV)`[[1]]) %>%
-        to_factor(1:3)
+        as_factor(1:3)
       BLUPint <-
         suppressWarnings(
           left_join(data_factors, bINT, by = c("ENV", "GEN")) %>%

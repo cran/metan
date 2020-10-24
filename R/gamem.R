@@ -19,6 +19,12 @@
 #'   information, whereas the complete replicate effect is always taken as
 #'   fixed, as no inter-replicate information was to be recovered (Mohring et
 #'   al., 2015).
+#'@param by One variable (factor) to compute the function by. It is a shortcut
+#'  to \code{\link[dplyr]{group_by}()}.This is especially useful, for example,
+#'  when the researcher what to fit a mixed-effect model for each environment.
+#'  In this case, an object of class gamem_grouped is returned.
+#'  \code{\link{mgidi}} can then be used to compute the mgidi index within each
+#'  environment.
 #' @param prob The probability for estimating confidence interval for BLUP's
 #'   prediction.
 #' @param verbose Logical argument. If \code{verbose = FALSE} the code are run
@@ -27,8 +33,8 @@
 #' to recover or not to recover it? TAG. Theor. Appl. Genet. 128:1541-54.
 #'  \doi{10.1007/s00122-015-2530-0}
 
-#' @return An object of class \code{gamem}, which is a list with the following items for each
-#' element (variable):
+#' @return An object of class \code{gamem} or \code{gamem_grouped}, which is a
+#'   list with the following items for each element (variable):
 #'  * \strong{fixed:} Test for fixed effects.
 #'
 #'  * \strong{random:} Variance components for random effects.
@@ -45,13 +51,21 @@
 #'  maximum observed, \code{MinGEN} the winner genotype, \code{MaxGEN}, the
 #'  loser genotype.
 #'
-#' * \strong{ESTIMATES:} A tibble with the values for the genotypic variance,
-#' block-within-replicate variance (if an alpha-lattice design is used by
-#' informing the block in \code{block}), the residual variance and their
-#' respective contribution to the phenotypic variance; broad-sence heritability,
-#' heritability on the entry-mean basis, genotypic coefficient of variation
-#' residual coefficient of variation and ratio between genotypic and residual
-#' coefficient of variation.
+#' * \strong{ESTIMATES:} A tibble with the values:
+#'    - \code{Gen_var}, the genotypic variance and ;
+#'    - \code{rep:block_var} block-within-replicate variance (if
+#' an alpha-lattice design is used by informing the block in \code{block});
+#'    - \code{Res_var}, the residual variance;
+#'    - \code{Gen (%), rep:block (%), and Res (%)} the respective contribution
+#'    of variance components to the phenotypic variance;
+#'    - \code{H2}, broad-sense heritability;
+#'    - \code{h2mg}, heritability on the entry-mean basis;
+#'    - \code{Accuracy}, the accuracy of selection (square root of
+#' \code{h2mg});
+#'    - \code{CVg}, genotypic coefficient of variation;
+#'    - \code{CVr}, residual coefficient of variation;
+#'    - \code{CV ratio}, the ratio between genotypic and residual coefficient of
+#' variation.
 #'
 #'  * \strong{residuals:} The residuals of the model.
 #'
@@ -125,7 +139,43 @@
 #' get_model_data(alpha, "ranef")
 #'}
 #'
-gamem <- function(.data, gen, rep, resp, block = NULL, prob = 0.05, verbose = TRUE) {
+gamem <- function(.data,
+                  gen,
+                  rep,
+                  resp,
+                  block = NULL,
+                  by = NULL,
+                  prob = 0.05,
+                  verbose = TRUE) {
+  if (!missing(by)){
+    if(length(as.list(substitute(by))[-1L]) != 0){
+      stop("Only one grouping variable can be used in the argument 'by'.\nUse 'group_by()' to pass '.data' grouped by more than one variable.", call. = FALSE)
+    }
+    .data <- group_by(.data, {{by}})
+  }
+if(is_grouped_df(.data)){
+  if(!missing(block)){
+    results <-
+      .data %>%
+      doo(gamem,
+          gen = {{gen}},
+          rep = {{rep}},
+          resp = {{resp}},
+          block = {{block}},
+          prob = prob,
+          verbose = verbose)
+  } else{
+    results <-
+      .data %>%
+      doo(gamem,
+          gen = {{gen}},
+          rep = {{rep}},
+          resp = {{resp}},
+          prob = prob,
+          verbose = verbose)
+  }
+  return(set_class(results, c("tbl_df",  "gamem_group", "tbl",  "data.frame")))
+}
   # RCBD
   if (missing(block) == TRUE) {
     factors  <- .data %>%
@@ -332,7 +382,7 @@ gamem <- function(.data, gen, rep, resp, block = NULL, prob = 0.05, verbose = TR
       blupBWR <- data.frame(Names = rownames(regen$`REP:BLOCK`)) %>%
         separate(Names, into = c("REP", "BLOCK"), sep = ":") %>%
         add_cols(BLUPbre = regen$`REP:BLOCK`[[1]]) %>%
-        to_factor(1:2)
+        as_factor(1:2)
       ranef <-
         suppressWarnings(
           left_join(data_factors, BLUPgen, by = "GEN") %>%

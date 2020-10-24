@@ -12,13 +12,13 @@
 #'   \code{\link{can_corr}()} \code{\link{ecovalence}()},  \code{\link{Fox}()},
 #'   \code{\link{gai}()}, \code{\link{gamem}()},\code{\link{gafem}()},
 #'   \code{\link{ge_acv}}, \code{\link{ge_means}()}, \code{\link{ge_reg}()},
-#'   \code{\link{gytb}()}, \code{\link{performs_ammi}()},
+#'   \code{\link{gytb}()}, \code{\link{mgidi}()}, \code{\link{performs_ammi}()},
 #'   \code{\link{Resende_indexes}()}, \code{\link{Shukla}()},
 #'   \code{\link{superiority}()}, \code{\link{waas}()} or \code{\link{waasb}()}.
 #' @param what What should be captured from the model. See more in section
 #'   \strong{Details}.
 #' @param type Chose if the statistics must be show by genotype (\code{type =
-#'   "GEN"}, default) or environment (\code{type = "ENV"}), when possible.
+#'   "GEN"}, default) or environment (\code{TYPE = "ENV"}), when possible.
 #' @param verbose Logical argument. If \code{verbose = FALSE} the code will run
 #'   silently.
 #' @return A tibble showing the values of the variable chosen in argument
@@ -115,6 +115,11 @@
 #' * \code{"stand_gyt"} The standardized (zero mean and unit variance) Genotype by yield*trait table.
 #' * \code{"si"} The superiority index (sum standardized value across all yield*trait combinations).
 #'
+#'  \strong{Objects of class \code{mgidi}:} See the \strong{Value} section of
+#'  \code{\link{mgidi}()} to see valid options for \code{what} argument.
+#'
+#'  \strong{Objects of class \code{mtsi}:} See the \strong{Value} section of
+#'  \code{\link{mtsi}()} to see valid options for \code{what} argument.
 #'
 #'  \strong{Objects of class \code{Shukla}:}
 #' * \code{"rMean"} Rank for the mean.
@@ -189,9 +194,11 @@
 #' * \code{"details"} The details of the trial.
 #' * \code{"genpar"} Genetic parameters (default).
 #' * \code{"gcov"} The genotypic variance-covariance matrix.
+#' * \code{"pcov"} The phenotypic variance-covariance matrix.
+#' * \code{"gcor"} The genotypic correlation matrix.
+#' * \code{"pcor"} The phenotypic correlation matrix.
 #' * \code{"h2"} The broad-sense heritability.
 #' * \code{"lrt"} The likelihood-ratio test for random effects.
-#' * \code{"pcov"} The phenotypic variance-covariance matrix.
 #' * \code{"vcomp"} The variance components for random effects.
 #' * \code{"ranef"} Random effects.
 #'
@@ -276,6 +283,8 @@
 #'   \code{\link{ge_reg}}, \code{\link{performs_ammi}},
 #'   \code{\link{Resende_indexes}}, \code{\link{Shukla}},
 #'   \code{\link{superiority}}, \code{\link{waas}}, \code{\link{waasb}}
+#' @importFrom dplyr bind_rows
+#' @importFrom purrr map_dfr
 #' @examples
 #' \donttest{
 #' library(metan)
@@ -357,12 +366,13 @@ get_model_data <- function(x,
                            type = "GEN",
                            verbose = TRUE) {
   call_f <- match.call()
-  if (!has_class(x, c("waasb", "waas","waas_means", "gamem", "performs_ammi", "Res_ind",
-                      "AMMI_indexes", "ecovalence", "ge_reg", "Fox", "Shukla",
+  if (!has_class(x, c("waasb", "waasb_group", "waas","waas_means", "gamem", "performs_ammi",
+                      "Res_ind", "AMMI_indexes", "ecovalence", "ge_reg", "Fox", "Shukla",
                       "superiority", "ge_effects", "gai", "Huehn", "Thennarasu",
                       "ge_stats", "Annicchiarico", "Schmildt", "ge_means", "anova_joint",
-                      "gafem", "anova_ind", "gge", "can_cor", "can_cor_group", "gytb",
-                      "ge_acv", "ge_polar"))) {
+                      "gafem", "gamem_group", "anova_ind", "gge", "can_cor",
+                      "can_cor_group", "gytb", "ge_acv", "ge_polar", "mgidi", "mtsi",
+                      "env_stratification"))) {
     stop("Invalid class in object ", call_f[["x"]], ". See ?get_model_data for more information.")
   }
   if (!is.null(what) && substr(what, 1, 2) == "PC") {
@@ -377,11 +387,11 @@ get_model_data <- function(x,
   check <- c(
     "blupg", "blupge", "Y", "WAASB", "PctResp", "PctWAASB", "wRes", "wWAASB", "OrResp", "OrWAASB",
     "OrPC1", "WAASBY", "OrWAASBY", "vcomp", "lrt", "details", "genpar", "ranef", "data", "gcov",
-    "pcov", "fixed", "h2")
+    "gcor", "pcov", "pcor", "fixed", "h2")
   check1 <- c("Y", "WAAS", "PctResp", "PctWAAS", "wRes", "wWAAS", "OrResp", "OrWAAS", "OrPC1", "WAASY", "OrWAASY")
   check2 <- paste("PC", 1:200, sep = "")
-  check3 <- c("blupg", "blupge", "vcomp", "lrt", "genpar", "details", "ranef", "data", "gcov", "pcov", "fixed")
-  check3.1 <- c("h2", "blupg", "vcomp", "lrt", "genpar", "details", "ranef", "data", "gcov", "pcov", "fixed")
+  check3 <- c("blupg", "blupge", "vcomp", "lrt", "genpar", "details", "ranef", "data", "gcov", "gcor", "pcov", "pcor", "fixed")
+  check3.1 <- c("h2", "blupg", "vcomp", "lrt", "genpar", "details", "ranef", "data", "gcov", "gcor", "pcov", "pcor", "fixed")
   check4 <- c("Y", "WAASB", "PctResp", "PctWAASB", "wRes", "wWAASB",
               "OrResp", "OrWAASB", "OrPC1", "WAASBY", "OrWAASBY")
   check5 <- c("ipca_ss", "ipca_ms", "ipca_fval", "ipca_pval", "ipca_expl", "ipca_accum")
@@ -406,13 +416,61 @@ get_model_data <- function(x,
   check24 <- c("gyt", "stand_gyt", "si")
   check25 <- c("ACV", "ACV_R")
   check26 <- c("POLAR", "POLAR_R")
-  if (!is.null(what) && what %in% check3 && !has_class(x, c("waasb", "gamem", "gafem", "anova_joint"))) {
+  check27 <- c("data", "cormat", "PCA", "FA", "KMO", "MSA", "communalities",
+               "communalities_mean", "initial_loadings", "finish_loadings",
+               "canonical_loadings", "scores_gen", "scores_ide", "gen_ide",
+               "MGIDI", "contri_fac", "contri_fac_rank", "contri_fac_rank_sel",
+               "sel_dif", "stat_gain", "sel_gen")
+  check28 <- c("data", "cormat", "PCA", "FA", "KMO", "MSA", "communalities",
+               "communalities_mean", "initial_loadings", "finish_loadings",
+               "canonical_loadings", "scores_gen", "scores_ide", "gen_ide",
+               "MTSI", "contri_fac", "contri_fac_rank", "contri_fac_rank_sel",
+               "sel_dif_trait", "stat_dif_trait", "sel_dif_waasb", "stat_dif_waasb",
+               "sel_dif_waasby", "stat_dif_waasby", "sel_gen")
+  check29 <- c("FA", "env_strat", "mega_env_stat")
+  if (!is.null(what) && what %in% check3 && !has_class(x, c("waasb", "waasb_group", "gamem", "gamem_group", "gafem", "anova_joint"))) {
     stop("Invalid argument 'what'. It can only be used with an oject of class 'waasb' or 'gamem', 'gafem, or 'anova_joint'. Please, check and fix.")
   }
   if (!type %in% c("GEN", "ENV")) {
     stop("Argument 'type' invalid. It must be either 'GEN' or 'ENV'.")
   }
 
+  if(has_class(x, "env_stratification")){
+    if (is.null(what)){
+      what <- "env_strat"
+    }
+    if (!what %in% check29) {
+      stop("Invalid value in 'what' for object of class 'env_stratification'. Allowed are ", paste(check29, collapse = ", "), call. = FALSE)
+    }
+    bind <- x %>% map_dfr(~ bind_rows(!!! .x %>% .[[what]]), .id = 'TRAIT')
+  }
+
+  if(has_class(x, "mtsi")){
+    if (is.null(what)){
+      what <- "sel_dif_trait"
+    }
+    if (!what %in% check28) {
+      stop("Invalid value in 'what' for object of class 'mtsi'. Allowed are ", paste(check28, collapse = ", "), call. = FALSE)
+    }
+    bind <- x[[what]]
+  }
+
+  if(has_class(x, "mgidi")){
+    if (is.null(what)){
+      what <- "sel_dif"
+    }
+    if (!what %in% check27) {
+      stop("Invalid value in 'what' for object of class 'mgidi'. Allowed are ", paste(check27, collapse = ", "), call. = FALSE)
+    }
+    if(has_class(x, "mgidi_group")){
+      bind <-
+        x %>%
+        mutate(data = map(data, ~.x %>% .[[what]])) %>%
+        unnest(data)
+    } else{
+      bind <- x[[what]]
+    }
+  }
   if (has_class(x,  "ge_polar")) {
     if (is.null(what)){
       what <- "POLAR"
@@ -424,8 +482,8 @@ get_model_data <- function(x,
       x[[what]]
     }) %>%
       as_tibble() %>%
-      mutate(gen = x[[1]][["GEN"]]) %>%
-      column_to_first(gen)
+      mutate(GEN = x[[1]][["GEN"]]) %>%
+      column_to_first(GEN)
   }
 
   if (has_class(x,  "ge_acv")) {
@@ -439,8 +497,8 @@ get_model_data <- function(x,
       x[[what]]
     }) %>%
       as_tibble() %>%
-      mutate(gen = x[[1]][["GEN"]]) %>%
-      column_to_first(gen)
+      mutate(GEN = x[[1]][["GEN"]]) %>%
+      column_to_first(GEN)
   }
 
   if(has_class(x,  "gge") & length(class(x)) == 1){
@@ -486,7 +544,7 @@ get_model_data <- function(x,
     }
 
     if(what == "gyt"){
-     bind <- x[["mod"]][["data"]]
+      bind <- x[["mod"]][["data"]]
     }
     if(what == "stand_gyt"){
       bind <- x[["mod"]][["ge_mat"]]
@@ -501,9 +559,6 @@ get_model_data <- function(x,
         arrange(-SI)
     }
   }
-
-
-
   if(has_class(x, c("can_cor", "can_cor_group"))){
     if (is.null(what)){
       what <- "coefs"
@@ -555,7 +610,7 @@ get_model_data <- function(x,
       npairs <- ncol(x[["Coef_FG"]])
       if(what == "canonical"){
         bind <-
-        x[["Sigtest"]] %>%
+          x[["Sigtest"]] %>%
           as_tibble(rownames = NA) %>%
           rownames_to_column("GROUP")
       } else{
@@ -571,235 +626,271 @@ get_model_data <- function(x,
                   rownames_to_column("VAR") %>%
                   add_cols(GROUP = "SG", .before = VAR)
           )
-    }
+      }
     }
   }
 
-
-
-  if (has_class(x, c("waasb", "gamem"))) {
+  if (has_class(x, c("waasb", "waasb_group", "gamem", "gamem_group"))) {
     if (is.null(what)){
       what <- "genpar"
     }
-    if(is.null(x[[1]][["ESTIMATES"]]) == TRUE && what == "genpar"){
-      warning("Using what = 'genpar' is only possible for models fitted with random = 'gen' or random = 'all'\nSetting what to 'vcomp'.", call. = FALSE)
-      what <- "vcomp"
-    }
-    if(has_class(x,  "gamem") && !what %in% check3.1){
-      stop("Invalid value in 'what' for an object of class '", class(x), "'. Allowed are ", paste(check3.1, collapse = ", "), call. = FALSE)
-    }
-    if(has_class(x,  "waasb") && !what %in% check){
-      stop("Invalid value in 'what' for an object of class '", class(x), "'. Allowed are ", paste(check, collapse = ", "), call. = FALSE)
-    }
-    if (has_class(x,  "waasb") & what %in% check4) {
-      bind <- sapply(x, function(x) {
-        x$model[[what]]
-      }) %>%
-        as_tibble() %>%
-        mutate(gen = x[[1]][["model"]][["Code"]],
-               type = x[[1]][["model"]][["type"]]) %>%
-        dplyr::filter(type == {{type}}) %>%
-        remove_cols(type) %>%
-        column_to_first(gen)
-    }
-    if(what == "h2"){
+    if(has_class(x, c("gamem_group", "waasb_group"))){
       bind <-
-        gmd(x, verbose = FALSE) %>%
-        subset(Parameters == "h2mg") %>%
-        remove_cols(1) %>%
-        t() %>%
-        as.data.frame() %>%
-        rownames_to_column("VAR") %>%
-        set_names("VAR", "h2")
-    }
-    if (what == "data") {
-      factors <- x[[1]][["residuals"]] %>% select_non_numeric_cols()
-      vars <- sapply(x, function(x) {
-        val <- x[["residuals"]][["Y"]]
-      }) %>%
-        as_tibble()
-      bind <- as_tibble(cbind(factors, vars))
-    }
-    if (what == "gcov") {
-      data <- gmd(x, "data", verbose = FALSE)
-      if(ncol(select_numeric_cols(data)) < 2){
-        stop("Only one numeric variable. No matrix generated.", call. = FALSE)
+        x %>%
+        mutate(bind = map(data, ~.x %>% gmd(what = what, verbose = verbose))) %>%
+        unnest(bind) %>%
+        remove_cols(data)
+    } else{
+      if(is.null(x[[1]][["ESTIMATES"]]) == TRUE && what == "genpar"){
+        warning("Using what = 'genpar' is only possible for models fitted with random = 'gen' or random = 'all'\nSetting what to 'vcomp'.", call. = FALSE)
+        what <- "vcomp"
       }
-      fctrs <- names(select_non_numeric_cols(data))
-      formula <-
-        x[[1]][["formula"]] %>%
-        replace_string(pattern = "Y", replacement = "value") %>%
-        as.formula()
-      gvar <-
-        data %>%
-        pivot_longer(-all_of(fctrs)) %>%
-        group_by(name) %>%
-        doo(~lmer(formula, data = .) %>% VarCorr()) %>%
-        mutate(data = as.numeric(map(data, ~ .[["GEN"]])))
-      factors <- select_non_numeric_cols(data)
-      combined_vars <- comb_vars(data, verbose = FALSE)
-      gcov <-
-        cbind(factors, combined_vars) %>%
-        pivot_longer(-all_of(fctrs)) %>%
-        group_by(name) %>%
-        doo(~lmer(formula, data = .) %>% VarCorr()) %>%
-        mutate(data = as.numeric(map(data, ~ .[["GEN"]]))) %>%
-        separate(name, into = c("v1", "v2"), sep = "x") %>%
-        left_join(gvar, by = c("v1" = "name")) %>%
-        left_join(gvar, by = c("v2" = "name")) %>%
-        mutate(gcov = (data.x - data.y - data) / 2)
-      gcov_mat <- diag(gvar$data, nrow = length(gvar$data), ncol = length(gvar$data))
-      colnames(gcov_mat) <- rownames(gcov_mat) <- gvar$name
-      for (i in 1:nrow(gcov)){
-        gcov_mat[which(rownames(gcov_mat) == as.character(gcov[i, 1])),
-                 which(colnames(gcov_mat) == as.character(gcov[i, 2]))] <- pull(gcov[i, 6])
+      if(has_class(x,  "gamem") && !what %in% check3.1){
+        stop("Invalid value in 'what' for an object of class '", class(x), "'. Allowed are ", paste(check3.1, collapse = ", "), call. = FALSE)
       }
-      for(i in 1:nrow(gcov_mat)){
-        for(j in 1:ncol(gcov_mat)){
-          if(gcov_mat[i, j] == 0){
-            gcov_mat[i, j] <- gcov_mat[j, i]
-          } else{
-            gcov_mat[i, j] <- gcov_mat[i, j]
+      if(has_class(x,  "waasb") && !what %in% check){
+        stop("Invalid value in 'what' for an object of class '", class(x), "'. Allowed are ", paste(check, collapse = ", "), call. = FALSE)
+      }
+      if (has_class(x,  "waasb") & what %in% check4) {
+        bind <- sapply(x, function(x) {
+          x$model[[what]]
+        }) %>%
+          as_tibble() %>%
+          mutate(GEN = x[[1]][["model"]][["Code"]],
+                 TYPE = x[[1]][["model"]][["type"]]) %>%
+          dplyr::filter(TYPE == {{type}}) %>%
+          remove_cols(TYPE) %>%
+          column_to_first(GEN)
+      }
+      if(what == "h2"){
+        bind <-
+          gmd(x, verbose = FALSE) %>%
+          subset(Parameters == "h2mg") %>%
+          remove_cols(1) %>%
+          t() %>%
+          as.data.frame() %>%
+          rownames_to_column("VAR") %>%
+          set_names("VAR", "h2")
+      }
+      if (what == "data") {
+        factors <- x[[1]][["residuals"]] %>% select_non_numeric_cols()
+        vars <- sapply(x, function(x) {
+          val <- x[["residuals"]][["Y"]]
+        }) %>%
+          as_tibble()
+        bind <- as_tibble(cbind(factors, vars))
+      }
+      if (what == "gcov") {
+        data <- gmd(x, "data", verbose = FALSE)
+        if(ncol(select_numeric_cols(data)) < 2){
+          stop("Only one numeric variable. No matrix generated.", call. = FALSE)
+        }
+        fctrs <- names(select_non_numeric_cols(data))
+        formula <-
+          x[[1]][["formula"]] %>%
+          replace_string(pattern = "Y", replacement = "value") %>%
+          as.formula()
+        gvar <-
+          data %>%
+          pivot_longer(-all_of(fctrs)) %>%
+          group_by(name) %>%
+          doo(~lmer(formula, data = .) %>% VarCorr()) %>%
+          mutate(data = as.numeric(map(data, ~ .[["GEN"]])))
+        factors <- select_non_numeric_cols(data)
+        combined_vars <- comb_vars(data, verbose = FALSE)
+        gcov <-
+          cbind(factors, combined_vars) %>%
+          pivot_longer(-all_of(fctrs)) %>%
+          group_by(name) %>%
+          doo(~lmer(formula, data = .) %>% VarCorr()) %>%
+          mutate(data = as.numeric(map(data, ~ .[["GEN"]]))) %>%
+          separate(name, into = c("v1", "v2"), sep = "x") %>%
+          left_join(gvar, by = c("v1" = "name")) %>%
+          left_join(gvar, by = c("v2" = "name")) %>%
+          mutate(gcov = (data.x - data.y - data) / 2)
+        gcov_mat <- diag(gvar$data, nrow = length(gvar$data), ncol = length(gvar$data))
+        colnames(gcov_mat) <- rownames(gcov_mat) <- gvar$name
+        for (i in 1:nrow(gcov)){
+          gcov_mat[which(rownames(gcov_mat) == as.character(gcov[i, 1])),
+                   which(colnames(gcov_mat) == as.character(gcov[i, 2]))] <- pull(gcov[i, 6])
+        }
+        for(i in 1:nrow(gcov_mat)){
+          for(j in 1:ncol(gcov_mat)){
+            if(gcov_mat[i, j] == 0){
+              gcov_mat[i, j] <- gcov_mat[j, i]
+            } else{
+              gcov_mat[i, j] <- gcov_mat[i, j]
+            }
           }
         }
+        bind <- make_sym(gcov_mat, diag = diag(gcov_mat), make = "lower")
+        bind <- bind[names(x), names(x)]
       }
-      bind <- make_sym(gcov_mat, diag = diag(gcov_mat), make = "lower")
-    }
-    if (what == "pcov") {
-      data <- gmd(x, "data", verbose = FALSE)
-      if(ncol(select_numeric_cols(data)) < 2){
-        stop("nly one numeric variable. No matrix generated.", call. = FALSE)
-      }
-      bind <-
-        data %>%
-        means_by(GEN) %>%
-        remove_cols(GEN) %>%
-        cov()
-    }
-    if (what == "fixed"){
-      temps <- lapply(seq_along(x), function(i) {
-        x[[i]][["fixed"]] %>%
-          add_cols(VAR = names(x)[i]) %>%
-          column_to_first(VAR)
-      })
-      names(temps) <- names(x)
-      bind <- temps %>% reduce(full_join, by = names(temps[[1]]))
-    }
-    if (what == "vcomp") {
-      bind <- sapply(x, function(x) {
-        val <- x[["random"]][["Variance"]]
-      }) %>%
-        as_tibble() %>%
-        mutate(Group = x[[1]][["random"]][["Group"]]) %>%
-        column_to_first(Group)
-    }
-    if (what == "genpar") {
-      bind <- sapply(x, function(x) {
-        val <- x[["ESTIMATES"]][["Values"]]
-      }) %>%
-        as_tibble() %>%
-        mutate(Parameters = x[[1]][["ESTIMATES"]][["Parameters"]]) %>%
-        column_to_first(Parameters)
-    }
-    if (what == "details") {
-      bind <- sapply(x, function(x) {
-        val <- x[["Details"]][["Values"]] %>% as.character()
-      }) %>%
-        as_tibble() %>%
-        mutate(Parameters = x[[1]][["Details"]][["Parameters"]]) %>%
-        column_to_first(Parameters)
-    }
-    if (what == "lrt") {
-      temps <- lapply(seq_along(x), function(i) {
-        x[[i]][["LRT"]] %>%
-          remove_rows_na(verbose = FALSE) %>%
-          add_cols(VAR = names(x)[i]) %>%
-          column_to_first(VAR)
-      })
-      names(temps) <- names(x)
-      bind <- temps %>% reduce(full_join, by = names(temps[[1]]))
-    }
-    if (what %in% c("blupg", "blupge")) {
-      if (what == "blupg") {
-        list <- lapply(x, function(x){
-          x[["BLUPgen"]] %>% select(GEN, Predicted)
-        })
-        bind <- suppressWarnings(
-          lapply(seq_along(list),
-                 function(i){
-                   set_names(list[[i]], "GEN", names(list)[i])
-                 }) %>%
-            reduce(full_join, by = "GEN") %>%
-            arrange(GEN)
-        )
-      }
-      if (what == "blupge") {
-        list <- lapply(x, function(x){
-          x[["BLUPint"]] %>% select(ENV, GEN, Predicted)
-        })
-        bind <-  suppressWarnings(
-          lapply(seq_along(list),
-                 function(i){
-                   set_names(list[[i]], "ENV", "GEN", names(list)[i])
-                 }) %>%
-            reduce(full_join, by = c("ENV", "GEN")) %>%
-            arrange(ENV, GEN) %>%
-            means_by(ENV, GEN)
-        )
-      }
-    }
-    if (what == "ranef") {
-      dfs<-
-        lapply(x, function(x){
-          if(has_class(x,  "waasb")){
-          int <- x[["BLUPint"]]
-          } else{
-            int <- x[["ranef"]]
+      if (what == "gcor") {
+        gcov <- gmd(x, "gcov", verbose = FALSE)
+        bind <- matrix(NA, nrow = nrow(gcov), ncol = ncol(gcov))
+        for(i in 1:nrow(gcov)){
+          for(j in 1:ncol(gcov)){
+            if(i == j){
+              next
+            } else{
+              bind[i, j] <- gcov[i, j] / sqrt(gcov[i, i] * gcov[j, j])
+            }
           }
-          factors <- int %>% select_non_numeric_cols()
-          numeric <- int %>% select_cols(contains("BLUP"))
-          df_list2 <- list()
-          for (i in 1:ncol(numeric)){
-            temp <-
-              cbind(factors, numeric[i])
-            var_names <- strsplit(case_when(names(temp[ncol(factors)+1])== "BLUPg" ~ "GEN",
-                                            names(temp[ncol(factors)+1])== "BLUPe" ~ "ENV",
-                                            names(temp[ncol(factors)+1])== "BLUPge" ~ c("ENV GEN"),
-                                            names(temp[ncol(factors)+1])== "BLUPre" ~ c("ENV REP"),
-                                            names(temp[ncol(factors)+1])== "BLUPg+ge" ~ c("ENV GEN"),
-                                            names(temp[ncol(factors)+1])== "BLUPbre" ~ c("REP BLOCK"),
-                                            names(temp[ncol(factors)+1])== "BLUPg+bre" ~ c("GEN REP BLOCK"),
-                                            names(temp[ncol(factors)+1])== "BLUPg+ge+bre" ~ c("ENV REP BLOCK GEN"),
-                                            names(temp[ncol(factors)+1])== "BLUPe+ge+re+bre" ~ c("ENV REP BLOCK GEN"),
-                                            names(temp[ncol(factors)+1])== "BLUPg+e+ge+re+bre" ~ c("ENV REP BLOCK GEN"),
-                                            names(temp[ncol(factors)+1])== "BLUPg+e+ge+re" ~ c("ENV GEN REP"),
-                                            names(temp[ncol(factors)+1])== "BLUPge+e+re" ~ c("ENV GEN REP")),
-                                  " ")[[1]]
-            temp <-
-              temp %>%
-              select(all_of(var_names), last_col()) %>%
-              distinct_all(.keep_all = TRUE)
-            fact_nam <- sapply(colnames(temp %>% select_non_numeric_cols()), paste) %>%
-              paste(., collapse = '_')
-            df_list2[[paste(fact_nam)]] <- temp
+        }
+        diag(bind) <- 1
+        rownames(bind) <- colnames(bind) <- rownames(gcov)
+      }
+      if (what == "pcov") {
+        data <- gmd(x, "data", verbose = FALSE)
+        if(ncol(select_numeric_cols(data)) < 2){
+          stop("nly one numeric variable. No matrix generated.", call. = FALSE)
+        }
+        bind <-
+          data %>%
+          means_by(GEN) %>%
+          remove_cols(GEN) %>%
+          cov()
+      }
+      if (what == "pcor") {
+        pcov <- gmd(x, "pcov", verbose = FALSE)
+        bind <- matrix(NA, nrow = nrow(pcov), ncol = ncol(pcov))
+        for(i in 1:nrow(pcov)){
+          for(j in 1:ncol(pcov)){
+            if(i == j){
+              next
+            } else{
+              bind[i, j] <- pcov[i, j] / sqrt(pcov[i, i] * pcov[j, j])
+            }
           }
-          return(df_list2)
+        }
+        diag(bind) <- 1
+        rownames(bind) <- colnames(bind) <- rownames(pcov)
+      }
+      if (what == "fixed"){
+        temps <- lapply(seq_along(x), function(i) {
+          x[[i]][["fixed"]] %>%
+            add_cols(VAR = names(x)[i]) %>%
+            column_to_first(VAR)
         })
-      nvcomp <- length(dfs[[1]])
-      bind <- list()
+        names(temps) <- names(x)
+        bind <- temps %>% reduce(full_join, by = names(temps[[1]]))
+      }
+      if (what == "vcomp") {
+        bind <- sapply(x, function(x) {
+          val <- x[["random"]][["Variance"]]
+        }) %>%
+          as_tibble() %>%
+          mutate(Group = x[[1]][["random"]][["Group"]]) %>%
+          column_to_first(Group)
+      }
+      if (what == "genpar") {
+        bind <- sapply(x, function(x) {
+          val <- x[["ESTIMATES"]][["Values"]]
+        }) %>%
+          as_tibble() %>%
+          mutate(Parameters = x[[1]][["ESTIMATES"]][["Parameters"]]) %>%
+          column_to_first(Parameters)
+      }
+      if (what == "details") {
+        bind <- sapply(x, function(x) {
+          val <- x[["Details"]][["Values"]] %>% as.character()
+        }) %>%
+          as_tibble() %>%
+          mutate(Parameters = x[[1]][["Details"]][["Parameters"]]) %>%
+          column_to_first(Parameters)
+      }
+      if (what == "lrt") {
+        temps <- lapply(seq_along(x), function(i) {
+          x[[i]][["LRT"]] %>%
+            remove_rows_na(verbose = FALSE) %>%
+            add_cols(VAR = names(x)[i]) %>%
+            column_to_first(VAR)
+        })
+        names(temps) <- names(x)
+        bind <- temps %>% reduce(full_join, by = names(temps[[1]]))
+      }
+      if (what %in% c("blupg", "blupge")) {
+        if (what == "blupg") {
+          list <- lapply(x, function(x){
+            x[["BLUPgen"]] %>% select(GEN, Predicted)
+          })
+          bind <- suppressWarnings(
+            lapply(seq_along(list),
+                   function(i){
+                     set_names(list[[i]], "GEN", names(list)[i])
+                   }) %>%
+              reduce(full_join, by = "GEN") %>%
+              arrange(GEN)
+          )
+        }
+        if (what == "blupge") {
+          list <- lapply(x, function(x){
+            x[["BLUPint"]] %>% select(ENV, GEN, Predicted)
+          })
+          bind <-  suppressWarnings(
+            lapply(seq_along(list),
+                   function(i){
+                     set_names(list[[i]], "ENV", "GEN", names(list)[i])
+                   }) %>%
+              reduce(full_join, by = c("ENV", "GEN")) %>%
+              arrange(ENV, GEN) %>%
+              means_by(ENV, GEN)
+          )
+        }
+      }
+      if (what == "ranef") {
+        dfs<-
+          lapply(x, function(x){
+            if(has_class(x,  "waasb")){
+              int <- x[["BLUPint"]]
+            } else{
+              int <- x[["ranef"]]
+            }
+            factors <- int %>% select_non_numeric_cols()
+            numeric <- int %>% select_cols(contains("BLUP"))
+            df_list2 <- list()
+            for (i in 1:ncol(numeric)){
+              temp <-
+                cbind(factors, numeric[i])
+              var_names <- strsplit(case_when(names(temp[ncol(factors)+1])== "BLUPg" ~ "GEN",
+                                              names(temp[ncol(factors)+1])== "BLUPe" ~ "ENV",
+                                              names(temp[ncol(factors)+1])== "BLUPge" ~ c("ENV GEN"),
+                                              names(temp[ncol(factors)+1])== "BLUPre" ~ c("ENV REP"),
+                                              names(temp[ncol(factors)+1])== "BLUPg+ge" ~ c("ENV GEN"),
+                                              names(temp[ncol(factors)+1])== "BLUPbre" ~ c("REP BLOCK"),
+                                              names(temp[ncol(factors)+1])== "BLUPg+bre" ~ c("GEN REP BLOCK"),
+                                              names(temp[ncol(factors)+1])== "BLUPg+ge+bre" ~ c("ENV REP BLOCK GEN"),
+                                              names(temp[ncol(factors)+1])== "BLUPe+ge+re+bre" ~ c("ENV REP BLOCK GEN"),
+                                              names(temp[ncol(factors)+1])== "BLUPg+e+ge+re+bre" ~ c("ENV REP BLOCK GEN"),
+                                              names(temp[ncol(factors)+1])== "BLUPg+e+ge+re" ~ c("ENV GEN REP"),
+                                              names(temp[ncol(factors)+1])== "BLUPge+e+re" ~ c("ENV GEN REP")),
+                                    " ")[[1]]
+              temp <-
+                temp %>%
+                select(all_of(var_names), last_col()) %>%
+                distinct_all(.keep_all = TRUE)
+              fact_nam <- sapply(colnames(temp %>% select_non_numeric_cols()), paste) %>%
+                paste(., collapse = '_')
+              df_list2[[paste(fact_nam)]] <- temp
+            }
+            return(df_list2)
+          })
+        nvcomp <- length(dfs[[1]])
+        bind <- list()
 
-      for(i in 1:nvcomp){
-        var_names <- names(dfs[[1]][[i]] %>%  select_non_numeric_cols())
-        index <- length(var_names)
-        num <-
-          lapply(seq_along(dfs),
-                 function(j){
-                   set_names(dfs[[j]][[i]], var_names, names(dfs)[j])
-                 }) %>%
-          reduce(full_join, by = var_names) %>%
-          arrange(across(where(~!is.numeric(.x))))
-          # arrange_if(~!is.numeric(.x))
-        bind[[names(dfs[[1]])[i]]] <- num
+        for(i in 1:nvcomp){
+          var_names <- names(dfs[[1]][[i]] %>%  select_non_numeric_cols())
+          index <- length(var_names)
+          num <-
+            lapply(seq_along(dfs),
+                   function(j){
+                     set_names(dfs[[j]][[i]], var_names, names(dfs)[j])
+                   }) %>%
+            reduce(full_join, by = var_names) %>%
+            arrange(across(where(~!is.numeric(.x))))
+          bind[[names(dfs[[1]])[i]]] <- num
+        }
       }
     }
   }
@@ -894,6 +985,7 @@ get_model_data <- function(x,
         column_to_first(GEN)
     }
   }
+
   if (has_class(x,  "Annicchiarico")) {
     if (is.null(what)){
       what <- "Wi"
@@ -905,9 +997,10 @@ get_model_data <- function(x,
       x[["general"]][[what]]
     }) %>%
       as_tibble() %>%
-      mutate(gen = x[[1]][["general"]][["GEN"]]) %>%
-      column_to_first(gen)
+      mutate(GEN = x[[1]][["general"]][["GEN"]]) %>%
+      column_to_first(GEN)
   }
+
   if (has_class(x,  "Schmildt")) {
     if (is.null(what)){
       what <- "Wi"
@@ -919,9 +1012,10 @@ get_model_data <- function(x,
       x[["general"]][[what]]
     }) %>%
       as_tibble() %>%
-      mutate(gen = x[[1]][["general"]][["GEN"]]) %>%
-      column_to_first(gen)
+      mutate(GEN = x[[1]][["general"]][["GEN"]]) %>%
+      column_to_first(GEN)
   }
+
   if (has_class(x,  "ge_stats")) {
     if (is.null(what)){
       what <- "stats"
@@ -937,13 +1031,14 @@ get_model_data <- function(x,
       }
     })) %>%
       as_tibble() %>%
-      mutate(gen = x[[1]][["GEN"]]) %>%
+      mutate(GEN = x[[1]][["GEN"]]) %>%
       pivot_longer(cols = contains(".")) %>%
       separate(name, into = c("var", "stat"), sep = "\\.") %>%
       pivot_wider(values_from = value, names_from = stat) %>%
       column_to_first(var) %>%
       arrange(var)
   }
+
   if (has_class(x,  "Thennarasu")) {
     if (is.null(what)){
       what <- "N1"
@@ -955,9 +1050,10 @@ get_model_data <- function(x,
       x[[what]]
     }) %>%
       as_tibble() %>%
-      mutate(gen = x[[1]][["GEN"]]) %>%
-      column_to_first(gen)
+      mutate(GEN = x[[1]][["GEN"]]) %>%
+      column_to_first(GEN)
   }
+
   if (has_class(x,  "Huehn")) {
     if (is.null(what)){
       what <- "S1"
@@ -969,9 +1065,10 @@ get_model_data <- function(x,
       x[[what]]
     }) %>%
       as_tibble() %>%
-      mutate(gen = x[[1]][["GEN"]]) %>%
-      column_to_first(gen)
+      mutate(GEN = x[[1]][["GEN"]]) %>%
+      column_to_first(GEN)
   }
+
   if (has_class(x,  "gai")) {
     if (is.null(what)){
       what <- "GAI"
@@ -983,9 +1080,10 @@ get_model_data <- function(x,
       x[[what]]
     }) %>%
       as_tibble() %>%
-      mutate(gen = x[[1]][["GEN"]]) %>%
-      column_to_first(gen)
+      mutate(GEN = x[[1]][["GEN"]]) %>%
+      column_to_first(GEN)
   }
+
   if (has_class(x,  "ge_effects")) {
     bind <- sapply(x, function(x) {
       make_long(x)[[3]]
@@ -996,6 +1094,7 @@ get_model_data <- function(x,
       select(1:2)
     bind <- cbind(factors, bind)
   }
+
   if (has_class(x,  "superiority")) {
     if (is.null(what)){
       what <- "Pi_a"
@@ -1007,9 +1106,10 @@ get_model_data <- function(x,
       x[["index"]][[what]]
     }) %>%
       as_tibble() %>%
-      mutate(gen = x[[1]][["index"]][["GEN"]]) %>%
-      column_to_first(gen)
+      mutate(GEN = x[[1]][["index"]][["GEN"]]) %>%
+      column_to_first(GEN)
   }
+
   if (has_class(x,  "Shukla")) {
     if (is.null(what)){
       what <- "ShuklaVar"
@@ -1021,9 +1121,10 @@ get_model_data <- function(x,
       x[[what]]
     }) %>%
       as_tibble() %>%
-      mutate(gen = x[[1]][["GEN"]]) %>%
-      column_to_first(gen)
+      mutate(GEN = x[[1]][["GEN"]]) %>%
+      column_to_first(GEN)
   }
+
   if (has_class(x,  "Fox")) {
     if (is.null(what)){
       what <- "TOP"
@@ -1035,9 +1136,10 @@ get_model_data <- function(x,
       x[[what]]
     }) %>%
       as_tibble() %>%
-      mutate(gen = x[[1]][["GEN"]]) %>%
-      column_to_first(gen)
+      mutate(GEN = x[[1]][["GEN"]]) %>%
+      column_to_first(GEN)
   }
+
   if (has_class(x,  "ge_reg")) {
     if (is.null(what)){
       what <- "slope"
@@ -1049,9 +1151,10 @@ get_model_data <- function(x,
       x[["regression"]][[what]]
     }) %>%
       as_tibble() %>%
-      mutate(gen = x[[1]][["regression"]][["GEN"]]) %>%
-      column_to_first(gen)
+      mutate(GEN = x[[1]][["regression"]][["GEN"]]) %>%
+      column_to_first(GEN)
   }
+
   if (has_class(x,  "ecovalence")) {
     if (is.null(what)){
       what <- "Ecoval"
@@ -1063,9 +1166,10 @@ get_model_data <- function(x,
       x[[what]]
     }) %>%
       as_tibble() %>%
-      mutate(gen = x[[1]][["GEN"]]) %>%
-      column_to_first(gen)
+      mutate(GEN = x[[1]][["GEN"]]) %>%
+      column_to_first(GEN)
   }
+
   if (has_class(x,  "AMMI_indexes")) {
     if (is.null(what)){
       what <- "WAAS"
@@ -1077,9 +1181,10 @@ get_model_data <- function(x,
       x[[what]]
     }) %>%
       as_tibble() %>%
-      mutate(gen = x[[1]][["GEN"]]) %>%
-      column_to_first(gen)
+      mutate(GEN = x[[1]][["GEN"]]) %>%
+      column_to_first(GEN)
   }
+
   if (has_class(x,  "Res_ind")) {
     if (is.null(what)){
       what <- "HMRPGV"
@@ -1091,9 +1196,10 @@ get_model_data <- function(x,
       x[[what]]
     }) %>%
       as_tibble() %>%
-      mutate(gen = x[[1]][["GEN"]]) %>%
-      column_to_first(gen)
+      mutate(GEN = x[[1]][["GEN"]]) %>%
+      column_to_first(GEN)
   }
+
   if (has_class(x,  "performs_ammi")) {
     if (is.null(what)){
       what <- "ipca_expl"
@@ -1106,11 +1212,11 @@ get_model_data <- function(x,
         x$model[[what]]
       }) %>%
         as_tibble() %>%
-        mutate(gen = x[[1]][["model"]][["Code"]],
-               type = x[[1]][["model"]][["type"]]) %>%
-        dplyr::filter(type == {{type}}) %>%
-        remove_cols(type) %>%
-        column_to_first(gen)
+        mutate(GEN = x[[1]][["model"]][["Code"]],
+               TYPE = x[[1]][["model"]][["type"]]) %>%
+        dplyr::filter(TYPE == {{type}}) %>%
+        remove_cols(TYPE) %>%
+        column_to_first(GEN)
     }
     if (what  %in% check5) {
       what <- case_when(
@@ -1130,6 +1236,7 @@ get_model_data <- function(x,
         column_to_first(PC, DF)
     }
   }
+
   if (has_class(x, c("waas", "waas_means"))){
     if (is.null(what)){
       what <- "WAAS"
@@ -1142,11 +1249,11 @@ get_model_data <- function(x,
         x$model[[what]]
       }) %>%
         as_tibble() %>%
-        mutate(gen = x[[1]][["model"]][["Code"]],
-               type = x[[1]][["model"]][["type"]]) %>%
-        dplyr::filter(type == {{type}}) %>%
-        remove_cols(type) %>%
-        column_to_first(gen)
+        mutate(GEN = x[[1]][["model"]][["Code"]],
+               TYPE = x[[1]][["model"]][["type"]]) %>%
+        dplyr::filter(TYPE == {{type}}) %>%
+        remove_cols(TYPE) %>%
+        column_to_first(GEN)
     }
     if (what == "details") {
       bind <- sapply(x, function(x) {
@@ -1157,6 +1264,7 @@ get_model_data <- function(x,
         column_to_first(Parameters)
     }
   }
+
   if(verbose == TRUE){
     message("Class of the model: ", paste(class(x), collapse = ", "))
     message("Variable extracted: ", what)

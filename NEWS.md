@@ -1,3 +1,22 @@
+# metan 1.10.0
+## Minor improvements
+* `gamem()`, `gamem_met()`, and `waasb()` now have a `by` argument and understand data passed from `group_by`.
+* `mtsi()` and `mgidi()` now returns the ranks for the contribution of each factor and understand models fitted with `gamem()` and `waasb()` using the `by` argument.
+* `plot.mtsi()` and `plot.mgidi()` now returns a radar plot by default when using `type = "contribution"`.
+* `get_model_data()` now returns the genotypic and phenotypic correlation matrices from objects of class `waasb` and `gamem`.
+* `replace_string()`, `replace_number()`, `extract_string()`, and `extract_number()` now accepts [tidy evaluation](https://tidyeval.tidyverse.org/index.html) in the new `...` argument.
+
+## New functions
+* `get_dist()` to get distance matrices from objects of class `clustering`.
+* `get_corvars()` to get normal, multivariate correlated variables.
+* `get_covmat()` to obtain covariance matrix based on variances and correlation values.
+* `as_numeric()`, `as_integer()`, `as_logical()`, `as_character()`, and `as_factor()` to coerce variables to specific formats quickly.
+* `n_valid()`, `n_missing()`, and `n_unique()` to count valid, missing, and unique values, respectively.
+* `tidy_colnames()` to clean up column names. It is a shortcut to `tidy_strings()` applied to the column names of a data frame.
+* `env_stratification()` to perform environment stratification using factor analysis.
+* 
+
+
 # metan 1.9.0
 * New functions `add_prefix()` and `add_suffix()` to add prefixes and suffixes to variable names, respectively.
 * New function `select_pred()` to selects a best subset of predictor variables.

@@ -4,7 +4,16 @@
 \alias{gamem}
 \title{Genotype analysis by mixed-effect models}
 \usage{
-gamem(.data, gen, rep, resp, block = NULL, prob = 0.05, verbose = TRUE)
+gamem(
+  .data,
+  gen,
+  rep,
+  resp,
+  block = NULL,
+  by = NULL,
+  prob = 0.05,
+  verbose = TRUE
+)
 }
 \arguments{
 \item{.data}{The dataset containing the columns related to, Genotypes,
@@ -27,6 +36,13 @@ information, whereas the complete replicate effect is always taken as
 fixed, as no inter-replicate information was to be recovered (Mohring et
 al., 2015).}
 
+\item{by}{One variable (factor) to compute the function by. It is a shortcut
+to \code{\link[dplyr]{group_by}()}.This is especially useful, for example,
+when the researcher what to fit a mixed-effect model for each environment.
+In this case, an object of class gamem_grouped is returned.
+\code{\link{mgidi}} can then be used to compute the mgidi index within each
+environment.}
+
 \item{prob}{The probability for estimating confidence interval for BLUP's
 prediction.}
 
@@ -34,8 +50,8 @@ prediction.}
 silently.}
 }
 \value{
-An object of class \code{gamem}, which is a list with the following items for each
-element (variable):
+An object of class \code{gamem} or \code{gamem_grouped}, which is a
+list with the following items for each element (variable):
 \itemize{
 \item \strong{fixed:} Test for fixed effects.
 \item \strong{random:} Variance components for random effects.
@@ -47,13 +63,23 @@ number of genotypes; \code{OVmean}, the grand mean; \code{Min}, the minimum
 observed (returning the genotype and replication/block); \code{Max} the
 maximum observed, \code{MinGEN} the winner genotype, \code{MaxGEN}, the
 loser genotype.
-\item \strong{ESTIMATES:} A tibble with the values for the genotypic variance,
-block-within-replicate variance (if an alpha-lattice design is used by
-informing the block in \code{block}), the residual variance and their
-respective contribution to the phenotypic variance; broad-sence heritability,
-heritability on the entry-mean basis, genotypic coefficient of variation
-residual coefficient of variation and ratio between genotypic and residual
-coefficient of variation.
+\item \strong{ESTIMATES:} A tibble with the values:
+\itemize{
+\item \code{Gen_var}, the genotypic variance and ;
+\item \code{rep:block_var} block-within-replicate variance (if
+an alpha-lattice design is used by informing the block in \code{block});
+\item \code{Res_var}, the residual variance;
+\item \code{Gen (\%), rep:block (\%), and Res (\%)} the respective contribution
+of variance components to the phenotypic variance;
+\item \code{H2}, broad-sense heritability;
+\item \code{h2mg}, heritability on the entry-mean basis;
+\item \code{Accuracy}, the accuracy of selection (square root of
+\code{h2mg});
+\item \code{CVg}, genotypic coefficient of variation;
+\item \code{CVr}, residual coefficient of variation;
+\item \code{CV ratio}, the ratio between genotypic and residual coefficient of
+variation.
+}
 \item \strong{residuals:} The residuals of the model.
 \item \strong{formula} The formula used to fit the model.
 }

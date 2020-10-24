@@ -2,29 +2,24 @@
 #' @name utils_num_str
 #' @param .data A data frame
 #' @param ... The argument depends on the function used.
-#' * For \code{round_cols()} \code{...} are the variables to round. If no
-#' variable is informed, all the numeric variables from \code{data} are used.
-#' * For \code{all_lower_case()}, \code{all_upper_case()},
-#' \code{all_title_case()}, \code{remove_strings()}, and \code{tidy_strings()}
-#' \code{...} are the variables to apply the function. If no variable is
-#' informed, the function will be applied to all non-numeric variables in
-#' \code{.data}.
+#'  * For \code{round_cols()} \code{...} are the variables to round. If no
+#'  variable is informed, all the numeric variables from \code{data} are used.
+#'  * For \code{all_lower_case()}, \code{all_upper_case()},
+#'   \code{all_title_case()}, \code{stract_number()}, \code{stract_string()},
+#'   \code{remove_strings()}, and \code{tidy_strings()} \code{...} are the
+#'   variables to apply the function. If no variable is informed, the function
+#'   will be applied to all non-numeric variables in \code{.data}.
 #' @param digits The number of significant figures.
 #' @param var The variable to extract or replace numbers or strings.
-#' @param new_var The name of the new variable containing the numbers or
-#'   strings extracted or replaced. Defaults to \code{new_var}.
-#' @param drop Logical argument. If \code{TRUE} keeps the new variable
-#'   \code{new_var} and drops the existing ones. Defaults to \code{FALSE}.
+#' @param new_var Deprecated argument as of metan 1.10.0.
+#' @param drop Deprecated argument as of metan 1.10.0.
 #' @param pattern A string to be matched. Regular Expression Syntax is also
 #'   allowed.
 #' @param replacement A string for replacement.
 #' @param ignore_case If \code{FALSE} (default), the pattern matching is case
 #'   sensitive and if \code{TRUE}, case is ignored during matching.
-#' @param pull Logical argument. If \code{TRUE}, returns the last column (on the
-#'   assumption that's the column you've created most recently), as a vector.
-#' @param .before,.after For \code{replace_sting()}, \code{replace_number()},
-#'   \code{extract_string()}, ,and  \code{extract_number()} one-based column
-#'   index or column name where to add the new columns.
+#' @param pull Deprecated argument as of metan 1.10.0.
+#' @param .before,.after Deprecated argument as of metan 1.10.0.
 #' @param sep A character string to separate the terms. Defaults to "_".
 #' @description
 #' * \code{all_lower_case()}: Translate all non-numeric strings of a data frame
@@ -71,33 +66,23 @@
 #' ########### Extract or replace numbers ##########
 #' # Extract numbers
 #' extract_number(data_ge, GEN)
-#' extract_number(data_ge,
-#'                var = GEN,
-#'                drop = TRUE,
-#'                new_var = g_number)
-#'
+
 #' # Replace numbers
-#'
 #' replace_number(data_ge, GEN)
 #' replace_number(data_ge,
-#'                var = GEN,
-#'                pattern = "1",
-#'                replacement = "_one",
-#'                pull = TRUE)
+#'                GEN,
+#'                pattern = 1,
+#'                replacement = "_one")
 #'
 #' ########## Extract, replace or remove strings ##########
 #' # Extract strings
 #' extract_string(data_ge, GEN)
-#' extract_string(data_ge,
-#'                var = GEN,
-#'                drop = TRUE,
-#'                new_var = g_name)
+
 #'
 #' # Replace strings
 #' replace_string(data_ge, GEN)
 #' replace_string(data_ge,
-#'                var = GEN,
-#'                new_var = GENOTYPE,
+#'                GEN,
 #'                pattern = "G",
 #'                replacement = "GENOTYPE_")
 #'
@@ -184,7 +169,7 @@ all_title_case <- function(.data, ...){
     .data <- as.data.frame(.data)
     if(!missing(...)){
       mutate(.data, across(c(...), to_title)) %>%
-      as_tibble(rownames = NA)
+        as_tibble(rownames = NA)
     } else{
       mutate(.data, across(where(~!is.numeric(.x)), to_title)) %>%
         as_tibble(rownames = NA)
@@ -196,64 +181,95 @@ all_title_case <- function(.data, ...){
 
 #' @name utils_num_str
 #' @export
+#'
 extract_number <- function(.data,
-                           var,
-                           new_var = new_var,
-                           drop = FALSE,
-                           pull = FALSE,
-                           .before = NULL,
-                           .after  = NULL){
-  if (has_class(.data, c("data.frame","tbl_df", "data.table"))){
-  if (drop == FALSE){
-    results <- .data %>%
-      mutate({{new_var}} :=   as.numeric(gsub("[^0-9.-]+", "", as.character({{var}}))))
-    if (pull == TRUE){
-      results <- pull(results)
-    }
-    if (!missing(.before) | !missing(.after)){
-      results <- reorder_cols(results, {{new_var}}, .before = {{.before}}, .after = {{.after}})
-    }
-  } else{
-    results <- .data %>%
-      transmute({{new_var}} :=   as.numeric(gsub("[^0-9.-]+", "", as.character({{var}}))))
-    if(pull == TRUE){
-      results <- pull(results)
-    }
+                           ...,
+                           pattern = NULL,
+                           var = "deprecated",
+                           new_var = "deprecated",
+                           drop =  "deprecated",
+                           pull =  "deprecated",
+                           .before =  "deprecated",
+                           .after  =  "deprecated"){
+  if(var != "deprecated"){
+    warning("Argument 'var' is deprecated as of metan 1.10.0")
   }
-  return(results)
+  if(new_var != "deprecated"){
+    warning("Argument 'new_var' is deprecated as of metan 1.10.0")
+  }
+  if(drop != "deprecated"){
+    warning("Argument 'drop' is deprecated as of metan 1.10.0")
+  }
+  if(pull != "deprecated"){
+    warning("Argument 'pull' is deprecated as of metan 1.10.0")
+  }
+  if(.before != "deprecated"){
+    warning("Argument '.before' is deprecated as of metan 1.10.0")
+  }
+  if(.after != "deprecated"){
+    warning("Argument '.after' is deprecated as of metan 1.10.0")
+  }
+  if(missing(pattern)){
+    pattern <- "[^0-9.-]+"
+  }
+  if (has_class(.data, c("data.frame","tbl_df", "data.table"))){
+    if(missing(...)){
+      results <-
+        mutate(.data, across(where(~!is.numeric(.)), gsub, pattern = pattern, replacement = "")) %>%
+        as_numeric(everything())
+    } else{
+      results <-
+        mutate(.data, across(c(...), gsub, pattern = pattern, replacement = "")) %>%
+        as_numeric(...)
+    }
+    return(results)
   } else{
-    as.numeric(gsub("[^0-9.-]+", "", .data))
+    return(as.numeric(gsub("[^0-9.-]+", "", .data)))
   }
 }
 #' @name utils_num_str
 #' @export
 extract_string <- function(.data,
-                           var,
-                           new_var = new_var,
-                           drop = FALSE,
-                           pull = FALSE,
-                           .before = NULL,
-                           .after  = NULL){
-  if (has_class(.data, c("data.frame","tbl_df", "data.table"))){
-  if (drop == FALSE){
-    results <- .data %>%
-      mutate({{new_var}} := as.character(gsub("[^A-z.-]+", "", as.character({{var}}))))
-    if(pull == TRUE){
-      results <- pull(results)
-    }
-    if (!missing(.before) | !missing(.after)){
-      results <- reorder_cols(results, {{new_var}}, .before = {{.before}}, .after = {{.after}})
-    }
-  } else{
-    results <- .data %>%
-      transmute({{new_var}} := as.character(gsub("[^A-z.-]+", "", as.character({{var}}))))
-    if(pull == TRUE){
-      results <- pull(results)
-    }
+                           ...,
+                           pattern = NULL,
+                           var = "deprecated",
+                           new_var = "deprecated",
+                           drop =  "deprecated",
+                           pull =  "deprecated",
+                           .before =  "deprecated",
+                           .after  =  "deprecated"){
+  if(var != "deprecated"){
+    warning("Argument 'var' is deprecated as of metan 1.10.0")
   }
-  return(results)
+  if(new_var != "deprecated"){
+    warning("Argument 'new_var' is deprecated as of metan 1.10.0")
+  }
+  if(drop != "deprecated"){
+    warning("Argument 'drop' is deprecated as of metan 1.10.0")
+  }
+  if(pull != "deprecated"){
+    warning("Argument 'pull' is deprecated as of metan 1.10.0")
+  }
+  if(.before != "deprecated"){
+    warning("Argument '.before' is deprecated as of metan 1.10.0")
+  }
+  if(.after != "deprecated"){
+    warning("Argument '.after' is deprecated as of metan 1.10.0")
+  }
+  if(missing(pattern)){
+    pattern <- "[^A-z.-]+"
+  }
+  if (has_class(.data, c("data.frame","tbl_df", "data.table"))){
+    if(missing(...)){
+      results <-
+        mutate(.data, across(where(~!is.numeric(.)), gsub, pattern = pattern, replacement = ""))
+    } else{
+      results <-
+        mutate(.data, across(c(...), gsub, pattern = pattern, replacement = ""))
+    }
+    return(results)
   } else{
-    as.character(gsub("[^A-z.-]+", "", .data))
+    return(as.character(gsub("[^A-z.-]+", "", .data)))
   }
 }
 #' @name utils_num_str
@@ -301,16 +317,16 @@ remove_space <- function(.data, ...){
 #' @export
 remove_strings <- function(.data, ...){
   if (has_class(.data, c("data.frame","tbl_df", "data.table"))){
-  if(missing(...)){
-    results <-
-      mutate(.data, across(everything(), gsub, pattern = "[^0-9.-]", replacement = "")) %>%
-      mutate(across(everything(), as.numeric))
-  } else{
-    results <-
-      mutate(.data, across(c(...), gsub, pattern = "[^0-9.-]", replacement = "")) %>%
-      mutate(across(c(...), as.numeric))
-  }
-  return(results)
+    if(missing(...)){
+      results <-
+        mutate(.data, across(everything(), gsub, pattern = "[^0-9.-]", replacement = "")) %>%
+        as_numeric(everything())
+    } else{
+      results <-
+        mutate(.data, across(c(...), gsub, pattern = "[^0-9.-]", replacement = "")) %>%
+        as_numeric(...)
+    }
+    return(results)
   } else{
     return(gsub(pattern = "[^0-9.-]", replacement = "", .data)) %>%
       remove_space() %>%
@@ -320,80 +336,94 @@ remove_strings <- function(.data, ...){
 #' @name utils_num_str
 #' @export
 replace_number <- function(.data,
-                           var,
-                           new_var = new_var,
+                           ...,
                            pattern = NULL,
                            replacement = "",
-                           drop = FALSE,
-                           pull = FALSE,
-                           .before = NULL,
-                           .after  = NULL){
+                           ignore_case = FALSE,
+                           var = "deprecated",
+                           new_var = "deprecated",
+                           drop =  "deprecated",
+                           pull =  "deprecated",
+                           .before =  "deprecated",
+                           .after  =  "deprecated"){
+  if(var != "deprecated"){
+    warning("Argument 'var' is deprecated as of metan 1.10.0")
+  }
+  if(new_var != "deprecated"){
+    warning("Argument 'new_var' is deprecated as of metan 1.10.0")
+  }
+  if(drop != "deprecated"){
+    warning("Argument 'drop' is deprecated as of metan 1.10.0")
+  }
+  if(pull != "deprecated"){
+    warning("Argument 'pull' is deprecated as of metan 1.10.0")
+  }
+  if(.before != "deprecated"){
+    warning("Argument '.before' is deprecated as of metan 1.10.0")
+  }
+  if(.after != "deprecated"){
+    warning("Argument '.after' is deprecated as of metan 1.10.0")
+  }
   if(missing(pattern)){
     pattern <- "[0-9]"
   } else{
     pattern <- pattern
   }
   if (has_class(.data, c("data.frame","tbl_df", "data.table"))){
-  if (drop == FALSE){
-    results <- .data %>%
-      mutate({{new_var}} := gsub(pattern, replacement, as.character({{var}})))
-    if(pull == TRUE){
-      results <- pull(results)
-    }
-    if (!missing(.before) | !missing(.after)){
-      results <- reorder_cols(results, {{new_var}}, .before = {{.before}}, .after = {{.after}})
-    }
+    results <-
+      .data %>%
+      mutate(across(..., ~gsub(pattern, replacement, ., ignore.case = ignore_case)))
+    return(results)
   } else{
-    results <- .data %>%
-      transmute({{new_var}} := gsub(pattern, replacement, as.character({{var}})))
-    if(pull == TRUE){
-      results <- pull(results)
-    }
-  }
-  return(results)
-  } else{
-    return(gsub(pattern, replacement, .data))
+    return(gsub(pattern, replacement, .data, ignore.case = ignore_case))
   }
 }
 #' @name utils_num_str
 #' @export
 replace_string <- function(.data,
-                           var,
-                           new_var = new_var,
+                           ...,
                            pattern = NULL,
                            replacement = "",
                            ignore_case = FALSE,
-                           drop = FALSE,
-                           pull = FALSE,
-                           .before = NULL,
-                           .after  = NULL){
+                           var = "deprecated",
+                           new_var = "deprecated",
+                           drop =  "deprecated",
+                           pull =  "deprecated",
+                           .before =  "deprecated",
+                           .after  =  "deprecated"){
+  if(var != "deprecated"){
+    warning("Argument 'var' is deprecated as of metan 1.10.0")
+  }
+  if(new_var != "deprecated"){
+    warning("Argument 'new_var' is deprecated as of metan 1.10.0")
+  }
+  if(drop != "deprecated"){
+    warning("Argument 'drop' is deprecated as of metan 1.10.0")
+  }
+  if(pull != "deprecated"){
+    warning("Argument 'pull' is deprecated as of metan 1.10.0")
+  }
+  if(.before != "deprecated"){
+    warning("Argument '.before' is deprecated as of metan 1.10.0")
+  }
+  if(.after != "deprecated"){
+    warning("Argument '.after' is deprecated as of metan 1.10.0")
+  }
   if(missing(pattern)){
     pattern <- "[A-z]"
   } else {
     pattern <- pattern
   }
   if (has_class(.data, c("data.frame","tbl_df", "data.table"))){
-  if (drop == FALSE){
-    results <- .data %>%
-      mutate({{new_var}} := gsub(pattern, replacement, as.character({{var}}), ignore.case = ignore_case))
-    if(pull == TRUE){
-      results <- pull(results)
-    }
-    if (!missing(.before) | !missing(.after)){
-      results <- reorder_cols(results, {{new_var}}, .before = {{.before}}, .after = {{.after}})
-    }
-  } else{
-    results <- .data %>%
-      transmute({{new_var}} := gsub(pattern, replacement, as.character({{var}}), ignore.case = ignore_case))
-    if(pull == TRUE){
-      results <- pull(results)
-    }
-  }
-  return(results)
+      results <-
+        .data %>%
+        mutate(across(..., ~gsub(pattern, replacement, ., ignore.case = ignore_case)))
+      return(results)
   } else{
     return(gsub(pattern, replacement, .data, ignore.case = ignore_case))
   }
 }
+
 #' @name utils_num_str
 #' @export
 #' @importFrom dplyr transmute
@@ -490,6 +520,9 @@ tidy_strings <- function(.data, ..., sep = "_"){
 #' * \code{select_non_numeric_cols()}: Select all the non-numeric columns of a
 #' data frame.
 #' * \code{select_rows()}: Select one or more rows from a data frame.
+#' * \code{tidy_colnames()}: Tidy up column names with
+#' \code{\link{tidy_strings}()}.
+#'
 #'
 #' @param .data A data frame
 #' @param ... The argument depends on the function used.
@@ -582,8 +615,7 @@ tidy_strings <- function(.data, ..., sep = "_"){
 #'           .after = GEN) %>%
 #'  replace_string(ENV_GEN,
 #'                 pattern = "H",
-#'                 replacement = "HYB_",
-#'                 .after = ENV_GEN)
+#'                 replacement = "HYB_")
 #'
 #' # Use prefixes and suffixes
 #' concatenate(data_ge2, REP, prefix = "REP", new_var = REP)
@@ -826,6 +858,12 @@ select_cols <- function(.data, ...){
 select_rows <- function(.data, ...){
   slice(.data, ...)
 }
+#' @name utils_rows_cols
+#' @export
+tidy_colnames <- function(.data, sep = "_"){
+  colnames(.data) <- tidy_strings(colnames(.data), sep = sep)
+  .data
+}
 
 
 
@@ -851,12 +889,15 @@ select_rows <- function(.data, ...){
 #'    - \code{ci_mean()} computes the confidence interval for the mean.
 #'    - \code{cv()} computes the coefficient of variation.
 #'    - \code{freq_table()} Computes frequency fable. Handles grouped data.
-#' - \code{hmean(), gmean()} computes the harmonic and geometric means,
+#'    - \code{hmean(), gmean()} computes the harmonic and geometric means,
 #' respectively. The harmonic mean is the reciprocal of the arithmetic mean of
 #' the reciprocals. The geometric mean is the \emph{n}th root of \emph{n}
 #' products.
 #'    - \code{kurt()} computes the kurtosis like used in SAS and SPSS.
 #'    - \code{range_data()} Computes the range of the values.
+#'    - \code{n_valid()} The valid (not \code{NA}) length of a data.
+#'    - \code{n_unique()} Number of unique values.
+#'    - \code{n_missing()} Number of missing values.
 #'    - \code{row_col_mean(), row_col_sum()} Adds a row with the mean/sum of
 #'    each variable and a column with the the mean/sum for each row of the data.
 #'    - \code{sd_amo(), sd_pop()} Computes sample and populational standard
@@ -866,25 +907,23 @@ select_rows <- function(.data, ...){
 #'    - \code{sum_dev()} computes the sum of the absolute deviations.
 #'    - \code{sum_sq_dev()} computes the sum of the squared deviations.
 #'    - \code{var_amo(), var_pop()} computes sample and populational variance.
-#'    - \code{valid_n()} Return the valid (not \code{NA}) length of a data.
 #'
 #' \code{\link{desc_stat}} is wrapper function around the above ones and can be
 #' used to compute quickly all these statistics at once.
 #'
 #' @param .data A data frame or a numeric vector.
 #' @param ... The argument depends on the function used.
-#'  * For \code{*_by} functions, \code{...} is one or more categorical variables
+#' * For \code{*_by} functions, \code{...} is one or more categorical variables
 #'  for grouping the data. Then the statistic required will be computed for all
 #'  numeric variables in the data. If no variables are informed in \code{...},
 #'  the statistic will be computed ignoring all non-numeric variables in
 #'  \code{.data}.
-#'  * For the other statistics, \code{...} is a comma-separated of unquoted
+#' * For the other statistics, \code{...} is a comma-separated of unquoted
 #'  variable names to compute the statistics. If no variables are informed in n
 #'  \code{...}, the statistic will be computed for all numeric variables in
 #'  \code{.data}.
-#'
-#' @param na.rm A logical value indicating whether \code{NA} values should be
-#'    stripped before the computation proceeds. Defaults to \code{FALSE}.
+#' @param na.rm If \code{FALSE}, the default, missing values are removed with a
+#'   warning. If \code{TRUE}, missing values are silently removed.
 #' @param level The confidence level for the confidence interval of the mean.
 #'   Defaults to 0.95.
 #' @return
@@ -928,10 +967,11 @@ select_rows <- function(.data, ...){
 #' @export
 av_dev <- function(.data, ..., na.rm = FALSE) {
   funct <- function(df){
+    if(na.rm == FALSE & has_na(df)){
+      warning("NA values removed to compute the function. Use 'na.rm = TRUE' to suppress this warning.", call. = FALSE)
+      na.rm <- TRUE
+    }
     sum(abs(df - mean(df, na.rm = na.rm)), na.rm = na.rm) / length(which(!is.na(df)))
-  }
-  if(has_na(.data) && na.rm == FALSE){
-    stop("NA values in data. Use 'na.rm = TRUE' to remove NAs from analysis.\nTo remove rows with NA use `remove_rows_na()'. \nTo remove columns with NA use `remove_cols_na()'.", call. = FALSE)
   }
   if(is.null(nrow(.data))){
     funct(.data)
@@ -942,7 +982,7 @@ av_dev <- function(.data, ..., na.rm = FALSE) {
         ungroup()
     } else{
       .data %>%
-       select_cols(group_vars(.), ...) %>%
+        select_cols(group_vars(.), ...) %>%
         summarise(across(where(is.numeric), funct)) %>%
         ungroup()
     }
@@ -952,10 +992,11 @@ av_dev <- function(.data, ..., na.rm = FALSE) {
 #' @export
 ci_mean <- function(.data, ..., na.rm = FALSE, level = 0.95) {
   funct <- function(df){
+    if(na.rm == FALSE & has_na(df)){
+      warning("NA values removed to compute the function. Use 'na.rm = TRUE' to suppress this warning.", call. = FALSE)
+      na.rm <- TRUE
+    }
     qt((0.5 + level/2), (length(which(!is.na(df))) - 1)) * sd(df, na.rm = na.rm)/sqrt(length(which(!is.na(df))))
-  }
-  if(has_na(.data) && na.rm == FALSE){
-    stop("NA values in data. Use 'na.rm = TRUE' to remove NAs from analysis.\nTo remove rows with NA use `remove_rows_na()'. \nTo remove columns with NA use `remove_cols_na()'.", call. = FALSE)
   }
   if(is.null(nrow(.data))){
     funct(.data)
@@ -966,7 +1007,7 @@ ci_mean <- function(.data, ..., na.rm = FALSE, level = 0.95) {
         ungroup()
     } else{
       .data %>%
-       select_cols(group_vars(.), ...) %>%
+        select_cols(group_vars(.), ...) %>%
         summarise(across(where(is.numeric), funct)) %>%
         ungroup()
     }
@@ -976,10 +1017,11 @@ ci_mean <- function(.data, ..., na.rm = FALSE, level = 0.95) {
 #' @export
 cv <- function(.data, ..., na.rm = FALSE) {
   funct <- function(df){
+    if(na.rm == FALSE & has_na(df)){
+      warning("NA values removed to compute the function. Use 'na.rm = TRUE' to suppress this warning.", call. = FALSE)
+      na.rm <- TRUE
+    }
     sd(df, na.rm = na.rm)/mean(df, na.rm = na.rm) * 100
-  }
-  if(has_na(.data) && na.rm == FALSE){
-    stop("NA values in data. Use 'na.rm = TRUE' to remove NAs from analysis.\nTo remove rows with NA use `remove_rows_na()'. \nTo remove columns with NA use `remove_cols_na()'.", call. = FALSE)
   }
   if(is.null(nrow(.data))){
     funct(.data)
@@ -990,7 +1032,7 @@ cv <- function(.data, ..., na.rm = FALSE) {
         ungroup()
     } else{
       .data %>%
-       select_cols(group_vars(.), ...) %>%
+        select_cols(group_vars(.), ...) %>%
         summarise(across(where(is.numeric), funct)) %>%
         ungroup()
     }
@@ -1011,10 +1053,11 @@ freq_table <- function(.data, ...){
 #' @export
 hmean <- function(.data, ..., na.rm = FALSE) {
   funct <- function(df){
+    if(na.rm == FALSE & has_na(df)){
+      warning("NA values removed to compute the function. Use 'na.rm = TRUE' to suppress this warning.", call. = FALSE)
+      na.rm <- TRUE
+    }
     1 / mean(1 / df, na.rm = na.rm)
-  }
-  if(has_na(.data) && na.rm == FALSE){
-    stop("NA values in data. Use 'na.rm = TRUE' to remove NAs from analysis.\nTo remove rows with NA use `remove_rows_na()'. \nTo remove columns with NA use `remove_cols_na()'.", call. = FALSE)
   }
   if(is.null(nrow(.data))){
     funct(.data)
@@ -1035,10 +1078,11 @@ hmean <- function(.data, ..., na.rm = FALSE) {
 #' @export
 gmean <- function(.data, ..., na.rm = FALSE){
   funct <- function(df){
+    if(na.rm == FALSE & has_na(df)){
+      warning("NA values removed to compute the function. Use 'na.rm = TRUE' to suppress this warning.", call. = FALSE)
+      na.rm <- TRUE
+    }
     exp(sum(log(df[df > 0]), na.rm = na.rm) / length(df))
-  }
-  if(has_na(.data) && na.rm == FALSE){
-    stop("NA values in data. Use 'na.rm = TRUE' to remove NAs from analysis.\nTo remove rows with NA use `remove_rows_na()'. \nTo remove columns with NA use `remove_cols_na()'.", call. = FALSE)
   }
   if(is.null(nrow(.data))){
     funct(.data)
@@ -1059,12 +1103,13 @@ gmean <- function(.data, ..., na.rm = FALSE){
 #' @export
 kurt <- function(.data, ..., na.rm = FALSE) {
   funct <- function(df){
+    if(na.rm == FALSE & has_na(df)){
+      warning("NA values removed to compute the function. Use 'na.rm = TRUE' to suppress this warning.", call. = FALSE)
+      na.rm <- TRUE
+    }
     n <- length(which(!is.na(df)))
     tmp <- sum((df - mean(df, na.rm = na.rm))^4, na.rm = na.rm)/(var(df, na.rm = na.rm))^2
     n * (n + 1) * tmp/((n - 1) * (n - 2) * (n - 3)) - 3 * (n - 1)^2/((n - 2) * (n - 3))
-  }
-  if(has_na(.data) && na.rm == FALSE){
-    stop("NA values in data. Use 'na.rm = TRUE' to remove NAs from analysis.\nTo remove rows with NA use `remove_rows_na()'. \nTo remove columns with NA use `remove_cols_na()'.", call. = FALSE)
   }
   if(is.null(nrow(.data))){
     funct(.data)
@@ -1075,7 +1120,74 @@ kurt <- function(.data, ..., na.rm = FALSE) {
         ungroup()
     } else{
       .data %>%
-       select_cols(group_vars(.), ...) %>%
+        select_cols(group_vars(.), ...) %>%
+        summarise(across(where(is.numeric), funct)) %>%
+        ungroup()
+    }
+  }
+}
+#' @name utils_stats
+#' @export
+n_missing <- function(.data, ..., na.rm = FALSE) {
+  funct <- function(df){
+    sum(is.na(df))
+  }
+  if(is.null(nrow(.data))){
+    funct(.data)
+  } else{
+    if(missing(...)){
+      .data %>%
+        summarise(across(everything(), funct)) %>%
+        ungroup()
+    } else{
+      .data %>%
+        summarise(across(c(...), funct))
+    }
+  }
+}
+#' @name utils_stats
+#' @export
+n_unique <- function(.data, ..., na.rm = FALSE) {
+  funct <- function(df){
+    if(na.rm == FALSE & has_na(df)){
+      warning("NA values removed to compute the function. Use 'na.rm = TRUE' to suppress this warning.", call. = FALSE)
+      na.rm <- TRUE
+    }
+    length(unique(df))
+  }
+  if(is.null(nrow(.data))){
+    funct(.data)
+  } else{
+    if(missing(...)){
+      .data %>%
+        summarise(across(everything(), funct)) %>%
+        ungroup()
+    } else{
+      .data %>%
+        summarise(across(c(...), funct))
+    }
+  }
+}
+#' @name utils_stats
+#' @export
+n_valid <- function(.data, ..., na.rm = FALSE){
+  funct <- function(df){
+    if(na.rm == FALSE & has_na(df)){
+      warning("NA values removed to compute the function. Use 'na.rm = TRUE' to suppress this warning.", call. = FALSE)
+      na.rm <- TRUE
+    }
+    length(which(!is.na(df)))
+  }
+  if(is.null(nrow(.data))){
+    funct(.data)
+  } else{
+    if(missing(...)){
+      .data %>%
+        summarise(across(where(is.numeric), funct)) %>%
+        ungroup()
+    } else{
+      .data %>%
+        select_cols(group_vars(.), ...) %>%
         summarise(across(where(is.numeric), funct)) %>%
         ungroup()
     }
@@ -1085,7 +1197,97 @@ kurt <- function(.data, ..., na.rm = FALSE) {
 #' @export
 pseudo_sigma <- function(.data, ..., na.rm = FALSE) {
   funct <- function(df){
+    if(na.rm == FALSE & has_na(df)){
+      warning("NA values removed to compute the function. Use 'na.rm = TRUE' to suppress this warning.", call. = FALSE)
+      na.rm <- TRUE
+    }
     IQR(df, na.rm = na.rm) / 1.35
+  }
+  if(is.null(nrow(.data))){
+    funct(.data)
+  } else{
+    if(missing(...)){
+      .data %>%
+        summarise(across(where(is.numeric), funct)) %>%
+        ungroup()
+    } else{
+      .data %>%
+        select_cols(group_vars(.), ...) %>%
+        summarise(across(where(is.numeric), funct)) %>%
+        ungroup()
+    }
+  }
+}
+#' @name utils_stats
+#' @export
+range_data <- function(.data, ..., na.rm = FALSE){
+  funct <- function(df){
+    if(na.rm == FALSE & has_na(df)){
+      warning("NA values removed to compute the function. Use 'na.rm = TRUE' to suppress this warning.", call. = FALSE)
+      na.rm <- TRUE
+    }
+    max(df, na.rm = na.rm) - min(df, na.rm = na.rm)
+  }
+  if(is.null(nrow(.data))){
+    funct(.data)
+  } else{
+    if(missing(...)){
+      .data %>%
+        summarise(across(where(is.numeric), funct)) %>%
+        ungroup()
+    } else{
+      .data %>%
+        select_cols(group_vars(.), ...) %>%
+        summarise(across(where(is.numeric), funct)) %>%
+        ungroup()
+    }
+  }
+}
+#' @name utils_stats
+#' @export
+row_col_mean <- function(.data, na.rm = FALSE) {
+  if(na.rm == FALSE & has_na(.data)){
+    warning("NA values removed to compute the function. Use 'na.rm = TRUE' to suppress this warning.", call. = FALSE)
+    na.rm <- TRUE
+  }
+  if(!any(sapply(.data, is.numeric))){
+    stop("All columns in '.data' must be numeric")
+  }
+  mat <- as.matrix(.data)
+  row_means <- rowMeans(mat, na.rm = na.rm)
+  col_means <- colMeans(mat, na.rm = na.rm)
+  cmeans <- suppressWarnings(cbind(mat,  row_means) %>% rbind(col_means))
+  rownames(cmeans) <- c(rownames(mat), "col_means")
+  cmeans[nrow(cmeans), ncol(cmeans)] <- mean(mat)
+  return(cmeans)
+}
+#' @name utils_stats
+#' @export
+row_col_sum <- function(.data, na.rm = FALSE) {
+  if(na.rm == FALSE & has_na(.data)){
+    warning("NA values removed to compute the function. Use 'na.rm = TRUE' to suppress this warning.", call. = FALSE)
+    na.rm <- TRUE
+  }
+  if(!any(sapply(.data, is.numeric))){
+    stop("All columns in '.data' must be numeric")
+  }
+  mat <- as.matrix(.data)
+  row_sums <- rowSums(mat, na.rm = na.rm)
+  col_sums <- colSums(mat, na.rm = na.rm)
+  cmeans <- suppressWarnings(cbind(mat,  row_sums) %>% rbind(col_sums))
+  rownames(cmeans) <- c(rownames(mat), "col_sums")
+  cmeans[nrow(cmeans), ncol(cmeans)] <- sum(mat)
+  return(cmeans)
+}
+#' @name utils_stats
+#' @export
+sd_amo <- function(.data, ..., na.rm = FALSE) {
+  funct <- function(df){
+    if(na.rm == FALSE & has_na(df)){
+      warning("NA values removed to compute the function. Use 'na.rm = TRUE' to suppress this warning.", call. = FALSE)
+      na.rm <- TRUE
+    }
+    sqrt(sum((df - mean(df, na.rm = na.rm))^2, na.rm = na.rm) / (length(which(!is.na(df))) - 1))
   }
   if(has_na(.data) && na.rm == FALSE){
     stop("NA values in data. Use 'na.rm = TRUE' to remove NAs from analysis.\nTo remove rows with NA use `remove_rows_na()'. \nTo remove columns with NA use `remove_cols_na()'.", call. = FALSE)
@@ -1107,84 +1309,12 @@ pseudo_sigma <- function(.data, ..., na.rm = FALSE) {
 }
 #' @name utils_stats
 #' @export
-range_data <- function(.data, ..., na.rm = FALSE){
-  funct <- function(df){
-    max(df, na.rm = na.rm) - min(df, na.rm = na.rm)
-  }
-  if(has_na(.data) && na.rm == FALSE){
-    stop("NA values in data. Use 'na.rm = TRUE' to remove NAs from analysis.\nTo remove rows with NA use `remove_rows_na()'. \nTo remove columns with NA use `remove_cols_na()'.", call. = FALSE)
-  }
-  if(is.null(nrow(.data))){
-    funct(.data)
-  } else{
-    if(missing(...)){
-      .data %>%
-        summarise(across(where(is.numeric), funct)) %>%
-        ungroup()
-    } else{
-      .data %>%
-       select_cols(group_vars(.), ...) %>%
-        summarise(across(where(is.numeric), funct)) %>%
-        ungroup()
-    }
-  }
-}
-#' @name utils_stats
-#' @export
-row_col_mean <- function(.data, na.rm = FALSE) {
-  if(!any(sapply(.data, is.numeric))){
-    stop("All columns in '.data' must be numeric")
-  }
-  mat <- as.matrix(.data)
-  row_means <- rowMeans(mat, na.rm = na.rm)
-  col_means <- colMeans(mat, na.rm = na.rm)
-  cmeans <- suppressWarnings(cbind(mat,  row_means) %>% rbind(col_means))
-  rownames(cmeans) <- c(rownames(mat), "col_means")
-  cmeans[nrow(cmeans), ncol(cmeans)] <- mean(mat)
-  return(cmeans)
-}
-#' @name utils_stats
-#' @export
-row_col_sum <- function(.data, na.rm = FALSE) {
-  if(!any(sapply(.data, is.numeric))){
-    stop("All columns in '.data' must be numeric")
-  }
-  mat <- as.matrix(.data)
-  row_sums <- rowSums(mat, na.rm = na.rm)
-  col_sums <- colSums(mat, na.rm = na.rm)
-  cmeans <- suppressWarnings(cbind(mat,  row_sums) %>% rbind(col_sums))
-  rownames(cmeans) <- c(rownames(mat), "col_sums")
-  cmeans[nrow(cmeans), ncol(cmeans)] <- sum(mat)
-  return(cmeans)
-}
-#' @name utils_stats
-#' @export
-sd_amo <- function(.data, ..., na.rm = FALSE) {
-  funct <- function(df){
-    sqrt(sum((df - mean(df, na.rm = na.rm))^2, na.rm = na.rm) / (length(which(!is.na(df))) - 1))
-  }
-  if(has_na(.data) && na.rm == FALSE){
-    stop("NA values in data. Use 'na.rm = TRUE' to remove NAs from analysis.\nTo remove rows with NA use `remove_rows_na()'. \nTo remove columns with NA use `remove_cols_na()'.", call. = FALSE)
-  }
-  if(is.null(nrow(.data))){
-    funct(.data)
-  } else{
-    if(missing(...)){
-      .data %>%
-        summarise(across(where(is.numeric), funct)) %>%
-        ungroup()
-    } else{
-      .data %>%
-       select_cols(group_vars(.), ...) %>%
-        summarise(across(where(is.numeric), funct)) %>%
-        ungroup()
-    }
-  }
-}
-#' @name utils_stats
-#' @export
 sd_pop <- function(.data, ..., na.rm = FALSE) {
   funct <- function(df){
+    if(na.rm == FALSE & has_na(df)){
+      warning("NA values removed to compute the function. Use 'na.rm = TRUE' to suppress this warning.", call. = FALSE)
+      na.rm <- TRUE
+    }
     sqrt(sum((df - mean(df, na.rm = na.rm))^2, na.rm = na.rm) / length(which(!is.na(df))))
   }
   if(has_na(.data) && na.rm == FALSE){
@@ -1199,7 +1329,7 @@ sd_pop <- function(.data, ..., na.rm = FALSE) {
         ungroup()
     } else{
       .data %>%
-       select_cols(group_vars(.), ...) %>%
+        select_cols(group_vars(.), ...) %>%
         summarise(across(where(is.numeric), funct)) %>%
         ungroup()
     }
@@ -1209,6 +1339,10 @@ sd_pop <- function(.data, ..., na.rm = FALSE) {
 #' @export
 sem <- function(.data, ..., na.rm = FALSE) {
   funct <- function(df){
+    if(na.rm == FALSE & has_na(df)){
+      warning("NA values removed to compute the function. Use 'na.rm = TRUE' to suppress this warning.", call. = FALSE)
+      na.rm <- TRUE
+    }
     sd(df, na.rm = na.rm) / sqrt(length(which(!is.na(df))))
   }
   if(has_na(.data) && na.rm == FALSE){
@@ -1223,7 +1357,7 @@ sem <- function(.data, ..., na.rm = FALSE) {
         ungroup()
     } else{
       .data %>%
-       select_cols(group_vars(.), ...) %>%
+        select_cols(group_vars(.), ...) %>%
         summarise(across(where(is.numeric), funct)) %>%
         ungroup()
     }
@@ -1233,6 +1367,10 @@ sem <- function(.data, ..., na.rm = FALSE) {
 #' @export
 skew <- function(.data, ..., na.rm = FALSE) {
   funct <- function(df){
+    if(na.rm == FALSE & has_na(df)){
+      warning("NA values removed to compute the function. Use 'na.rm = TRUE' to suppress this warning.", call. = FALSE)
+      na.rm <- TRUE
+    }
     n <- length(which(!is.na(df)))
     sum((df - mean(df, na.rm = na.rm))^3, na.rm = na.rm)/sd(df, na.rm = na.rm)^3 * n / ((n - 1) * (n - 2))
   }
@@ -1248,7 +1386,7 @@ skew <- function(.data, ..., na.rm = FALSE) {
         ungroup()
     } else{
       .data %>%
-       select_cols(group_vars(.), ...) %>%
+        select_cols(group_vars(.), ...) %>%
         summarise(across(where(is.numeric), funct)) %>%
         ungroup()
     }
@@ -1258,6 +1396,10 @@ skew <- function(.data, ..., na.rm = FALSE) {
 #' @export
 sum_dev <- function(.data, ..., na.rm = FALSE) {
   funct <- function(df){
+    if(na.rm == FALSE & has_na(df)){
+      warning("NA values removed to compute the function. Use 'na.rm = TRUE' to suppress this warning.", call. = FALSE)
+      na.rm <- TRUE
+    }
     sum(abs(df - mean(df, na.rm = na.rm)), na.rm = na.rm)
   }
   if(has_na(.data) && na.rm == FALSE){
@@ -1272,7 +1414,7 @@ sum_dev <- function(.data, ..., na.rm = FALSE) {
         ungroup()
     } else{
       .data %>%
-       select_cols(group_vars(.), ...) %>%
+        select_cols(group_vars(.), ...) %>%
         summarise(across(where(is.numeric), funct)) %>%
         ungroup()
     }
@@ -1282,6 +1424,10 @@ sum_dev <- function(.data, ..., na.rm = FALSE) {
 #' @export
 sum_sq_dev <- function(.data, ..., na.rm = FALSE) {
   funct <- function(df){
+    if(na.rm == FALSE & has_na(df)){
+      warning("NA values removed to compute the function. Use 'na.rm = TRUE' to suppress this warning.", call. = FALSE)
+      na.rm <- TRUE
+    }
     sum((df - mean(df, na.rm = na.rm))^2, na.rm = na.rm)
   }
   if(has_na(.data) && na.rm == FALSE){
@@ -1296,7 +1442,7 @@ sum_sq_dev <- function(.data, ..., na.rm = FALSE) {
         ungroup()
     } else{
       .data %>%
-       select_cols(group_vars(.), ...) %>%
+        select_cols(group_vars(.), ...) %>%
         summarise(across(where(is.numeric), funct)) %>%
         ungroup()
     }
@@ -1306,6 +1452,10 @@ sum_sq_dev <- function(.data, ..., na.rm = FALSE) {
 #' @export
 var_pop <- function(.data, ..., na.rm = FALSE) {
   funct <- function(df){
+    if(na.rm == FALSE & has_na(df)){
+      warning("NA values removed to compute the function. Use 'na.rm = TRUE' to suppress this warning.", call. = FALSE)
+      na.rm <- TRUE
+    }
     sd_pop(df, na.rm = na.rm)^2
   }
   if(has_na(.data) && na.rm == FALSE){
@@ -1320,7 +1470,7 @@ var_pop <- function(.data, ..., na.rm = FALSE) {
         ungroup()
     } else{
       .data %>%
-       select_cols(group_vars(.), ...) %>%
+        select_cols(group_vars(.), ...) %>%
         summarise(across(where(is.numeric), funct)) %>%
         ungroup()
     }
@@ -1330,6 +1480,10 @@ var_pop <- function(.data, ..., na.rm = FALSE) {
 #' @export
 var_amo <- function(.data, ..., na.rm = FALSE) {
   funct <- function(df){
+    if(na.rm == FALSE & has_na(df)){
+      warning("NA values removed to compute the function. Use 'na.rm = TRUE' to suppress this warning.", call. = FALSE)
+      na.rm <- TRUE
+    }
     sd_amo(df, na.rm = na.rm)^2
   }
   if(has_na(.data) && na.rm == FALSE){
@@ -1344,7 +1498,7 @@ var_amo <- function(.data, ..., na.rm = FALSE) {
         ungroup()
     } else{
       .data %>%
-       select_cols(group_vars(.), ...) %>%
+        select_cols(group_vars(.), ...) %>%
         summarise(across(where(is.numeric), funct)) %>%
         ungroup()
     }
@@ -1353,73 +1507,87 @@ var_amo <- function(.data, ..., na.rm = FALSE) {
 #' @name utils_stats
 #' @export
 valid_n <- function(.data, ..., na.rm = FALSE){
-  funct <- function(df){
-    length(which(!is.na(df)))
-  }
-  if(has_na(.data) && na.rm == FALSE){
-    stop("NA values in data. Use 'na.rm = TRUE' to remove NAs from analysis.\nTo remove rows with NA use `remove_rows_na()'. \nTo remove columns with NA use `remove_cols_na()'.", call. = FALSE)
-  }
-  if(is.null(nrow(.data))){
-    funct(.data)
-  } else{
-    if(missing(...)){
-      .data %>%
-        summarise(across(where(is.numeric), funct)) %>%
-        ungroup()
-    } else{
-      .data %>%
-       select_cols(group_vars(.), ...) %>%
-        summarise(across(where(is.numeric), funct)) %>%
-        ungroup()
-    }
-  }
+  warning("valid_n() is deprecated as of metan 1.9.0. Use n_valid() instead.", call. = FALSE)
+  return(n_valid(.data, ..., na.rm = TRUE))
 }
 # main statistics, possible by one or more factors
 #' @name utils_stats
 #' @export
 cv_by <- function(.data, ..., na.rm = FALSE){
+  if(na.rm == FALSE & has_na(.data)){
+    warning("NA values removed to compute the function. Use 'na.rm = TRUE' to suppress this warning.", call. = FALSE)
+    na.rm <- TRUE
+  }
   group_by(.data, ...) %>%
     summarise(across(where(is.numeric), cv, na.rm = na.rm), .groups = "drop")
 }
 #' @name utils_stats
 #' @export
 max_by <- function(.data, ..., na.rm = FALSE){
+  if(na.rm == FALSE & has_na(.data)){
+    warning("NA values removed to compute the function. Use 'na.rm = TRUE' to suppress this warning.", call. = FALSE)
+    na.rm <- TRUE
+  }
   group_by(.data, ...) %>%
     summarise(across(where(is.numeric), max, na.rm = na.rm), .groups = "drop")
 }
 #' @name utils_stats
 #' @export
 means_by <- function(.data, ..., na.rm = FALSE){
+  if(na.rm == FALSE & has_na(.data)){
+    warning("NA values removed to compute the function. Use 'na.rm = TRUE' to suppress this warning.", call. = FALSE)
+    na.rm <- TRUE
+  }
   group_by(.data, ...) %>%
     summarise(across(where(is.numeric), mean, na.rm = na.rm), .groups = "drop")
 }
 #' @name utils_stats
 #' @export
 min_by <- function(.data, ..., na.rm = FALSE){
+  if(na.rm == FALSE & has_na(.data)){
+    warning("NA values removed to compute the function. Use 'na.rm = TRUE' to suppress this warning.", call. = FALSE)
+    na.rm <- TRUE
+  }
   group_by(.data, ...) %>%
     summarise(across(where(is.numeric), min, na.rm = na.rm), .groups = "drop")
 }
 #' @name utils_stats
 #' @export
 n_by <- function(.data, ..., na.rm = FALSE){
-    group_by(.data, ...) %>%
+  if(na.rm == FALSE & has_na(.data)){
+    warning("NA values removed to compute the function. Use 'na.rm = TRUE' to suppress this warning.", call. = FALSE)
+    na.rm <- TRUE
+  }
+  group_by(.data, ...) %>%
     summarise(across(everything(), ~sum(!is.na(.))), .groups = "drop")
 }
 #' @name utils_stats
 #' @export
 sd_by <- function(.data, ..., na.rm = FALSE){
+  if(na.rm == FALSE & has_na(.data)){
+    warning("NA values removed to compute the function. Use 'na.rm = TRUE' to suppress this warning.", call. = FALSE)
+    na.rm <- TRUE
+  }
   group_by(.data, ...) %>%
     summarise(across(where(is.numeric), sd, na.rm = na.rm), .groups = "drop")
 }
 #' @name utils_stats
 #' @export
 sem_by <- function(.data, ..., na.rm = FALSE){
+  if(na.rm == FALSE & has_na(.data)){
+    warning("NA values removed to compute the function. Use 'na.rm = TRUE' to suppress this warning.", call. = FALSE)
+    na.rm <- TRUE
+  }
   group_by(.data, ...) %>%
     summarise(across(where(is.numeric), sem, na.rm = na.rm), .groups = "drop")
 }
 #' @name utils_stats
 #' @export
 sum_by <- function(.data, ..., na.rm = FALSE){
+  if(na.rm == FALSE & has_na(.data)){
+    warning("NA values removed to compute the function. Use 'na.rm = TRUE' to suppress this warning.", call. = FALSE)
+    na.rm <- TRUE
+  }
   group_by(.data, ...) %>%
     summarise(across(where(is.numeric), sum, na.rm = na.rm), .groups = "drop")
 }
@@ -1434,6 +1602,8 @@ sum_by <- function(.data, ..., na.rm = FALSE){
 #'   matrix in \code{make_upper_tri()} and \code{make_lower_tri()} or a
 #'   triangular matrix in \code{make_sym()}. \code{tidy_sym()} accepts both
 #'   symmetrical or triangular matrices.
+#' @param lower A square matrix to fill the lower diagonal of the new matrix.
+#' @param upper A square matrix to fill the upper diagonal of the new matrix.
 #' @param diag What show in the diagonal of the matrix. Default to \code{NA}.
 #' @param make The triangular to built. Default is \code{"upper"}. In this case,
 #'   a symmetric matrix will be built based on the values of a lower triangular
@@ -1478,6 +1648,31 @@ make_lower_tri<-function(x, diag = NA){
 }
 #' @name utils_mat
 #' @export
+make_lower_upper<-function(lower, upper, diag = NA){
+  if(any(rownames(upper) == rownames(lower)) == FALSE){
+    stop("Row names of 'upper' and 'lower' don't match.")
+  }
+  if(any(colnames(upper) == colnames(lower)) == FALSE){
+    stop("Column names of 'upper' and 'lower' don't match.")
+  }
+  if (nrow(lower) != ncol(lower)) {
+    stop("lower matrix must be square")
+  }
+  if (nrow(upper) != ncol(upper)) {
+    stop("upper matrix must be square")
+  }
+  if (nrow(lower) != ncol(upper)) {
+    stop("lower and upper matrices must have the same dimensions")
+  }
+  result <- matrix(NA, nrow = nrow(upper), ncol = ncol(upper))
+  result[lower.tri(result)] <- t(lower)[lower.tri(t(lower))]
+  result[upper.tri(result)] <- t(upper)[upper.tri(t(upper))]
+  diag(result) <- diag
+  rownames(result) <- colnames(result) <- rownames(lower)
+  return(result)
+}
+#' @name utils_mat
+#' @export
 make_sym <- function(x, make = "upper", diag = NA) {
   if(make == "upper"){
     x[upper.tri(x)] <- t(x)[upper.tri(x)]
@@ -1519,9 +1714,12 @@ tidy_sym <- function(x, keep_diag = TRUE){
 #'@param .data a (grouped) data frame
 #'@param .fun A function, formula, or atomic vector.
 #'@param ... Additional arguments passed on to \code{.fun}
+#'@param unnest Logical argument defaults to \code{TRUE} to control if results
+#'  of \code{.fun} should be unnested. Valid only if the result is of class
+#'  \code{data.frame} or \code{tbl_df}.
 #' @export
-#' @author Tiago Olivoto \email{tiagoolivoto@@gmail.com}
 #'@return a data frame
+#' @author Tiago Olivoto \email{tiagoolivoto@@gmail.com}
 #'@importFrom purrr map
 #'@importFrom tidyr nest unnest
 #'@examples
@@ -1538,7 +1736,7 @@ tidy_sym <- function(x, keep_diag = TRUE){
 #'   group_by(ENV) %>%
 #'   doo(~gafem(., GEN, REP, PH, verbose = FALSE))
 #'}
-doo <- function(.data, .fun, ...){
+doo <- function(.data, .fun, ..., unnest = TRUE){
   if(is_grouped_df(.data)){
     out <- nest(.data)
   } else{
@@ -1548,8 +1746,8 @@ doo <- function(.data, .fun, ...){
     ungroup() %>%
     mutate(data = purrr::map(.data$data, droplevels)) %>%
     mutate(data = purrr::map(.data$data, .fun, ...))
-  if(inherits(out$data[[1]], c("tbl_df"))){
-    out <- suppressWarnings(unnest(out))
+  if(has_class(out$data[[1]], c("tbl_df", "data.frame")) & unnest == TRUE){
+    out <- unnest(out, cols = c(data))
   }
   if(is_grouped_df(.data)){
     out <- arrange(out, !!!syms(group_vars(.data)))
@@ -1584,7 +1782,7 @@ doo <- function(.data, .fun, ...){
 #'
 add_class <- function(x, class){
   class(x) <- unique(c(class(x), class))
- return(x)
+  return(x)
 }
 #' @name utils_class
 #' @export
@@ -1792,4 +1990,12 @@ get_os <- function(){
     }
   }
   return(all_lower_case(os))
+}
+# Coord radar for mtsi and mgidi indexes
+coord_radar <- function (theta = "x", start = 0, direction = 1) {
+  theta <- match.arg(theta, c("x", "y"))
+  r <- ifelse(theta == "x", "y", "x")
+  ggproto("CoordRadar", CoordPolar, theta = theta, r = r, start = start,
+          direction = sign(direction),
+          is_linear = function(coord) TRUE)
 }

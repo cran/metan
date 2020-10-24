@@ -60,11 +60,15 @@
 #' ideotype.|
 #' * \strong{MGIDI} The multi-trait genotype-ideotype distance index.
 #' * \strong{contri_fac} The relative contribution of each factor on the MGIDI
-#' value.
-#' The lower the contribution of a factor, the close of the ideotype the
+#' value. The lower the contribution of a factor, the close of the ideotype the
 #' variables in such factor are.
+#' * \strong{contri_fac_rank, contri_fac_rank_sel} The rank for the contribution
+#' of each factor for all genotypes and selected genotypes, respectively.
 #' * \strong{sel_dif} The selection differential for the variables.
-#' * \strong{total_gain} The selection differential for the variables.
+#' * \strong{stat_gain} A descriptive statistic for the selection gains. The
+#' minimum, mean, confidence interval, standard deviation, maximum, and sum of
+#' selection gain values are computed. If traits have negative and positive
+#' desired gains, the statistics are computed for by strata.
 #' * \strong{sel_gen} The selected genotypes.
 #' @md
 #' @references Olivoto, T., A.D.C. L{\'{u}}cio, J.A.G. da silva, B.G. Sari, and
@@ -99,6 +103,18 @@ mgidi <- function(.data,
                   ideotype = NULL,
                   use = "complete.obs",
                   verbose = TRUE) {
+  if(has_class(.data, "gamem_group")){
+    bind <-
+      .data %>%
+      mutate(data = map(data, ~.x %>%
+                          mgidi(use_data = use_data,
+                                SI = SI,
+                                mineval = mineval,
+                                ideotype = ideotype,
+                                use = use,
+                                verbose = verbose)))
+    return(set_class(bind, c("tbl_df",  "mgidi_group", "mgidi", "tbl",  "data.frame")))
+  } else{
   d <- match.call()
   if(!use_data %in% c("blup", "pheno")){
     stop("Argument 'use_data = ", d["use_data"], "'", "invalid. It must be either 'blup' or 'pheno'.")
@@ -220,17 +236,25 @@ mgidi <- function(.data,
   gen_ide <- sweep(scores, 2, ideotypes.scores, "-")
   MGIDI <- sort(apply(gen_ide, 1, function(x) sqrt(sum(x^2))), decreasing = FALSE)
   contr.factor <- data.frame((sqrt(gen_ide^2)/apply(gen_ide, 1, function(x) sum(sqrt(x^2)))) * 100) %>%
-    rownames_to_column("Gen") %>%
+    rownames_to_column("GEN") %>%
     as_tibble()
   means.factor <- means[, names.pos.var.factor]
   observed <- means[, names.pos.var.factor]
+  contri_long <- pivot_longer(contr.factor, -GEN)
+  contri_fac_rank <-
+    contri_long %>%
+    ge_winners(name, GEN, value, type = "ranks", better = "l") %>%
+    split_factors(ENV) %>%
+    map_dfc(~.x %>% pull())
+
   if (!is.null(ngs)) {
+    selected <- names(MGIDI)[1:ngs]
     data_order <- data[colnames(observed)]
     sel_dif_mean <-
       tibble(VAR = names(pos.var.factor[, 2]),
              Factor = paste("FA", as.numeric(pos.var.factor[, 2])),
              Xo = colMeans(data_order, na.rm = TRUE),
-             Xs = colMeans(data_order[names(MGIDI)[1:ngs], ], na.rm = TRUE),
+             Xs = colMeans(data_order[selected, ], na.rm = TRUE),
              SD = Xs - colMeans(data_order, na.rm = TRUE),
              SDperc = (Xs - colMeans(data_order, na.rm = TRUE)) / colMeans(data_order, na.rm = TRUE) * 100)
 
@@ -248,15 +272,22 @@ mgidi <- function(.data,
         sense == "decrease" & SDperc < 0  |  sense == "increase" & SDperc > 0 ~ 100,
         TRUE ~ 0
       ))
-    total_gain <-
+    stat_gain <-
       desc_stat(sel_dif_mean,
                 by = sense,
                 any_of(c("SDperc", "SGperc")),
-                stats = c("min, mean, max, sum"))
+                stats = c("min, mean, ci, sd.amo, max, sum"))
 
+    contri_fac_rank_sel <-
+      contri_long %>%
+      subset(GEN %in% selected) %>%
+      ge_winners(name, GEN, value, type = "ranks", better = "l") %>%
+      split_factors(ENV) %>%
+      map_dfc(~.x %>% pull())
 
   } else{
     sel_dif_mean <- NULL
+    contri_fac_rank_sel <- NULL
   }
   if (verbose) {
     cat("\n-------------------------------------------------------------------------------\n")
@@ -277,10 +308,11 @@ mgidi <- function(.data,
       cat("------------------------------------------------------------------------------\n")
       cat("Selected genotypes\n")
       cat("-------------------------------------------------------------------------------\n")
-      cat(names(MGIDI)[1:ngs])
+      cat(selected)
       cat("\n-------------------------------------------------------------------------------\n")
     }
   }
+
   return(structure(list(data = rownames_to_column(data, "GEN"),
                         cormat = as.matrix(cor.means),
                         PCA = pca,
@@ -297,10 +329,13 @@ mgidi <- function(.data,
                         gen_ide = as_tibble(gen_ide, rownames = NA) %>% rownames_to_column("GEN"),
                         MGIDI = as_tibble(MGIDI, rownames = NA) %>% rownames_to_column("Genotype") %>% rename(MGIDI = value),
                         contri_fac = contr.factor,
+                        contri_fac_rank = contri_fac_rank,
+                        contri_fac_rank_sel = contri_fac_rank_sel,
                         sel_dif = sel_dif_mean,
-                        total_gain = total_gain,
-                        sel_gen = names(MGIDI)[1:ngs]),
+                        stat_gain = stat_gain,
+                        sel_gen = selected),
                    class = "mgidi"))
+  }
 }
 
 
@@ -347,7 +382,8 @@ mgidi <- function(.data,
 #'   Defaults to 0.75.
 #' @param col.sel The colour for selected genotypes. Defaults to \code{"red"}.
 #' @param col.nonsel The colour for nonselected genotypes. Defaults to \code{"black"}.
-#' @param ... Other arguments to be passed from ggplot2::theme().
+#' @param legend.position The position of the legend.
+#' @param ... Other arguments to be passed from  \code{\link[ggplot2]{theme}()}.
 #' @return An object of class \code{gg, ggplot}.
 #' @author Tiago Olivoto \email{tiagoolivoto@@gmail.com}
 #' @method plot mgidi
@@ -384,6 +420,7 @@ plot.mgidi <- function(x,
                        width.bar = 0.75,
                        col.sel = "red",
                        col.nonsel = "black",
+                       legend.position = "bottom",
                        ...) {
   if(!is.null(invert)){
     warning("Argument 'invert' is deprecated. Use 'replacement' instead.", call. = FALSE)
@@ -409,12 +446,17 @@ plot.mgidi <- function(x,
     ggplot(data = data, aes(x = reorder(Genotype, -MGIDI), y = MGIDI)) +
     geom_hline(yintercept = cutpoint, col = col.sel, size = size.line) +
     geom_path(colour = "black", group = 1, size = size.line) +
-    geom_point(size = size.point, aes(fill = sel), shape = 21, colour = "black", stroke  = size.point / 10) +
+    geom_point(size = size.point,
+               aes(fill = sel),
+               shape = 21,
+               colour = "black",
+               stroke  = size.point / 10) +
     scale_x_discrete() +
     scale_y_reverse() +
     theme_minimal() +
-    theme(legend.position = "bottom",
+    theme(legend.position = legend.position,
           legend.title = element_blank(),
+          panel.grid = element_line(size = size.line / 2),
           panel.border = element_blank(),
           axis.text = element_text(colour = "black"),
           text = element_text(size = size.text),
@@ -433,10 +475,8 @@ plot.mgidi <- function(x,
       sseq <- c((tot_gen/2 + 1):tot_gen)
       fang <- c(90 - 180/length(fseq) * fseq)
       sang <- c(-90 - 180/length(sseq) * sseq)
-      p <-
-        p +
-        theme(axis.text.x = element_text(angle = c(fang, sang)),
-              legend.margin = margin(-120, 0, 0, 0), ...)
+      p <- p +
+        theme(axis.text.x = suppressMessages(suppressWarnings(element_text(angle = c(fang, sang)))), ...)
     }
   }
   } else{
@@ -445,27 +485,66 @@ plot.mgidi <- function(x,
     if(genotypes == "selected"){
     data <-
       x$contri_fac %>%
-      subset(Gen %in% x$sel_gen)
-    data$Gen <-
-      factor(data$Gen, levels = x$sel_gen)
+      subset(GEN %in% x$sel_gen)
+    data$GEN <-
+      factor(data$GEN, levels = x$sel_gen)
     } else{
       data <- x$contri_fac
     }
-    data %<>% pivot_longer(-Gen)
+    data %<>%
+      pivot_longer(-GEN) %>%
+      arrange(GEN)
     title <- ifelse(is.null(title), "The strengths and weaknesses view of genotypes", title)
+    if(radar == TRUE){
+      p <-
+        ggplot(data, aes(x = GEN, y = value)) +
+        geom_polygon(aes(group = name, color = name), fill = NA, size = size.line) +
+        geom_polygon(aes(group = 1, x = GEN, y = 100 / length(unique(name))),
+                     fill = NA,
+                     color = "black",
+                     linetype = 2,
+                     size = size.line,
+                     show.legend = FALSE) +
+        geom_line(aes(group = name, color = name), size = size.line) +
+        theme_minimal() +
+        theme(strip.text.x = element_text(size = size.text),
+              axis.text.x = element_text(color = "black", size = size.text),
+              axis.ticks.y = element_blank(),
+              panel.grid = element_line(size = size.line / 2),
+              axis.text.y = element_text(size = size.text, color = "black"),
+              legend.position = legend.position,
+              legend.title = element_blank(),
+              ...) +
+        labs(title = title,
+             x = NULL,
+             y = "Contribution of each factor to the MGIDI index") +
+        scale_y_reverse() +
+        guides(color = guide_legend(nrow = 1)) +
+        coord_radar()
+      if(arrange.label == TRUE){
+        tot_gen <- length(unique(data$GEN))
+        fseq <- c(1:(tot_gen/2))
+        sseq <- c((tot_gen/2 + 1):tot_gen)
+        fang <- c(90 - 180/length(fseq) * fseq)
+        sang <- c(-90 - 180/length(sseq) * sseq)
+        p <- p +
+          theme(axis.text.x = suppressMessages(suppressWarnings(element_text(angle = c(fang, sang)))), ...)
+      }
+    } else{
     p <-
-      ggplot(data, aes(Gen, value, fill = name))+
+      ggplot(data, aes(GEN, value, fill = name))+
       geom_bar(stat = "identity",
                position = position,
                color = "black",
                size = size.line,
                width = width.bar) +
         scale_y_continuous(expand = expansion(c(0, ifelse(position == "fill", 0, 0.05))))+
-        theme_metan()+
-        theme(legend.position = "bottom",
+        theme_metan() +
+        theme(legend.position = legend.position,
               axis.ticks = element_line(size = size.line),
               plot.margin = margin(0.5, 0.5, 0, 0, "cm"),
-              panel.border = element_rect(size = size.line))+
+              panel.border = element_rect(size = size.line),
+              ...)+
         scale_x_discrete(guide = guide_axis(n.dodge = n.dodge, check.overlap = check.overlap),
                          expand = expansion(0))+
         labs(x = x.lab, y = y.lab)+
@@ -473,6 +552,7 @@ plot.mgidi <- function(x,
         ggtitle(title)
     if(rotate == TRUE){
       p <- p + coord_flip()
+    }
     }
   }
   return(p)

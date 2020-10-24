@@ -153,14 +153,14 @@ NULL
 NULL
 
 .onAttach <- function(libname, pkgname) {
-  vers <-  "v1.9.0"
-  packageStartupMessage("[]========================================================[]")
-  packageStartupMessage("[] Multi-Environment Trial Analysis (metan) ", vers, "        []")
-  packageStartupMessage("[] Author: Tiago Olivoto                                  []")
-  packageStartupMessage("[] Type 'citation('metan')' to know how to cite metan     []")
-  packageStartupMessage("[] Type 'vignette('metan_start')' for a short tutorial    []")
-  packageStartupMessage("[] Visit 'https://bit.ly/2TIq6JE' for a complete tutorial []")
-  packageStartupMessage("[]========================================================[]")
+  vers <-  "v1.10.0"
+  packageStartupMessage("|========================================================|")
+  packageStartupMessage("| Multi-Environment Trial Analysis (metan) ", vers, "       |")
+  packageStartupMessage("| Author: Tiago Olivoto                                  |")
+  packageStartupMessage("| Type 'citation('metan')' to know how to cite metan     |")
+  packageStartupMessage("| Type 'vignette('metan_start')' for a short tutorial    |")
+  packageStartupMessage("| Visit 'https://bit.ly/2TIq6JE' for a complete tutorial |")
+  packageStartupMessage("|========================================================|")
 }
 
 if (getRversion() >= "2.15.1") {
@@ -188,5 +188,5 @@ if (getRversion() >= "2.15.1") {
       "intercept", "lower", "upper", "pred_ols", "res_ammi", "res_ols", "pattern",
       "replacement", "comparison", "group1", "group2", "p.adj", "term", "rel_freq",
       "variable", "Model", "level", "RESIDUAL", "MGIDI", "sd.amo", "SD", "SG", "data.x",
-      "data.y", "sense", "win", "where", "test", "FG", "SI", "ACV"))
+      "data.y", "sense", "win", "where", "test", "FG", "SI", "ACV", "SDperc", "MEGA_ENV"))
   }

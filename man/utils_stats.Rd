@@ -9,6 +9,9 @@
 \alias{hmean}
 \alias{gmean}
 \alias{kurt}
+\alias{n_missing}
+\alias{n_unique}
+\alias{n_valid}
 \alias{pseudo_sigma}
 \alias{range_data}
 \alias{row_col_mean}
@@ -45,6 +48,12 @@ hmean(.data, ..., na.rm = FALSE)
 gmean(.data, ..., na.rm = FALSE)
 
 kurt(.data, ..., na.rm = FALSE)
+
+n_missing(.data, ..., na.rm = FALSE)
+
+n_unique(.data, ..., na.rm = FALSE)
+
+n_valid(.data, ..., na.rm = FALSE)
 
 pseudo_sigma(.data, ..., na.rm = FALSE)
 
@@ -104,8 +113,8 @@ variable names to compute the statistics. If no variables are informed in n
 \code{.data}.
 }}
 
-\item{na.rm}{A logical value indicating whether \code{NA} values should be
-stripped before the computation proceeds. Defaults to \code{FALSE}.}
+\item{na.rm}{If \code{FALSE}, the default, missing values are removed with a
+warning. If \code{TRUE}, missing values are silently removed.}
 
 \item{level}{The confidence level for the confidence interval of the mean.
 Defaults to 0.95.}
@@ -139,16 +148,15 @@ numeric variables from \code{.data} by default).}
 \item \code{ci_mean()} computes the confidence interval for the mean.
 \item \code{cv()} computes the coefficient of variation.
 \item \code{freq_table()} Computes frequency fable. Handles grouped data.
-}
-}
-\itemize{
 \item \code{hmean(), gmean()} computes the harmonic and geometric means,
 respectively. The harmonic mean is the reciprocal of the arithmetic mean of
 the reciprocals. The geometric mean is the \emph{n}th root of \emph{n}
 products.
-\itemize{
 \item \code{kurt()} computes the kurtosis like used in SAS and SPSS.
 \item \code{range_data()} Computes the range of the values.
+\item \code{n_valid()} The valid (not \code{NA}) length of a data.
+\item \code{n_unique()} Number of unique values.
+\item \code{n_missing()} Number of missing values.
 \item \code{row_col_mean(), row_col_sum()} Adds a row with the mean/sum of
 each variable and a column with the the mean/sum for each row of the data.
 \item \code{sd_amo(), sd_pop()} Computes sample and populational standard
@@ -158,7 +166,6 @@ deviation, respectively.
 \item \code{sum_dev()} computes the sum of the absolute deviations.
 \item \code{sum_sq_dev()} computes the sum of the squared deviations.
 \item \code{var_amo(), var_pop()} computes sample and populational variance.
-\item \code{valid_n()} Return the valid (not \code{NA}) length of a data.
 }
 }
 

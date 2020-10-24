@@ -1,7 +1,7 @@
 Type: Package
 Package: metan
 Title: Multi Environment Trials Analysis
-Version: 1.9.0
+Version: 1.10.0
 Authors@R: 
     person(given = "Tiago",
            family = "Olivoto",
@@ -52,7 +52,7 @@ Language: en-US
 LazyData: true
 RoxygenNote: 7.1.1
 NeedsCompilation: no
-Packaged: 2020-09-18 14:51:17 UTC; tiago
+Packaged: 2020-10-23 00:26:32 UTC; tiago
 Author: Tiago Olivoto [aut, cre, cph] (<https://orcid.org/0000-0002-0241-9636>)
 Repository: CRAN
-Date/Publication: 2020-09-18 15:30:03 UTC
+Date/Publication: 2020-10-24 04:30:02 UTC

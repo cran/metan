@@ -15,7 +15,7 @@ gmd(x, what = NULL, type = "GEN", verbose = TRUE)
 \code{\link{can_corr}()} \code{\link{ecovalence}()},  \code{\link{Fox}()},
 \code{\link{gai}()}, \code{\link{gamem}()},\code{\link{gafem}()},
 \code{\link{ge_acv}}, \code{\link{ge_means}()}, \code{\link{ge_reg}()},
-\code{\link{gytb}()}, \code{\link{performs_ammi}()},
+\code{\link{gytb}()}, \code{\link{mgidi}()}, \code{\link{performs_ammi}()},
 \code{\link{Resende_indexes}()}, \code{\link{Shukla}()},
 \code{\link{superiority}()}, \code{\link{waas}()} or \code{\link{waasb}()}.}
 
@@ -23,7 +23,7 @@ gmd(x, what = NULL, type = "GEN", verbose = TRUE)
 \strong{Details}.}
 
 \item{type}{Chose if the statistics must be show by genotype (\code{type =
-"GEN"}, default) or environment (\code{type = "ENV"}), when possible.}
+"GEN"}, default) or environment (\code{TYPE = "ENV"}), when possible.}
 
 \item{verbose}{Logical argument. If \code{verbose = FALSE} the code will run
 silently.}
@@ -157,6 +157,12 @@ analyzed traits (default).
 \item \code{"si"} The superiority index (sum standardized value across all yield*trait combinations).
 }
 
+\strong{Objects of class \code{mgidi}:} See the \strong{Value} section of
+\code{\link{mgidi}()} to see valid options for \code{what} argument.
+
+\strong{Objects of class \code{mtsi}:} See the \strong{Value} section of
+\code{\link{mtsi}()} to see valid options for \code{what} argument.
+
 \strong{Objects of class \code{Shukla}:}
 \itemize{
 \item \code{"rMean"} Rank for the mean.
@@ -245,9 +251,11 @@ objects of class \code{waas}).
 \item \code{"details"} The details of the trial.
 \item \code{"genpar"} Genetic parameters (default).
 \item \code{"gcov"} The genotypic variance-covariance matrix.
+\item \code{"pcov"} The phenotypic variance-covariance matrix.
+\item \code{"gcor"} The genotypic correlation matrix.
+\item \code{"pcor"} The phenotypic correlation matrix.
 \item \code{"h2"} The broad-sense heritability.
 \item \code{"lrt"} The likelihood-ratio test for random effects.
-\item \code{"pcov"} The phenotypic variance-covariance matrix.
 \item \code{"vcomp"} The variance components for random effects.
 \item \code{"ranef"} Random effects.
 }
