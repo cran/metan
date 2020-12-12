@@ -14,7 +14,6 @@
   genotypes = "selected",
   n.dodge = 1,
   check.overlap = FALSE,
-  invert = NULL,
   x.lab = NULL,
   y.lab = NULL,
   title = NULL,
@@ -24,7 +23,7 @@
   size.text = 10,
   width.bar = 0.75,
   col.sel = "red",
-  col.nonsel = "black",
+  col.nonsel = "gray",
   legend.position = "bottom",
   ...
 )
@@ -62,8 +61,6 @@ This is useful for displaying labels that would otherwise overlap.}
 \item{check.overlap}{Silently remove overlapping labels, (recursively)
 prioritizing the first, last, and middle labels.}
 
-\item{invert}{Deprecated argument as of 1.8.0. Use \code{rotate} instead.}
-
 \item{x.lab, y.lab}{The labels for the axes x and y, respectively. x label is
 set to null when a radar plot is produced.}
 
@@ -84,7 +81,7 @@ Defaults to 0.75.}
 
 \item{col.sel}{The colour for selected genotypes. Defaults to \code{"red"}.}
 
-\item{col.nonsel}{The colour for nonselected genotypes. Defaults to \code{"black"}.}
+\item{col.nonsel}{The colour for nonselected genotypes. Defaults to \code{"gray"}.}
 
 \item{legend.position}{The position of the legend.}
 

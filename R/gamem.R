@@ -21,7 +21,7 @@
 #'   al., 2015).
 #'@param by One variable (factor) to compute the function by. It is a shortcut
 #'  to \code{\link[dplyr]{group_by}()}.This is especially useful, for example,
-#'  when the researcher what to fit a mixed-effect model for each environment.
+#'  when the researcher want to fit a mixed-effect model for each environment.
 #'  In this case, an object of class gamem_grouped is returned.
 #'  \code{\link{mgidi}} can then be used to compute the mgidi index within each
 #'  environment.
@@ -91,7 +91,6 @@
 #'  corresponding to \mjseqn{y_{ijk}}.
 #'
 #' @md
-#' @importFrom cowplot draw_label ggdraw
 #' @author Tiago Olivoto \email{tiagoolivoto@@gmail.com}
 #' @seealso \code{\link{get_model_data}} \code{\link{waasb}}
 #' @export
@@ -637,11 +636,8 @@ predict.gamem <- function(object, ...) {
 #' c(1:4)} that means that the first four graphics will be plotted.
 #' @param ncol,nrow The number of columns and rows of the plot pannel. Defaults
 #'   to \code{NULL}
-#' @param align Specifies whether graphs in the grid should be horizontally
-#'   (\code{"h"}) or vertically (\code{"v"}) aligned. \code{"hv"} (default)
-#'   align in both directions, \code{"none"} do not align the plot.
 #' @param ... Additional arguments passed on to the function
-#'   \code{\link[cowplot]{plot_grid}}
+#'  \code{\link[patchwork]{wrap_plots}()}.
 #' @author Tiago Olivoto \email{tiagoolivoto@@gmail.com}
 #' @method plot gamem
 #' @export
@@ -682,7 +678,6 @@ plot.gamem <- function(x,
                        which = c(1:4),
                        ncol = NULL,
                        nrow = NULL,
-                       align = "hv",
                        ...) {
   if(!type  %in% c("res", 're', "vcomp")){
     stop("Argument type = '", match.call()[["type"]], "' invalid. Use one of 'res', 're', or 'vcomp'", call. = FALSE)
@@ -880,21 +875,11 @@ plot.gamem <- function(x,
             panel.spacing = unit(0, "cm"))
     plots <- list(p1, p2, p3, p4, p5, p6, p7)
     p1 <-
-      plot_grid(plotlist = plots[c(which)],
+      wrap_plots(plots[c(which)],
                 ncol = ncol,
                 nrow = nrow,
-                align = align,
-                ...)
-    title <- ggdraw() +
-      draw_label(var_name,
-                 fontface = 'bold',
-                 x = 0,
-                 hjust = 0) +
-      theme(plot.margin = margin(0, 0, 0, 7))
-    p1 <-
-      plot_grid(title, p1,
-                ncol = 1,
-                rel_heights = c(0.05, 1))
+                ...) +
+      plot_annotation(title = var_name)
     return(p1)
   }
   if (type == "re") {

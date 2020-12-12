@@ -1,4 +1,18 @@
+# metan 1.11.0
+## New functions
+* `set_union()`, `set_difference()` and `set_intersect()` for set operations with many sets.
+* `venn_plot()` to produce Venn diagrams.
+
+# Minor improvements
+* `gge()` now have a `by` argument and understand data passed from `group_by`.
+* New arguments `col.stroke` and `size.stroke` in `plot.gge()`
+* `gtb` and `gytb` now produces biplots with lines for genotype's vectors in `type = 1`.
+* `get_model_data()` now understand objects of class `fai_blup` and `sh`.
+
 # metan 1.10.0
+* `as_*()` now handles vectors.
+* `plot.corr_coef()` now shows both stars or p-values for reporting the significance of correlations.s
+
 ## Minor improvements
 * `gamem()`, `gamem_met()`, and `waasb()` now have a `by` argument and understand data passed from `group_by`.
 * `mtsi()` and `mgidi()` now returns the ranks for the contribution of each factor and understand models fitted with `gamem()` and `waasb()` using the `by` argument.
@@ -14,7 +28,7 @@
 * `n_valid()`, `n_missing()`, and `n_unique()` to count valid, missing, and unique values, respectively.
 * `tidy_colnames()` to clean up column names. It is a shortcut to `tidy_strings()` applied to the column names of a data frame.
 * `env_stratification()` to perform environment stratification using factor analysis.
-* 
+
 
 
 # metan 1.9.0

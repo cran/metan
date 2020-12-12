@@ -42,7 +42,7 @@ c <- plot_scores(ammi_model,
                  col.env = "gray70",
                  col.segm.env = "gray70",
                  axis.expand = 1.5)
-arrange_ggplot(a, b, c, labels = letters[1:3], ncol = 1)
+arrange_ggplot(a, b, c, tag_levels = "a", ncol = 1)
 
 ## -----------------------------------------------------------------------------
 predicted <- predict(ammi_model, naxis = c(4, 6))
@@ -69,7 +69,7 @@ e <- plot_blup(model2,
                prob = 0.1,
                col.shape  =  c("gray20", "gray80")) +
       coord_flip()
-arrange_ggplot(d, e, labels = letters[4:5], ncol = 1)
+arrange_ggplot(d, e, tag_levels = list(c("d", "e")), ncol = 1)
 
 ## -----------------------------------------------------------------------------
 get_model_data(model2, what = "blupge") %>% 
@@ -91,7 +91,7 @@ gge_model <- gge(data_ge, ENV, GEN, GY)
 ## ----echo = TRUE, fig.width = 4, fig.height=8, message=F, warning=F-----------
 f <- plot(gge_model)
 g <- plot(gge_model, type = 2)
-arrange_ggplot(e, f, labels = letters[6:7], ncol = 1)
+arrange_ggplot(e, f, tag_levels = list(c("e", "f")), ncol = 1)
 
 ## -----------------------------------------------------------------------------
 stat_ge <- ge_stats(data_ge, ENV, GEN, REP, GY)

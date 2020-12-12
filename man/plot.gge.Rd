@@ -14,11 +14,14 @@
   sel_gen2 = NA,
   shape.gen = 21,
   shape.env = 23,
+  line.type.gen = "dotted",
   size.shape = 2.2,
   size.shape.win = 3.2,
-  size.bor.tick = 0.3,
+  size.stroke = 0.3,
+  col.stroke = "black",
   col.gen = "blue",
   col.env = "forestgreen",
+  col.line = "forestgreen",
   col.alpha = 1,
   col.circle = "gray",
   col.alpha.circle = 0.5,
@@ -26,8 +29,9 @@
   size.text.gen = 4,
   size.text.env = 4,
   size.text.lab = 12,
+  size.text.win = 4.5,
   size.line = 0.5,
-  large_label = 4.5,
+  large_label = "deprecated",
   axis_expand = 1.2,
   title = TRUE,
   plot_theme = theme_metan(),
@@ -67,18 +71,23 @@ in the biplot. Defaults to \code{shape.gen = 21} (circle) for genotypes and
 \code{21-25}: \code{21} (circle), \code{22} (square), \code{23} (rhombus),
 \code{24} (up triangle), and \code{25} (low triangle).}
 
+\item{line.type.gen}{The line type to highlith the genotype's vectors.
+Defaults to `line.type.gen == "dotted`.}
+
 \item{size.shape}{The size of the shape (both for genotypes and
 environments). Defaults to \code{2.2}.}
 
 \item{size.shape.win}{The size of the shape for winners genotypes when
 \code{type = 3}. Defaults to \code{3.2}.}
 
-\item{size.bor.tick}{The size of tick of shape. Default is \code{0.3}. The
-size of the shape will be \code{size.shape + size.bor.tick}}
+\item{size.stroke, col.stroke}{The width and color of the border,
+respectively. Default to \code{size.stroke = 0.3} and \code{col.stroke =
+"black"}. The size of the shape will be \code{size.shape + size.stroke}}
 
-\item{col.gen, col.env}{Color for genotype and environment attributes in the
-biplot. Defaults to \code{col.gen = 'blue'} and \code{col.env =
-'forestgreen'}}
+\item{col.gen, col.env, col.line}{Color for genotype/environment labels and for
+the line that passes through the biplot origin. Defaults to \code{col.gen =
+'blue'}, \code{col.env = 'forestgreen'}, and \code{col.line =
+'forestgreen'}.}
 
 \item{col.alpha}{The alpha value for the color. Defaults to \code{1}. Values
 must be between \code{0} (full transparency) to \code{1} (full color).}
@@ -91,11 +100,14 @@ lines. Defaults to \code{'gray'} and \code{0.4}, respectively.}
 \item{size.text.gen, size.text.env, size.text.lab}{The size of the text for
 genotypes, environments and labels, respectively.}
 
+\item{size.text.win}{The text size to use for winner genotypes where
+\code{type = 3} and for the two selected genotypes where \code{type = 9}.
+Defaults to 4.5.}
+
 \item{size.line}{The size of the line in biplots (Both for segments and circles).}
 
-\item{large_label}{The text size to use for larger labels where \code{type =
-3}, used for the outermost genotypes and where \code{type = 9}, used for
-the two selected genotypes. Defaults to 4.5}
+\item{large_label}{Deprecated as of metan 1.11.0. Use \code{size.text.win}
+instead.}
 
 \item{axis_expand}{multiplication factor to expand the axis limits by to
 enable fitting of labels. Defaults to 1.2}

@@ -71,10 +71,9 @@
 #' desired gains, the statistics are computed for by strata.
 #' * \strong{sel_gen} The selected genotypes.
 #' @md
-#' @references Olivoto, T., A.D.C. L{\'{u}}cio, J.A.G. da silva, B.G. Sari, and
-#'   M.I. Diel. 2019. Mean performance and stability in multi-environment trials
-#'   II: Selection based on multiple traits. Agron. J. 111:2961-2969.
-#' \doi{10.2134/agronj2019.03.0220}
+#' @references Olivoto, T., and Nardino, M. (2020). MGIDI: toward an effective
+#'   multivariate selection in biological experiments. Bioinformatics.
+#' \doi{10.1093/bioinformatics/btaa981}
 #' @importFrom tidyselect any_of all_of
 #' @author Tiago Olivoto \email{tiagoolivoto@@gmail.com}
 #' @export
@@ -252,7 +251,7 @@ mgidi <- function(.data,
     data_order <- data[colnames(observed)]
     sel_dif_mean <-
       tibble(VAR = names(pos.var.factor[, 2]),
-             Factor = paste("FA", as.numeric(pos.var.factor[, 2])),
+             Factor = paste("FA", as.numeric(pos.var.factor[, 2]), sep = ""),
              Xo = colMeans(data_order, na.rm = TRUE),
              Xs = colMeans(data_order[selected, ], na.rm = TRUE),
              SD = Xs - colMeans(data_order, na.rm = TRUE),
@@ -368,7 +367,6 @@ mgidi <- function(.data,
 #'   This is useful for displaying labels that would otherwise overlap.
 #' @param check.overlap Silently remove overlapping labels, (recursively)
 #'   prioritizing the first, last, and middle labels.
-#' @param invert Deprecated argument as of 1.8.0. Use \code{rotate} instead.
 #' @param x.lab,y.lab The labels for the axes x and y, respectively. x label is
 #'   set to null when a radar plot is produced.
 #' @param title The plot title when \code{type = "contribution"}.
@@ -381,7 +379,7 @@ mgidi <- function(.data,
 #' @param width.bar The width of the bars if \code{type = "contribution"}.
 #'   Defaults to 0.75.
 #' @param col.sel The colour for selected genotypes. Defaults to \code{"red"}.
-#' @param col.nonsel The colour for nonselected genotypes. Defaults to \code{"black"}.
+#' @param col.nonsel The colour for nonselected genotypes. Defaults to \code{"gray"}.
 #' @param legend.position The position of the legend.
 #' @param ... Other arguments to be passed from  \code{\link[ggplot2]{theme}()}.
 #' @return An object of class \code{gg, ggplot}.
@@ -409,7 +407,6 @@ plot.mgidi <- function(x,
                        genotypes = "selected",
                        n.dodge = 1,
                        check.overlap = FALSE,
-                       invert = NULL,
                        x.lab = NULL,
                        y.lab = NULL,
                        title = NULL,
@@ -419,13 +416,9 @@ plot.mgidi <- function(x,
                        size.text = 10,
                        width.bar = 0.75,
                        col.sel = "red",
-                       col.nonsel = "black",
+                       col.nonsel = "gray",
                        legend.position = "bottom",
                        ...) {
-  if(!is.null(invert)){
-    warning("Argument 'invert' is deprecated. Use 'replacement' instead.", call. = FALSE)
-    rotate <- invert
-  }
   if(!type %in% c("index", "contribution")){
     stop("The argument index must be one of the 'index' or 'contribution'", call. = FALSE)
   }

@@ -22,9 +22,9 @@
 \alias{skew}
 \alias{sum_dev}
 \alias{sum_sq_dev}
+\alias{sum_sq}
 \alias{var_pop}
 \alias{var_amo}
-\alias{valid_n}
 \alias{cv_by}
 \alias{max_by}
 \alias{means_by}
@@ -75,11 +75,11 @@ sum_dev(.data, ..., na.rm = FALSE)
 
 sum_sq_dev(.data, ..., na.rm = FALSE)
 
+sum_sq(.data, ..., na.rm = FALSE)
+
 var_pop(.data, ..., na.rm = FALSE)
 
 var_amo(.data, ..., na.rm = FALSE)
-
-valid_n(.data, ..., na.rm = FALSE)
 
 cv_by(.data, ..., na.rm = FALSE)
 
@@ -164,6 +164,7 @@ deviation, respectively.
 \item \code{sem()} computes the standard error of the mean.
 \item \code{skew()} computes the skewness like used in SAS and SPSS.
 \item \code{sum_dev()} computes the sum of the absolute deviations.
+\item \code{sum_sq()} computes the sum of the squared values.
 \item \code{sum_sq_dev()} computes the sum of the squared deviations.
 \item \code{var_amo(), var_pop()} computes sample and populational variance.
 }

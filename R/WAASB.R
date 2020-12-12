@@ -76,7 +76,7 @@
 #'   al., 2015).
 #'@param by One variable (factor) to compute the function by. It is a shortcut
 #'  to \code{\link[dplyr]{group_by}()}.This is especially useful, for example,
-#'  when the researcher what to compute the indexes by mega-environments. In
+#'  when the researcher want to compute the indexes by mega-environments. In
 #'  this case, an object of class waasb_grouped is returned.
 #'  \code{\link{mtsi}()} can then be used to compute the mtsi index within each
 #'  mega-environment.
@@ -537,7 +537,8 @@ waasb <- function(.data,
             t() %>%
             as.data.frame() %>%
             mutate(Percent = Pesos$Percent)
-        WAASAbs <- mutate(Escores, WAASB = sapply(WAASB[, -ncol(WAASB)], weighted.mean, w = WAASB$Percent)) %>%
+        WAASAbs <-
+            mutate(Escores, WAASB = sapply(WAASB[, -ncol(WAASB)], weighted.mean, w = WAASB$Percent)) %>%
             group_by(type) %>%
             mutate(PctResp = (mresp[vin] - minresp[vin])/(max(Y) - min(Y)) * (Y - max(Y)) + mresp[vin],
                    PctWAASB = (0 - 100)/(max(WAASB) - min(WAASB)) * (WAASB - max(WAASB)) + 0,
@@ -546,7 +547,7 @@ waasb <- function(.data,
                    OrResp = rank(-Y),
                    OrWAASB = rank(WAASB),
                    OrPC1 = rank(abs(PC1)),
-                   WAASBY = ((PctResp * wRes) + (PctWAASB * wWAASB))/(wRes + wWAASB),
+                   WAASBY = ifelse(is.na(((PctResp * wRes) + (PctWAASB * wWAASB))/(wRes + wWAASB)), PctResp, ((PctResp * wRes) + (PctWAASB * wWAASB))/(wRes + wWAASB)),
                    OrWAASBY = rank(-WAASBY)) %>%
             ungroup()
         Details <-
@@ -790,16 +791,19 @@ waasb <- function(.data,
                 x[["LRT"]][which(x[["LRT"]][[1]] == "GEN:ENV"), 7]
             })) > prob)), "\n")
             cat("---------------------------------------------------------------------------\n")
+            chek_na_waasb <- listres %>% map(~.x[["model"]] %>% has_na)
+            if(any(chek_na_waasb == TRUE)){
+            cat("The following traits had p-value for GE interaction = 1\n")
+            cat(names(which(chek_na_waasb == TRUE)), "\n")
+            cat("WAASBY value for these traits is based on mean performance only (PctResp)\n")
+            cat("---------------------------------------------------------------------------\n")
+            }
         } else {
             cat("All variables with significant (p < 0.05) genotype-vs-environment interaction\n")
         }
     }
     invisible(structure(listres, class = "waasb"))
 }
-
-
-
-
 
 
 
@@ -861,13 +865,9 @@ waasb <- function(.data,
 #' c(1:4)} that means that the first four graphics will be plotted.
 #' @param ncol,nrow The number of columns and rows of the plot pannel. Defaults
 #'   to \code{NULL}
-#' @param align Specifies whether graphs in the grid should be horizontally
-#'   (\code{"h"}) or vertically (\code{"v"}) aligned. \code{"hv"} (default)
-#'   align in both directions, \code{"none"} do not align the plot.
 #' @param ... Additional arguments passed on to the function
-#'   \code{\link[cowplot]{plot_grid}}
+#'  \code{\link[patchwork]{wrap_plots}()}.
 #' @author Tiago Olivoto \email{tiagoolivoto@@gmail.com}
-#' @importFrom cowplot plot_grid
 #' @importFrom dplyr distinct_all
 #' @importFrom tibble tribble
 #' @method plot waasb
@@ -910,7 +910,6 @@ plot.waasb <- function(x,
                        which = c(1:4),
                        ncol = NULL,
                        nrow = NULL,
-                       align = "hv",
                        ...) {
     if(!type  %in% c("res", 're', "vcomp")){
         stop("Argument type = '", match.call()[["type"]], "' invalid. Use one of 'res', 're', or 'vcomp'", call. = FALSE)
@@ -1108,22 +1107,11 @@ plot.waasb <- function(x,
                   plot.title = element_text(size = size.tex.lab, hjust = 0, vjust = 1),
                   panel.spacing = unit(0, "cm"))
         plots <- list(p1, p2, p3, p4, p5, p6, p7)
-        p1 <-
-            plot_grid(plotlist = plots[c(which)],
-                      ncol = ncol,
-                      nrow = nrow,
-                      align = align,
-                      ...)
-        title <- ggdraw() +
-            draw_label(var_name,
-                       fontface = 'bold',
-                       x = 0,
-                       hjust = 0) +
-            theme(plot.margin = margin(0, 0, 0, 7))
-        p1 <-
-            plot_grid(title, p1,
-                      ncol = 1,
-                      rel_heights = c(0.05, 1))
+        p1 <- wrap_plots(plots[c(which)],
+                         ncol = ncol,
+                         nrow = nrow,
+                         ...) +
+            plot_annotation(title = var_name)
         return(p1)
     }
     if (type == "re") {
