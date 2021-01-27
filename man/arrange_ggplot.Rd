@@ -20,13 +20,7 @@ arrange_ggplot(
   tag_prefix = NULL,
   tag_suffix = NULL,
   tag_sep = NULL,
-  plotlist = "deprecated",
-  labels = "deprecated",
-  rel_widths = "deprecated",
-  rel_heights = "deprecated",
-  hjust = "deprecated",
-  vjust = "deprecated",
-  align = "deprecated"
+  theme = NULL
 )
 }
 \arguments{
@@ -45,8 +39,8 @@ removing duplicates.}
 
 \item{design}{Specification of the location of areas in the layout.}
 
-\item{legend.position}{The position of the legends in the plot if \code{guides = "collect"} Default to
-`'bottom'`.}
+\item{legend.position}{The position of the legends in the plot if
+\code{guides = "collect"} Default to `'bottom'`.}
 
 \item{title, subtitle, caption}{Text strings to use for the various plot
 annotations.}
@@ -64,16 +58,8 @@ tag.}
 
 \item{tag_sep}{A separator between different tag levels.}
 
-\item{plotlist}{Deprecated as of metan 1.11.0.}
-
-\item{labels}{Deprecated as of metan 1.11.0. Use \code{tag_levels} instead.}
-
-\item{rel_widths, rel_heights}{Deprecated as of metan 1.11.0. Use \code{widths
-and heights} instead.}
-
-\item{hjust, vjust}{Deprecated as of metan 1.11.0.}
-
-\item{align}{Deprecated as of metan 1.11.0.}
+\item{theme}{A ggplot theme specification to use for the plot. Only elements
+related to the titles as well as plot margin and background is used.}
 }
 \value{
 A `patchwork` object
@@ -92,12 +78,22 @@ p1 <- ggplot(mtcars, aes(wt, mpg)) +
 p2 <- ggplot(mpg, aes(class, hwy)) +
              geom_boxplot()
 
+# Default plot
 arrange_ggplot(p1, p2)
+
+# Insert plot annotation, titles and subtitles
 arrange_ggplot(p1, p2,
                ncol = 1,
                tag_levels = list(c("(P1)", "(P2)")),
                title = "My grouped ggplot",
-               caption = "A = scatter plot\nB = boxplot")
+               subtitle = "Made with arrange_ggplot()",
+               caption = "P1 = scatter plot\nP2 = boxplot",
+               theme = theme(plot.title = element_text(size = 20,
+                                                       face = "bold"),
+                             plot.subtitle = element_text(size = 10,
+                                                          face = "italic"),
+                             plot.caption  = element_text(size = 10,
+                                                          face = "italic")))
 }
 
 }

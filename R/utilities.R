@@ -8,7 +8,7 @@
 #'   \code{all_title_case()}, \code{stract_number()}, \code{stract_string()},
 #'   \code{remove_strings()}, and \code{tidy_strings()} \code{...} are the
 #'   variables to apply the function. If no variable is informed, the function
-#'   will be applied to all non-numeric variables in \code{.data}.
+#'   will be applied to all non-numeric variables in `.data`.
 #' @param digits The number of significant figures.
 #' @param pattern A string to be matched. Regular Expression Syntax is also
 #'   allowed.
@@ -18,12 +18,13 @@
 #' @param sep A character string to separate the terms. Defaults to "_".
 #' @description
 #' * \code{all_lower_case()}: Translate all non-numeric strings of a data frame
-#' to lower case (
-#'  \code{"Env"} to \code{"env"}).
+#' to lower case.
 #' * \code{all_upper_case()}: Translate all non-numeric strings of a data frame
-#' to upper case (e.g., \code{"Env"} to \code{"ENV"}).
+#' to upper case.
 #' * \code{all_title_case()}: Translate all non-numeric strings of a data frame
-#' to title case (e.g., \code{"ENV"} to \code{"Env"}).
+#' to title case.
+#' * \code{first_upper_case}: Translate the first word of a string to upper
+#' case.
 #' * \code{extract_number()}: Extract the number(s) of a string.
 #' * \code{extract_string()}: Extract all strings, ignoring case.
 #' * \code{find_text_in_num()}: Find text characters in a numeric sequence and
@@ -93,10 +94,11 @@
 #' find_text_in_num(mixed_text, GY)
 #'
 #' ############# upper, lower and title cases ############
-#'gen_text <- c("GEN 1", "Gen 1", "gen 1")
+#'gen_text <- c("This is the first string.", "this is the second one")
 #'all_lower_case(gen_text)
 #'all_upper_case(gen_text)
 #'all_title_case(gen_text)
+#'first_upper_case(gen_text)
 #'
 #'# A whole data frame
 #'all_lower_case(data_ge)
@@ -123,57 +125,23 @@
 #' }
 #' @export
 all_upper_case <- function(.data, ...){
-  if (has_class(.data, c("data.frame","tbl_df", "data.table"))){
-    .data <- as.data.frame(.data)
-    if(!missing(...)){
-      mutate(.data, across(c(...), toupper)) %>%
-        as_tibble(rownames = NA)
-    } else{
-      mutate(.data, across(where(~!is.numeric(.x)), toupper)) %>%
-        as_tibble(rownames = NA)
-    }
-  } else{
-    toupper(.data)
-  }
+  helper_case(.data, toupper, ...)
 }
 #' @name utils_num_str
 #' @export
 all_lower_case <- function(.data, ...){
-  if (has_class(.data, c("data.frame","tbl_df", "data.table"))){
-    .data <- as.data.frame(.data)
-    if(!missing(...)){
-      mutate(.data, across(c(...), tolower)) %>%
-        as_tibble(rownames = NA)
-    } else{
-      mutate(.data, across(where(~!is.numeric(.x)), tolower)) %>%
-      as_tibble(rownames = NA)
-    }
-  } else{
-    tolower(.data)
-  }
+  helper_case(.data, tolower, ...)
 }
 #' @name utils_num_str
 #' @export
 all_title_case <- function(.data, ...){
-  to_title <- function(x){
-    x <- tolower(x)
-    substr(x, 1, 1) <- toupper(substr(x, 1, 1))
-    return(x)
-  }
-  if (has_class(.data, c("data.frame","tbl_df", "data.table"))){
-    .data <- as.data.frame(.data)
-    if(!missing(...)){
-      mutate(.data, across(c(...), to_title)) %>%
-        as_tibble(rownames = NA)
-    } else{
-      mutate(.data, across(where(~!is.numeric(.x)), to_title)) %>%
-        as_tibble(rownames = NA)
-    }
-  } else{
-    return(to_title(.data))
-  }
+  helper_case(.data, to_title, ...)
 }
-
+#' @name utils_num_str
+#' @export
+first_upper_case <- function(.data, ...){
+  helper_case(.data, first_upper, ...)
+}
 #' @name utils_num_str
 #' @export
 #'
@@ -384,13 +352,15 @@ tidy_strings <- function(.data, ..., sep = "_"){
 #' * \code{add_cols()}: Add one or more columns to an existing data frame. If
 #' specified \code{.before} or \code{.after} columns does not exist, columns are
 #' appended at the end of the data. Return a data frame with all the original
-#' columns in \code{.data} plus the columns declared in \code{...}. In
-#' \code{add_cols()} columns in \code{.data} are available for the expressions.
+#' columns in `.data` plus the columns declared in \code{...}. In
+#' \code{add_cols()} columns in `.data` are available for the expressions.
 #' So, it is possible to add a column based on existing data.
 #' * \code{add_rows()}: Add one or more rows to an existing data frame. If
 #' specified \code{.before} or \code{.after} rows does not exist, rows are
 #' appended at the end of the data. Return a data frame with all the original
-#' rows in \code{.data} plus the rows declared in \code{...} argument.
+#' rows in `.data` plus the rows declared in \code{...} argument.
+#' * \code{add_row_id()}: Add a column with the row id as the first column in
+#' `.data`.
 #' * \code{add_prefix()} and \code{add_suffix()} add prefixes and suffixes,
 #' respectively, in variable names selected in \code{...} argument.
 #' * \code{all_pairs()}: Get all the possible pairs between the levels of a
@@ -400,13 +370,19 @@ tidy_strings <- function(.data, ..., sep = "_"){
 #' * \code{colnames_to_title()}: Translate all column names to title case.
 #' * \code{column_exists()}: Checks if a column exists in a data frame. Return a
 #' logical value.
-#' * \code{columns_to_first()}: Move columns to first positions in \code{.data}.
-#' * \code{columns_to_last()}: Move columns to last positions in \code{.data}.
+#' * \code{columns_to_first()}: Move columns to first positions in `.data`.
+#' * \code{columns_to_last()}: Move columns to last positions in `.data`.
+#' * \code{columns_to_rownames()}: Move a column of `.data` to its row
+#' names.
+#' * \code{rownames_to_column()}: Move the row names of `.data` to a new
+#' column.
+#' * \code{remove_rownames()}: Remove the row names of `.data`.
 #' * \code{concatenate()}: Concatenate columns of a data frame. If \code{drop =
 #' TRUE} then the existing variables are dropped. If \code{pull = TRUE} then the
 #' concatenated variable is pull out to a vector. This is specially useful when
 #' using \code{concatenate} to add columns to a data frame with \code{add_cols()}.
 #' * \code{get_levels()}: Get the levels of a factor variable.
+#' * \code{get_levels_comb()}: Get the combination of the levels of a factor.
 #' * \code{get_level_size()}: Get the size of each level of a factor variable.
 #' * \code{remove_cols()}: Remove one or more columns from a data frame.
 #' * \code{remove_rows()}: Remove one or more rows from a data frame.
@@ -426,8 +402,8 @@ tidy_strings <- function(.data, ..., sep = "_"){
 #' @param .data A data frame
 #' @param ... The argument depends on the function used.
 #' * For \code{add_cols()} and \code{add_rows()} is name-value pairs. All values
-#' must have one element for each row in \code{.data} when using
-#' \code{add_cols()} or one element for each column in \code{.data} when using
+#' must have one element for each row in `.data` when using
+#' \code{add_cols()} or one element for each column in `.data` when using
 #' \code{add_rows()}. Values of length 1 will be recycled when using
 #' \code{add_cols()}.
 #'
@@ -439,13 +415,18 @@ tidy_strings <- function(.data, ..., sep = "_"){
 #'
 #' * For \code{columns_to_first()} and \code{columns_to_last()},  \code{...} is
 #' the column name or column index of the variable(s) to be moved to first or
-#' last in \code{.data}.
+#' last in `.data`.
 #'
 #' * For \code{remove_rows()} and \code{select_rows()}, \code{...} is an integer
 #' row value.
 #'
 #' * For \code{concatenate()}, \code{...} is the unquoted variable names to be
 #' concatenated.
+#'
+#' * For \code{get_levels()}, \code{get_level_comb()}, and
+#' \code{get_level_size()} \code{...} is the unquoted variable names to get the
+#' levels, levels combinations and levels size, respectively.
+#'
 #' @param .before,.after For \code{add_cols()}, \code{concatenate()}, and
 #'   \code{reorder_cols()}, one-based column index or column name where to add
 #'   the new columns, default: .after last column. For \code{add_rows()},
@@ -454,21 +435,21 @@ tidy_strings <- function(.data, ..., sep = "_"){
 #'   \code{add_suffix()}, respectively.
 #' @param new_var The name of the new variable containing the concatenated
 #'   values. Defaults to \code{new_var}.
+#' @param var Name of column to use for rownames.
 #' @param sep The separator to appear when using \code{concatenate()},
 #'   \code{add_prefix()}, or \code{add_suffix()}. Defaults to to \code{"_"}.
 #' @param drop Logical argument. If \code{TRUE} keeps the new variable
 #'   \code{new_var} and drops the existing ones. Defaults to \code{FALSE}.
 #' @param pull Logical argument. If \code{TRUE}, returns the last column (on the
 #'   assumption that's the column you've created most recently), as a vector.
-#' @param cols A quoted variable name to check if it exists in \code{.data}.
-#' @param group A factor variable to get the levels.
+#' @param cols A quoted variable name to check if it exists in `.data`.
 #' @param levels The levels of a factor or a numeric vector.
 #' @param offset Set it to \emph{n} to select the \emph{n}th variable from the
 #'   end (for \code{select_last_col()}) of from the begin (for
 #'   \code{select_first_col()})
 #' @md
 #' @author Tiago Olivoto \email{tiagoolivoto@@gmail.com}
-#' @importFrom  tibble add_column add_row
+#' @importFrom  tibble add_row
 #' @importFrom dplyr relocate across
 #' @export
 #' @examples
@@ -546,8 +527,9 @@ tidy_strings <- function(.data, ..., sep = "_"){
 #' ########## checking if a column exists ###########
 #' column_exists(data_g, "GEN")
 #'
-#' ####### get the levels and size of levels ########
+#' ####### get the levels, level combinations and size of levels ########
 #' get_levels(data_g, GEN)
+#' get_levels_comb(data_ge, ENV, GEN)
 #' get_level_size(data_g, GEN)
 #'
 #' ############## all possible pairs ################
@@ -582,6 +564,15 @@ add_rows <- function(.data, ..., .before = NULL, .after = NULL){
     }
   }
   add_row(.data, ..., .before = .before, .after = .after)
+}
+#' @name utils_rows_cols
+#' @export
+add_row_id <- function(.data, var = "row_id"){
+  if(!has_class(.data, "data.frame")){
+    stop("The object '",  match.call()[[".data"]], "' must be a data frame.")
+  }
+  df <- .data
+  add_cols(df, {{var}} := seq_len(nrow(df)), .before = 1)
 }
 #' @name utils_rows_cols
 #' @export
@@ -630,6 +621,36 @@ column_to_first <-function(.data, ...){
 #' @export
 column_to_last <-function(.data, ...){
   select_cols(.data, -c(!!!quos(...)), everything())
+}
+#' @name utils_rows_cols
+#' @export
+column_to_rownames <- function(.data, var = "rowname"){
+  df <-
+    as.data.frame(.data) %>%
+    remove_rownames()
+  if(!var %in% colnames(df)){
+    stop("Variable '", var, "' not in data.", call. = FALSE)
+  }
+  rownames(df) <- df[[var]]
+  df[[var]] <- NULL
+  df
+}
+#' @name utils_rows_cols
+#' @export
+rownames_to_column <- function(.data, var = "rowname"){
+  df <- .data
+  if(var %in% colnames(df)){
+    stop("Variable '", var, "' already in data.", call. = FALSE)
+  }
+  df %>%
+    mutate(`:=`(!!var, rownames(df)), .before = 1) %>%
+    remove_rownames()
+}
+#' @name utils_rows_cols
+#' @export
+remove_rownames <- function(.data, ...){
+  rownames(.data) <- NULL
+  .data
 }
 #' @name utils_rows_cols
 #' @export
@@ -683,22 +704,43 @@ concatenate <- function(.data,
 }
 #' @name utils_rows_cols
 #' @export
-get_levels <- function(.data, group){
-  .data %>%
-    mutate(across(where(~!is.numeric(.x)), as.factor)) %>%
-    pull({{group}}) %>%
-    levels()
+get_levels <- function(.data, ...){
+  if(missing(...)){
+    df <-
+      select(.data, everything()) %>% select_non_numeric_cols()
+  } else{
+    df <- select(.data, ...) %>% select_non_numeric_cols()
+  }
+  results <-
+  df %>%
+    as_factor(everything()) %>%
+    map(levels)
+  if(length(results) == 1){
+    return(results[[1]])
+  } else{
+    return(results)
+  }
+}
+#' @name utils_rows_cols
+#' @export
+get_levels_comb <- function(.data, ...){
+  if(missing(...)){
+    df <-
+      select(.data, everything()) %>% select_non_numeric_cols()
+  } else{
+    df <- select(.data, ...) %>% select_non_numeric_cols()
+  }
+  df %>%
+  as_factor() %>%
+    map(levels) %>%
+    expand.grid() %>%
+    as_tibble()
 }
 #' @name utils_rows_cols
 #' @importFrom dplyr count
 #' @export
-get_level_size <- function(.data, group){
-  result <- .data %>%
-    group_by({{group}}) %>%
-    count()
-  n <- result$n
-  names(n) <- result %>% pull(1)
-  return(n)
+get_level_size <- function(.data, ...){
+  return(n_by(.data, ...))
 }
 #' @name utils_rows_cols
 #' @importFrom rlang quos
@@ -783,7 +825,7 @@ tidy_colnames <- function(.data, sep = "_"){
 #'
 #' * \strong{Useful functions for descriptive statistics. All of them work
 #' naturally with \code{\%>\%}, handle grouped data and multiple variables (all
-#' numeric variables from \code{.data} by default).}
+#' numeric variables from `.data` by default).}
 #'    - \code{av_dev()} computes the average absolute deviation.
 #'    - \code{ci_mean()} computes the confidence interval for the mean.
 #'    - \code{cv()} computes the coefficient of variation.
@@ -817,11 +859,11 @@ tidy_colnames <- function(.data, sep = "_"){
 #'  for grouping the data. Then the statistic required will be computed for all
 #'  numeric variables in the data. If no variables are informed in \code{...},
 #'  the statistic will be computed ignoring all non-numeric variables in
-#'  \code{.data}.
+#'  `.data`.
 #' * For the other statistics, \code{...} is a comma-separated of unquoted
 #'  variable names to compute the statistics. If no variables are informed in n
 #'  \code{...}, the statistic will be computed for all numeric variables in
-#'  \code{.data}.
+#'  `.data`.
 #' @param na.rm If \code{FALSE}, the default, missing values are removed with a
 #'   warning. If \code{TRUE}, missing values are silently removed.
 #' @param level The confidence level for the confidence interval of the mean.
@@ -1896,6 +1938,33 @@ check_labels <- function(.data){
     stop("Using ':' in genotype or environment labels is not allowed. Use '_' instead.\ne.g., replace_string(data, ENV, pattern = ':', replacement = '_', new_var = ENV)", call. = FALSE)
   }
 }
+# Case
+helper_case <- function(.data, fun, ...){
+  if (has_class(.data, c("data.frame","tbl_df", "data.table"))){
+    .data <- as.data.frame(.data)
+    if(!missing(...)){
+      mutate(.data, across(c(...), fun)) %>%
+        as_tibble(rownames = NA)
+    } else{
+      mutate(.data, across(where(~!is.numeric(.x)), fun)) %>%
+        as_tibble(rownames = NA)
+    }
+  } else{
+    fun(.data)
+  }
+}
+first_upper <- function(x){
+  x <- tolower(x)
+  substr(x, 1, 1) <- toupper(substr(x, 1, 1))
+  return(x)
+}
+to_title <- function(x){
+  gsub("(^|[[:space:]])([[:alpha:]])", "\\1\\U\\2",
+       all_lower_case(x),
+       perl = TRUE)
+}
+
+
 # Get the OS
 get_os <- function(){
   sysinf <- Sys.info()
@@ -1921,4 +1990,26 @@ coord_radar <- function (theta = "x", start = 0, direction = 1) {
   ggproto("CoordRadar", CoordPolar, theta = theta, r = r, start = start,
           direction = sign(direction),
           is_linear = function(coord) TRUE)
+}
+# check for data frames in lists
+has_df_in_list <- function(x){
+  !any(
+    is.na(
+      map(x, class) %>%
+        lapply(function(x){
+          match('data.frame', x)
+        })
+    )
+  )
+}
+# check if all are dataframes
+all_df_in_list <- function(x){
+  !all(
+    is.na(
+      map(x, class) %>%
+        lapply(function(x){
+          match('data.frame', x)
+        })
+    )
+  )
 }

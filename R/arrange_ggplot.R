@@ -12,8 +12,8 @@
 #'   In this case, will collect guides below to the given nesting level,
 #'   removing duplicates.
 #' @param design Specification of the location of areas in the layout.
-#' @param legend.position The position of the legends in the plot if \code{guides = "collect"} Default to
-#'   `'bottom'`.
+#' @param legend.position The position of the legends in the plot if
+#'   \code{guides = "collect"} Default to `'bottom'`.
 #' @param title,subtitle,caption Text strings to use for the various plot
 #' annotations.
 #' @param tag_levels A character vector defining the enumeration format to use
@@ -26,12 +26,8 @@
 #' @param tag_prefix,tag_suffix Strings that should appear before or after the
 #' tag.
 #' @param tag_sep A separator between different tag levels.
-#' @param rel_widths,rel_heights Deprecated as of metan 1.11.0. Use \code{widths
-#'   and heights} instead.
-#' @param plotlist Deprecated as of metan 1.11.0.
-#' @param labels Deprecated as of metan 1.11.0. Use \code{tag_levels} instead.
-#' @param hjust,vjust Deprecated as of metan 1.11.0.
-#' @param align Deprecated as of metan 1.11.0.
+#' @param theme A ggplot theme specification to use for the plot. Only elements
+#'   related to the titles as well as plot margin and background is used.
 #' @return A `patchwork` object
 #' @import patchwork
 #' @export
@@ -46,12 +42,22 @@
 #' p2 <- ggplot(mpg, aes(class, hwy)) +
 #'              geom_boxplot()
 #'
+#' # Default plot
 #' arrange_ggplot(p1, p2)
+#'
+#' # Insert plot annotation, titles and subtitles
 #' arrange_ggplot(p1, p2,
 #'                ncol = 1,
 #'                tag_levels = list(c("(P1)", "(P2)")),
 #'                title = "My grouped ggplot",
-#'                caption = "A = scatter plot\nB = boxplot")
+#'                subtitle = "Made with arrange_ggplot()",
+#'                caption = "P1 = scatter plot\nP2 = boxplot",
+#'                theme = theme(plot.title = element_text(size = 20,
+#'                                                        face = "bold"),
+#'                              plot.subtitle = element_text(size = 10,
+#'                                                           face = "italic"),
+#'                              plot.caption  = element_text(size = 10,
+#'                                                           face = "italic")))
 #' }
 #'
 arrange_ggplot <- function(...,
@@ -69,13 +75,7 @@ arrange_ggplot <- function(...,
                            tag_prefix = NULL,
                            tag_suffix = NULL,
                            tag_sep = NULL,
-                           plotlist = "deprecated",
-                           labels = "deprecated",
-                           rel_widths = "deprecated",
-                           rel_heights = "deprecated",
-                           hjust = "deprecated",
-                           vjust = "deprecated",
-                           align = "deprecated") {
+                           theme = NULL) {
   p <-
   wrap_plots(...,
              ncol = ncol,
@@ -90,7 +90,8 @@ arrange_ggplot <- function(...,
                     tag_levels = tag_levels,
                     tag_prefix = tag_prefix,
                     tag_suffix = tag_suffix,
-                    tag_sep = tag_sep)
+                    tag_sep = tag_sep,
+                    theme = theme)
   if(!missing(guides)){
     p <-
       p +

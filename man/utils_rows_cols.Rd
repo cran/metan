@@ -4,6 +4,7 @@
 \alias{utils_rows_cols}
 \alias{add_cols}
 \alias{add_rows}
+\alias{add_row_id}
 \alias{all_pairs}
 \alias{add_prefix}
 \alias{add_suffix}
@@ -12,9 +13,13 @@
 \alias{colnames_to_title}
 \alias{column_to_first}
 \alias{column_to_last}
+\alias{column_to_rownames}
+\alias{rownames_to_column}
+\alias{remove_rownames}
 \alias{column_exists}
 \alias{concatenate}
 \alias{get_levels}
+\alias{get_levels_comb}
 \alias{get_level_size}
 \alias{reorder_cols}
 \alias{remove_cols}
@@ -32,6 +37,8 @@ add_cols(.data, ..., .before = NULL, .after = NULL)
 
 add_rows(.data, ..., .before = NULL, .after = NULL)
 
+add_row_id(.data, var = "row_id")
+
 all_pairs(.data, levels)
 
 add_prefix(.data, ..., prefix, sep = "_")
@@ -48,6 +55,12 @@ column_to_first(.data, ...)
 
 column_to_last(.data, ...)
 
+column_to_rownames(.data, var = "rowname")
+
+rownames_to_column(.data, var = "rowname")
+
+remove_rownames(.data, ...)
+
 column_exists(.data, cols)
 
 concatenate(
@@ -63,9 +76,11 @@ concatenate(
   .after = NULL
 )
 
-get_levels(.data, group)
+get_levels(.data, ...)
 
-get_level_size(.data, group)
+get_levels_comb(.data, ...)
+
+get_level_size(.data, ...)
 
 reorder_cols(.data, ..., .before = NULL, .after = NULL)
 
@@ -108,12 +123,17 @@ last in \code{.data}.
 row value.
 \item For \code{concatenate()}, \code{...} is the unquoted variable names to be
 concatenated.
+\item For \code{get_levels()}, \code{get_level_comb()}, and
+\code{get_level_size()} \code{...} is the unquoted variable names to get the
+levels, levels combinations and levels size, respectively.
 }}
 
 \item{.before, .after}{For \code{add_cols()}, \code{concatenate()}, and
 \code{reorder_cols()}, one-based column index or column name where to add
 the new columns, default: .after last column. For \code{add_rows()},
 one-based row index where to add the new rows, default: .after last row.}
+
+\item{var}{Name of column to use for rownames.}
 
 \item{levels}{The levels of a factor or a numeric vector.}
 
@@ -134,8 +154,6 @@ values. Defaults to \code{new_var}.}
 \item{pull}{Logical argument. If \code{TRUE}, returns the last column (on the
 assumption that's the column you've created most recently), as a vector.}
 
-\item{group}{A factor variable to get the levels.}
-
 \item{offset}{Set it to \emph{n} to select the \emph{n}th variable from the
 end (for \code{select_last_col()}) of from the begin (for
 \code{select_first_col()})}
@@ -152,6 +170,8 @@ So, it is possible to add a column based on existing data.
 specified \code{.before} or \code{.after} rows does not exist, rows are
 appended at the end of the data. Return a data frame with all the original
 rows in \code{.data} plus the rows declared in \code{...} argument.
+\item \code{add_row_id()}: Add a column with the row id as the first column in
+\code{.data}.
 \item \code{add_prefix()} and \code{add_suffix()} add prefixes and suffixes,
 respectively, in variable names selected in \code{...} argument.
 \item \code{all_pairs()}: Get all the possible pairs between the levels of a
@@ -163,11 +183,17 @@ factor.
 logical value.
 \item \code{columns_to_first()}: Move columns to first positions in \code{.data}.
 \item \code{columns_to_last()}: Move columns to last positions in \code{.data}.
+\item \code{columns_to_rownames()}: Move a column of \code{.data} to its row
+names.
+\item \code{rownames_to_column()}: Move the row names of \code{.data} to a new
+column.
+\item \code{remove_rownames()}: Remove the row names of \code{.data}.
 \item \code{concatenate()}: Concatenate columns of a data frame. If \code{drop =
 TRUE} then the existing variables are dropped. If \code{pull = TRUE} then the
 concatenated variable is pull out to a vector. This is specially useful when
 using \code{concatenate} to add columns to a data frame with \code{add_cols()}.
 \item \code{get_levels()}: Get the levels of a factor variable.
+\item \code{get_levels_comb()}: Get the combination of the levels of a factor.
 \item \code{get_level_size()}: Get the size of each level of a factor variable.
 \item \code{remove_cols()}: Remove one or more columns from a data frame.
 \item \code{remove_rows()}: Remove one or more rows from a data frame.
@@ -259,8 +285,9 @@ data_ge \%>\%
 ########## checking if a column exists ###########
 column_exists(data_g, "GEN")
 
-####### get the levels and size of levels ########
+####### get the levels, level combinations and size of levels ########
 get_levels(data_g, GEN)
+get_levels_comb(data_ge, ENV, GEN)
 get_level_size(data_g, GEN)
 
 ############## all possible pairs ################

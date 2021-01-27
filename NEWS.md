@@ -1,25 +1,35 @@
+# metan 1.12.0
+## New functions
+* `get_levels_comb()` to get the combination of the levels of a factor.
+* `g_simula()` to simulate replicated genotype data.
+* `add_row_id()` to add a column as the row id.
+* `remove_rownames()`, `column_to_rownames()` and `rownames_to_column()` to deal
+with rownames.
+
+## Minor improvements
+* New argument `sel.var()` in `corr_ci()` to filter correlations with a selected
+variable
+* New arguments `fill` and `position.fill` in `plot_ci()` to fill correlations
+by levels of a factor variable.
+* Remove deprecated arguments in `arrange_ggplot()` and `gge()`.
+* New argument `theme` `in arrange_ggplot()` to control the theme of the plot.
+* Include `by` argument in `gafem()`.
+* `mgid()` now understands models of class `gafem_grouped`.
+* Fix bug in `get_levels()` to get the levels even if the variable is not a factor.
+
+
 # metan 1.11.0
 ## New functions
 * `set_union()`, `set_difference()` and `set_intersect()` for set operations with many sets.
 * `venn_plot()` to produce Venn diagrams.
 
-# Minor improvements
+## Minor improvements
 * `gge()` now have a `by` argument and understand data passed from `group_by`.
 * New arguments `col.stroke` and `size.stroke` in `plot.gge()`
 * `gtb` and `gytb` now produces biplots with lines for genotype's vectors in `type = 1`.
 * `get_model_data()` now understand objects of class `fai_blup` and `sh`.
 
 # metan 1.10.0
-* `as_*()` now handles vectors.
-* `plot.corr_coef()` now shows both stars or p-values for reporting the significance of correlations.s
-
-## Minor improvements
-* `gamem()`, `gamem_met()`, and `waasb()` now have a `by` argument and understand data passed from `group_by`.
-* `mtsi()` and `mgidi()` now returns the ranks for the contribution of each factor and understand models fitted with `gamem()` and `waasb()` using the `by` argument.
-* `plot.mtsi()` and `plot.mgidi()` now returns a radar plot by default when using `type = "contribution"`.
-* `get_model_data()` now returns the genotypic and phenotypic correlation matrices from objects of class `waasb` and `gamem`.
-* `replace_string()`, `replace_number()`, `extract_string()`, and `extract_number()` now accepts [tidy evaluation](https://tidyeval.tidyverse.org/index.html) in the new `...` argument.
-
 ## New functions
 * `get_dist()` to get distance matrices from objects of class `clustering`.
 * `get_corvars()` to get normal, multivariate correlated variables.
@@ -29,7 +39,15 @@
 * `tidy_colnames()` to clean up column names. It is a shortcut to `tidy_strings()` applied to the column names of a data frame.
 * `env_stratification()` to perform environment stratification using factor analysis.
 
+## Minor improvements
+* `as_*()` now handles vectors.
+* `plot.corr_coef()` now shows both stars or p-values for reporting the significance of correlations.
 
+* `gamem()`, `gamem_met()`, and `waasb()` now have a `by` argument and understand data passed from `group_by`.
+* `mtsi()` and `mgidi()` now returns the ranks for the contribution of each factor and understand models fitted with `gamem()` and `waasb()` using the `by` argument.
+* `plot.mtsi()` and `plot.mgidi()` now returns a radar plot by default when using `type = "contribution"`.
+* `get_model_data()` now returns the genotypic and phenotypic correlation matrices from objects of class `waasb` and `gamem`.
+* `replace_string()`, `replace_number()`, `extract_string()`, and `extract_number()` now accepts [tidy evaluation](https://tidyeval.tidyverse.org/index.html) in the new `...` argument.
 
 # metan 1.9.0
 * New functions `add_prefix()` and `add_suffix()` to add prefixes and suffixes to variable names, respectively.
