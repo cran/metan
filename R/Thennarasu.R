@@ -1,4 +1,6 @@
 #' Thennarasu's stability statistics
+#' @description
+#' `r badge('stable')`
 #'
 #' Performs a stability analysis based on Thennarasu (1995) statistics.
 #'
@@ -8,11 +10,11 @@
 #'   environments.
 #' @param gen The name of the column that contains the levels of the genotypes.
 #' @param resp The response variable(s). To analyze multiple variables in a
-#'   single procedure use, for example, \code{resp = c(var1, var2, var3)}.
-#' @param verbose Logical argument. If \code{verbose = FALSE} the code will run
+#'   single procedure use, for example, `resp = c(var1, var2, var3)`.
+#' @param verbose Logical argument. If `verbose = FALSE` the code will run
 #'   silently.
-#' @return An object of class \code{Thennarasu}, which is a list containing the results
-#'   for each variable used in the argument \code{resp}. For each variable, a
+#' @return An object of class `Thennarasu`, which is a list containing the results
+#'   for each variable used in the argument `resp`. For each variable, a
 #'   tibble with the columns GEN, N1, N2, N3 and N4 is returned.
 #' @md
 #' @author Tiago Olivoto \email{tiagoolivoto@@gmail.com}
@@ -40,9 +42,7 @@ Thennarasu <- function(.data, env, gen, resp, verbose = TRUE) {
   listres <- list()
   nvar <- ncol(vars)
   if (verbose == TRUE) {
-    pb <- progress_bar$new(
-      format = "Evaluating the variable :what [:bar]:percent",
-      clear = FALSE, total = nvar, width = 90)
+    pb <- progress(max = nvar, style = 4)
   }
   for (var in 1:nvar) {
     data <- factors %>%
@@ -58,14 +58,14 @@ Thennarasu <- function(.data, env, gen, resp, verbose = TRUE) {
     N4.1 <- matrix(NA, nr, nc)
     N4 <- numeric()
     k <- 2
-    data_r <- sweep(data_m, 1, rowMeans(data_m), FUN = "-")
+    data_r <- sweep(data_m, 1, rowMeans(data_m, na.rm = TRUE), FUN = "-")
     ranks <- apply(-data_r, 2, rank)
     ranks_y <- apply(-data_m, 2, rank)
-    r_means <- rowMeans(ranks)
-    r_means_y <- rowMeans(ranks_y)
-    N1 <- round( rowMeans(abs(sweep(ranks, 1, apply(ranks, 1, median)))),  4)
-    N2 <- rowMeans(sweep(abs(sweep(ranks, 1, apply(ranks, 1, median))), 1, apply(ranks_y, 1, median), FUN = "/"))
-    N3 <- round(sqrt(rowSums((sweep(ranks, 1, apply(ranks, 1, mean))^2) / nc)) / (rowMeans(ranks_y)), digits = 4)
+    r_means <- rowMeans(ranks, na.rm = TRUE)
+    r_means_y <- rowMeans(ranks_y, na.rm = TRUE)
+    N1 <- round(rowMeans(abs(sweep(ranks, 1, apply(ranks, 1, median, na.rm = TRUE))), na.rm = TRUE),  4)
+    N2 <- rowMeans(sweep(abs(sweep(ranks, 1, apply(ranks, 1, median, na.rm = TRUE))), 1, apply(ranks_y, 1, median, na.rm = TRUE), FUN = "/"))
+    N3 <- round(sqrt(rowSums((sweep(ranks, 1, apply(ranks, 1, mean, na.rm = TRUE))^2) / nc)) / (rowMeans(ranks_y, na.rm = TRUE)), digits = 4)
     for (i in 1:nrow(data)) {
       for (j in 1:(nc - 1)) {
         N4.1[i, j] <- abs(ranks[i, j] - ranks[i, k])
@@ -74,7 +74,7 @@ Thennarasu <- function(.data, env, gen, resp, verbose = TRUE) {
       N4[i] <- round((2/(nc * (nc - 1))) * (sum((N4.1[i, j])/(mean(ranks_y[i, ])))), digits = 4)
     }
     temp <- tibble(GEN = rownames(data),
-                   Y = apply(data, 1, mean),
+                   Y = apply(data, 1, mean, na.rm = TRUE),
                    Y_R = rank(-Y),
                    N1 = N1,
                    N1_R = rank(N1),
@@ -85,7 +85,9 @@ Thennarasu <- function(.data, env, gen, resp, verbose = TRUE) {
                    N4 = N4,
                    N4_R = rank(N4))
     if (verbose == TRUE) {
-      pb$tick(tokens = list(what = names(vars[var])))
+      run_progress(pb,
+                   actual = var,
+                   text = paste("Evaluating trait", names(vars[var])))
     }
     listres[[paste(names(vars[var]))]] <- temp
   }
@@ -94,20 +96,20 @@ Thennarasu <- function(.data, env, gen, resp, verbose = TRUE) {
 
 
 
-#' Print an object ofclass \code{Thennarasu}
+#' Print an object ofclass `Thennarasu`
 #'
-#' Print the \code{Thennarasu} object in two ways. By default, the results are
+#' Print the `Thennarasu` object in two ways. By default, the results are
 #' shown in the R console. The results can also be exported to the directory
 #' into a *.txt file.
 #'
 #'
-#' @param x An object of class \code{Thennarasu}.
-#' @param export A logical argument. If \code{TRUE}, a *.txt file is exported to
+#' @param x An object of class `Thennarasu`.
+#' @param export A logical argument. If `TRUE`, a *.txt file is exported to
 #'   the working directory.
-#' @param file.name The name of the file if \code{export = TRUE}
+#' @param file.name The name of the file if `export = TRUE`
 #' @param digits The significant digits to be shown.
 #' @param ... Options used by the tibble package to format the output. See
-#'   \code{\link[tibble:formatting]{tibble::print()}} for more details.
+#'   [`tibble::print()`][tibble::formatting] for more details.
 #' @author Tiago Olivoto \email{tiagoolivoto@@gmail.com}
 #' @method print Thennarasu
 #' @export

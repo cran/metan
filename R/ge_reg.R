@@ -1,4 +1,6 @@
 #' Eberhart and Russell's regression model
+#' @description
+#' `r badge('stable')`
 #'
 #' Regression-based stability analysis using the Eberhart and Russell (1966) model.
 #'
@@ -10,14 +12,24 @@
 #' @param rep The name of the column that contains the levels of the
 #' replications/blocks
 #' @param resp The response variable(s). To analyze multiple variables in a
-#' single procedure use, for example, \code{resp = c(var1, var2, var3)}.
-#' @param verbose Logical argument. If \code{verbose = FALSE} the code will run silently.
-#' @return An object of class \code{ge_reg} with the folloing items for each variable:
-#' \item{data}{The data with means for genotype and environment combinations and the
-#' environment index}
-#' \item{anova}{The analysis of variance for the regression model.}
-#' \item{regression}{The estimated coefficients of the regression model.}
-#' @seealso \code{\link{superiority}, \link{ecovalence}, \link{ge_stats}}
+#' single procedure use, for example, `resp = c(var1, var2, var3)`.
+#' @param verbose Logical argument. If `verbose = FALSE` the code will run
+#'   silently.
+#' @return An object of class `ge_reg` with the folloing items for each
+#'   variable:
+#' * data: The data with means for genotype and environment combinations and the
+#' environment index
+#' * anova: The analysis of variance for the regression model.
+#' * regression: A data frame with the following columns: `GEN`, the genotypes;
+#' `b0` and `b1` the intercept and slope of the regression, respectively;
+#' `t(b1=1)` the calculated t-value; `pval_t` the p-value for the t test; `s2di`
+#' the deviations from the regression (stability parameter); `F(s2di=0)` the
+#' F-test for the deviations; `pval_f` the p-value for the F test; `RMSE` the
+#' root-mean-square error; `R2` the determination coefficient of the regression.
+#' * b0_variance: The variance of b0.
+#' * b1_variance: The variance of b1.
+#' @md
+#' @seealso [superiority()], [ecovalence()], [ge_stats()]
 #' @author Tiago Olivoto, \email{tiagoolivoto@@gmail.com}
 #' @export
 #' @examples
@@ -52,12 +64,11 @@ ge_reg = function(.data,
   listres <- list()
   nvar <- ncol(vars)
   if (verbose == TRUE) {
-    pb <- progress_bar$new(
-      format = "Evaluating the variable :what [:bar]:percent",
-      clear = FALSE, total = nvar, width = 90)
+    pb <- progress(max = nvar, style = 4)
   }
   for (var in 1:nvar) {
-    data <- factors %>%
+    data <-
+      factors %>%
       mutate(Y = vars[[var]])
     if(has_na(data)){
       data <- remove_rows_na(data)
@@ -69,72 +80,129 @@ ge_reg = function(.data,
       as.data.frame()
     model1 <- lm(Y ~ GEN + ENV + ENV/REP + ENV * GEN, data = data)
     modav <- anova(model1)
-    mydf = data.frame(aggregate(Y ~ GEN + ENV, data = data, mean))
-    myAgg = aggregate(Y ~ GEN, mydf, "c")
-    iamb = data.frame(aggregate(Y ~ ENV, data = data, mean))
-    iamb = dplyr::mutate(iamb, IndAmb = Y - mean(Y))
-    iamb2 = data.frame(aggregate(Y ~ ENV + GEN, data = data, mean))
-    iamb2 = suppressMessages(dplyr::mutate(iamb2,
-                                           IndAmb = dplyr::left_join(iamb2, iamb %>% select(ENV, IndAmb))$IndAmb))
-    matx <- myAgg$Y
-    meandf = data.frame(GEN = myAgg$GEN, myAgg$Y)
-    names(meandf) = c("GEN", levels(mydf$ENV))
-    iij = apply(matx, 2, mean) - mean(matx)
-    YiIj = matx %*% iij
-    bij = YiIj/sum((iij)^2)
-    svar = (apply(matx^2, 1, sum)) - (((apply(matx, 1, sum))^2)/ncol(matx))
-    bYijIj = bij * YiIj
-    dij = svar - bYijIj
-    pred = apply(matx, 1, mean) + bij %*% iij
-    gof = function(x, y){
+    mydf <-
+      data %>%
+      means_by(GEN, ENV)
+    iamb <-
+      data %>%
+      means_by(ENV) %>%
+      add_cols(IndAmb = Y - mean(Y)) %>%
+      select_cols(ENV, IndAmb)
+    iamb2 <-
+      data %>%
+      means_by(ENV, GEN) %>%
+      left_join(iamb, by = "ENV")
+    meandf <- make_mat(mydf, GEN, ENV, Y) %>% rownames_to_column("GEN")
+    matx <- make_mat(mydf, GEN, ENV, Y) %>% as.matrix()
+    iij <- apply(matx, 2, mean, na.rm = TRUE) - mean(matx, na.rm = TRUE)
+    sumij2 <- sum((iij)^2)
+    YiIj <- matx %*% iij
+    if(has_na(matx)){
+      missing <- which(apply(is.na(matx), 1, function(x){any(x) == TRUE}) == TRUE)
+      YiIj_complete <- NULL
+      for(i in seq_along(missing)){
+        YiIj_complete[i] <- matx[missing[i],][!is.na(matx[missing[i],])] %*% iij[!is.na(matx[missing[i],])]
+      }
+      YiIj[which(is.na(YiIj))] <- YiIj_complete
+      warning("Genotypes ", paste(names(missing), collapse = ", "), " missing in some environments", call. = FALSE)
+      warning("Regression parameters computed after removing missing values", call. = FALSE)
+    }
+    bij <- YiIj/sumij2
+    svar <- (apply(matx^2, 1, sum, na.rm = TRUE)) - (((apply(matx, 1, sum, na.rm = TRUE))^2)/ncol(matx))
+    bYijIj <- bij * YiIj
+    dij <- svar - bYijIj
+    pred <- apply(matx, 1, mean, na.rm = TRUE) + bij %*% iij
+    gof <- function(x, y){
       R2 = NULL
       RMSE = NULL
       for (i in 1:nrow(x)){
-        R2[i] =  cor(x[i, ], y[i, ])^2
-        RMSE[i] = sqrt(sum((x[i, ] - y[i, ])^2)/ncol(x))
+        R2[i] =  cor(x[i, ], y[i, ], use = "complete.obs")^2
+        RMSE[i] = sqrt(sum((x[i, ] - y[i, ])^2, na.rm = TRUE)/ncol(x))
       }
       return(list(R2 = R2, RMSE = RMSE))
     }
-    S2e = modav$"Mean Sq"[5]
-    rps = length(levels(data$REP))
-    en = length(levels(data$ENV))
-    S2di = (dij/(en - 2)) - (S2e/rps)
-    data2 = data2
-    model2 <- lm(Y ~ GEN + ENV, data = data2)
-    amod2 <- anova(model2)
-    SSL = amod2$"Sum Sq"[2]
-    SSGxL = amod2$"Sum Sq"[3]
-    SS.L.GxL = SSL + SSGxL
-    SSL.Linear = (1/length(levels(data$GEN))) * (colSums(matx) %*% iij)^2/sum(iij^2)
-    SS.L.GxL.linear = sum(bYijIj) - SSL.Linear
-    ge = length(levels(mydf$GEN))
-    Df <- c(en * ge - 1, ge - 1, ge * (en - 1), 1, ge - 1, ge * (en - 2),
-            replicate(length(dij), en - 2), en * ge * (rps - 1))
-    poolerr = modav$"Sum Sq"[5]/rps
-    SSS <- c(sum(amod2$"Sum Sq"), amod2$"Sum Sq"[1], SSL + SSGxL,
-             SSL.Linear, SS.L.GxL.linear, sum(dij), dij, poolerr) * rps
-    MSSS = (SSS/Df)
-    FVAL = c(NA, MSSS[2]/MSSS[6], NA, NA, MSSS[5]/MSSS[6], NA,
-             MSSS[7:(length(MSSS) - 1)]/MSSS[length(MSSS)], NA)
-    PLINES = 1 - pf(FVAL[7:(length(MSSS) - 1)], Df[7], Df[length(Df)])
-    pval = c(NA, 1 - pf(FVAL[2], Df[2], Df[6]), NA, NA, 1 -
-               pf(FVAL[5], Df[5], Df[6]), NA, PLINES, NA)
-    anovadf <- data.frame(Df, `Sum Sq` = SSS, `Mean Sq` = MSSS,
-                          `F value` = FVAL, `Pr(>F)` = pval, check.names = FALSE)
+    gof <- gof(pred, matx)
+    S2e <- modav$"Mean Sq"[5]
+    nrep <- length(levels(data$REP))
+    en <- length(levels(data$ENV))
+    ge <- length(levels(mydf$GEN))
+    S2di <- (dij/(en - 2)) - (S2e/nrep)
+    amod2 <- anova(lm(Y ~ GEN + ENV, data = data2))
+    # amod2 <- anova(model2)
+    SSL <- amod2$"Sum Sq"[2]
+    SSGxL <- amod2$"Sum Sq"[3]
+    SS.L.GxL <- SSL + SSGxL
+    SSL.Linear <- (1/length(levels(data$GEN))) * (colSums(matx, na.rm = TRUE) %*% iij)^2/sum(iij^2)
+    SS.L.GxL.linear <- sum(bYijIj) - SSL.Linear
+    Df <- c(en * ge - 1,
+            ge - 1,
+            ge * (en - 1),
+            1,
+            ge - 1,
+            ge * (en - 2),
+            replicate(length(dij), en - 2),
+            en*(nrep - 1) * (ge - 1))
+    poolerr <- modav$"Sum Sq"[5]/nrep
+    sigma2 <- modav$"Mean Sq"[5]
+    dferr <- modav$"Df"[5]
+    vbo <- sigma2 / (en * nrep)
+    vb1 <- sigma2 / (nrep * sumij2)
+    tcal <- (bij - 1) / sqrt(vb1)
+    ptcal <- 2 * pt(abs(tcal), dferr, lower.tail = FALSE)
+    SSS <- c(sum(amod2$"Sum Sq"),
+             amod2$"Sum Sq"[1],
+             SSL + SSGxL,
+             SSL.Linear,
+             SS.L.GxL.linear,
+             sum(dij),
+             dij,
+             poolerr) * nrep
+    MSSS <- (SSS/Df)
+    FVAL <- c(NA,
+              MSSS[2]/MSSS[6],
+              NA,
+              NA,
+              MSSS[5]/MSSS[6],
+              NA,
+              MSSS[7:(length(MSSS) - 1)]/MSSS[length(MSSS)],
+              NA)
+    PLINES <- 1 - pf(FVAL[7:(length(MSSS) - 1)], Df[7], Df[length(Df)])
+    pval <- c(NA,
+              1 - pf(FVAL[2], Df[2], Df[6]),
+              NA,
+              NA,
+              1 - pf(FVAL[5], Df[5], Df[6]),
+              NA,
+              PLINES,
+              NA)
+    anovadf <- data.frame(Df,
+                          `Sum Sq` = SSS,
+                          `Mean Sq` = MSSS,
+                          `F value` = FVAL,
+                          `Pr(>F)` = pval,
+                          check.names = FALSE)
     rownames(anovadf) <- c("Total", "GEN", "ENV + (GEN x ENV)", "ENV (linear)",
                            " GEN x ENV (linear)", "Pooled deviation",
                            levels(data$GEN), "Pooled error")
-    temp = structure(list(data = iamb2,
-                          anova = as_tibble(rownames_to_column(anovadf, "SV")),
-                          regression = tibble(GEN = levels(mydf$GEN),
-                                              Y = apply(matx, 1, mean),
-                                              slope = as.numeric(bij),
-                                              deviations = as.numeric(S2di),
-                                              RMSE = gof(pred, matx)$RMSE,
-                                              R2 = gof(pred, matx)$R2)),
-                     class = "ge_reg")
+    temp <- structure(list(data = iamb2,
+                           anova = as_tibble(rownames_to_column(anovadf, "SV")),
+                           regression = tibble(GEN = levels(mydf$GEN),
+                                               b0 = apply(matx, 1, mean, na.rm = TRUE),
+                                               b1 = as.numeric(bij),
+                                               `t(b1=1)` = tcal,
+                                               pval_t = ptcal,
+                                               s2di = as.numeric(S2di),
+                                               `F(s2di=0)` = FVAL[7:(length(FVAL) - 1)],
+                                               pval_f = PLINES,
+                                               RMSE = gof$RMSE,
+                                               R2 = gof$R2),
+                           bo_variance = vbo,
+                           b1_variance = vb1),
+                      class = "ge_reg")
     if (verbose == TRUE) {
-      pb$tick(tokens = list(what = names(vars[var])))
+      run_progress(pb,
+                   actual = var,
+                   text = paste("Evaluating trait", names(vars[var])))
     }
     listres[[paste(names(vars[var]))]] <- temp
   }
@@ -143,49 +211,44 @@ ge_reg = function(.data,
 
 
 
-
-
-
-
-
 #' Plot an object of class ge_reg
 #'
-#' Plot the regression model generated by the function \code{ge_reg}.
+#' Plot the regression model generated by the function `ge_reg`.
 #'
 #'
-#' @param x An object of class \code{ge_factanal}
-#' @param var The variable to plot. Defaults to \code{var = 1} the first
-#'   variable of \code{x}.
-#' @param type The type of plot to show. \code{type = 1} produces a plot with
+#' @param x An object of class `ge_factanal`
+#' @param var The variable to plot. Defaults to `var = 1` the first
+#'   variable of `x`.
+#' @param type The type of plot to show. `type = 1` produces a plot with
 #'   the environmental index in the x axis and the genotype mean yield in the y
-#'   axis. \code{type = 2} produces a plot with the response variable in the x
-#'   axis and the slope of the regression in the y axis.
+#'   axis. `type = 2` produces a plot with the response variable in the x
+#'   axis and the slope/deviations of the regression in the y axis.
 #' @param plot_theme The graphical theme of the plot. Default is
-#'   \code{plot_theme = theme_metan()}. For more details, see
-#'   \code{\link[ggplot2]{theme}}.
-#' @param x.lim The range of x-axis. Default is \code{NULL} (maximum and minimum
-#'   values of the data set). New arguments can be inserted as \code{x.lim =
-#'   c(x.min, x.max)}.
+#'   `plot_theme = theme_metan()`. For more details, see
+#'   [ggplot2::theme()].
+#' @param x.lim The range of x-axis. Default is `NULL` (maximum and minimum
+#'   values of the data set). New arguments can be inserted as `x.lim =
+#'   c(x.min, x.max)`.
 #' @param x.breaks The breaks to be plotted in the x-axis. Default is
-#'   \code{authomatic breaks}. New arguments can be inserted as \code{x.breaks =
-#'   c(breaks)}
+#'   `authomatic breaks`. New arguments can be inserted as `x.breaks =
+#'   c(breaks)`
 #' @param x.lab The label of x-axis. Each plot has a default value. New
-#'   arguments can be inserted as \code{x.lab = "my label"}.
-#' @param y.lim The range of x-axis. Default is \code{NULL}. The same arguments
-#'   than \code{x.lim} can be used.
+#'   arguments can be inserted as `x.lab = "my label"`.
+#' @param y.lim The range of x-axis. Default is `NULL`. The same arguments
+#'   than `x.lim` can be used.
 #' @param y.breaks The breaks to be plotted in the x-axis. Default is
-#'   \code{authomatic breaks}. The same arguments than \code{x.breaks} can be
+#'   `authomatic breaks`. The same arguments than `x.breaks` can be
 #'   used.
 #' @param y.lab The label of y-axis. Each plot has a default value. New
-#'   arguments can be inserted as \code{y.lab = "my label"}.
+#'   arguments can be inserted as `y.lab = "my label"`.
 #' @param leg.position The position of the legend.
 #' @param size.tex.lab The size of the text in the axes text and labels. Default
-#'   is \code{12}.
+#'   is `12`.
 #' @param ... Currently not used..
 #' @author Tiago Olivoto \email{tiagoolivoto@@gmail.com}
-#' @seealso \code{\link{ge_factanal}}
+#' @seealso [ge_factanal()]
 #' @method plot ge_reg
-#' @return An object of class \code{gg, ggplot}.
+#' @return An object of class `gg, ggplot`.
 #' @export
 #' @examples
 #' \donttest{
@@ -229,46 +292,45 @@ plot.ge_reg <- function(x,
             axis.ticks = element_line(color = "black"),
             axis.ticks.length = unit(.2, "cm"),
             legend.position = leg.position)
+    return(p)
   }
   if(type == 2){
     y.lab <- ifelse(missing(y.lab), "Slope of the regression", y.lab)
     x.lab <- ifelse(missing(x.lab), "Response variable", x.lab)
     p <-
-      ggplot(x$regression, aes(x = Y, y = slope))+
+      ggplot(x$regression, aes(x = b0, y = b1))+
       geom_point(size = 1.5)+
-      geom_hline(yintercept = mean(x$regression$slope))+
-      theme_bw()+
+      geom_hline(yintercept = mean(x$regression$b1))+
       geom_text_repel(aes(label = GEN))+
-      labs(x = x.lab, y = y.lab)+
-      plot_theme %+replace%
-      theme(axis.text = element_text(size = size.tex.lab, colour = "black"),
-            axis.title = element_text(size = size.tex.lab, colour = "black"),
-            axis.ticks = element_line(color = "black"),
-            axis.ticks.length = unit(.2, "cm"),
-            legend.position = leg.position)
+      labs(x = x.lab, y = y.lab) +
+      plot_theme
+
+    p2 <-
+      ggplot(x$regression, aes(x = b0, y = s2di))+
+      geom_point(size = 1.5)+
+      geom_hline(yintercept = mean(x$regression$s2di))+
+      geom_text_repel(aes(label = GEN))+
+      labs(x = x.lab, y = "Deviations from the regression") +
+      plot_theme
+
+    p + p2
+
   }
-  return(p)
 }
-
-
-
-
-
-
 
 #' Print an object of class ge_reg
 #'
-#' Print the \code{ge_reg} object in two ways. By default, the results are shown
+#' Print the `ge_reg` object in two ways. By default, the results are shown
 #' in the R console. The results can also be exported to the directory into a
 #' *.txt file.
 #'
-#' @param x An object of class \code{ge_reg}.
-#' @param export A logical argument. If \code{TRUE}, a *.txt file is exported to
+#' @param x An object of class `ge_reg`.
+#' @param export A logical argument. If `TRUE`, a *.txt file is exported to
 #'   the working directory.
-#' @param file.name The name of the file if \code{export = TRUE}
+#' @param file.name The name of the file if `export = TRUE`
 #' @param digits The significant digits to be shown.
 #' @param ... Options used by the tibble package to format the output. See
-#'   \code{\link[tibble:formatting]{tibble::print()}} for more details.
+#'   [`tibble::print()`][tibble::formatting] for more details.
 #' @author Tiago Olivoto \email{tiagoolivoto@@gmail.com}
 #' @method print ge_reg
 #' @export
@@ -301,6 +363,8 @@ print.ge_reg <- function(x, export = FALSE, file.name = NULL, digits = 3, ...) {
     cat("---------------------------------------------------------------------------\n")
     print(var$regression)
     cat("---------------------------------------------------------------------------\n")
+    cat("Variance of b0:", var[["bo_variance"]], "\n")
+    cat("Variance of b1:", var[["b1_variance"]], "\n")
     cat("\n\n\n")
   }
   if (export == TRUE) {

@@ -81,7 +81,7 @@ get_model_data(model3, what = "WAASB") %>%
   round_cols()
 
 ## -----------------------------------------------------------------------------
-index <- Resende_indexes(model3)
+index <- blup_indexes(model3)
 get_model_data(index) %>% round_cols()
 
 ## ----echo = TRUE--------------------------------------------------------------

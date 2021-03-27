@@ -19,13 +19,12 @@ mtsi(
 \item{index}{If \code{index = 'waasby'} (default) both stability and mean
 performance are considered. If \code{index = 'waasb'} the multi-trait index
 will be computed considering the stability of genotypes only.  More details
-can be seen in \code{\link{waasb}} and \code{\link{waas}} functions.}
+can be seen in \code{\link[=waasb]{waasb()}} and \code{\link[=waas]{waas()}} functions.}
 
 \item{ideotype}{A vector of length \code{nvar} where \code{nvar} is the
 number of variables used to plan the ideotype. Use \code{'h'} to indicate
 the traits in which higher values are desired or \code{'l'} to indicate the
-variables in which lower values are desired. For example, \code{ideotype =
-  c("h, h, h, h, l")} will consider that the ideotype has higher values for
+variables in which lower values are desired. For example, \code{ideotype = c("h, h, h, h, l")} will consider that the ideotype has higher values for
 the first four traits and lower values for the last trait.}
 
 \item{SI}{An integer (0-100). The selection intensity in percentage of the
@@ -59,36 +58,66 @@ value. The lower the contribution of a factor, the close of the ideotype the
 variables in such factor are.
 \item \strong{contri_fac_rank, contri_fac_rank_sel} The rank for the contribution
 of each factor for all genotypes and selected genotypes, respectively.
-\item \strong{sel_dif_trait, sel_dif_waasb, sel_dif_waasby} The selection
-differential (gains) for the traits, and for the WAASB and WAASBY indexes.
-\item \strong{stat_dif_var, stat_dif_waasb, stat_dif_waasby} A descriptive
-statistic for the selection gains of the traits and WAASB and WAASBY indexes.
-The minimum, mean, confidence interval, standard deviation, maximum, and sum
-of selection gain values are computed. If traits have negative and positive
-desired gains, the statistics are computed for by strata.
+\item \strong{sel_dif_trait, sel_dif_stab, sel_dif_mps} A data frame containing the
+selection differential (gains) for the traits, for the stability (WAASB
+index) WAASB, and for the mean performance and stability (WAASBY indexes).
+The following variables are shown.
+\itemize{
+\item \code{VAR}: the trait's name.
+\item \code{Factor}: The factor that traits where grouped into.
+\item \code{Xo}: The original population mean.
+\item \code{Xs}: The mean of selected genotypes.
+\item \code{SD} and \code{SDperc}: The selection differential and selection differential in
+percentage, respectively.
+\item \code{h2}: The broad-sense heritability.
+\item \code{SG} and \code{SGperc}: The selection gains and selection gains in percentage,
+respectively.
+\item \code{sense}: The desired selection sense.
+\item \code{goal}: selection gains match desired sense? 100 for yes and 0 for no.
+}
+\item \strong{stat_dif_var, stat_dif_stab, stat_dif_mps} A data frame with the
+descriptive statistic for the selection gains for the traits, for the
+stability (WAASB index) WAASB, and for the mean performance and stability
+(WAASBY index).
+The following variables are shown.
+\itemize{
+\item \code{sense}: The desired selection sense.
+\item \code{variable}: the trait's name.
+\item \code{min}: the minimum value for the selection gain.
+\item \code{mean}: the mean value for the selection gain.
+\item \code{ci}: the confidence interval for the selection gain.
+\item \code{sd.amo}: the standard deviation for the selection gain.
+\item \code{max}: the maximum value for the selection gain.
+\item \code{sum}: the sum of the selection gain.
+}
 \item \strong{sel_gen} The selected genotypes.
 }
 }
 \description{
+\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#stable}{\figure{lifecycle-stable.svg}{options: alt='[Stable]'}}}{\strong{[Stable]}}
+
 Computes the multi-trait stability index proposed by Olivoto et al. (2019)
 }
 \examples{
 \donttest{
 library(metan)
 # Based on stability only, for both GY and HM, higher is better
-mtsi_model <- waasb(data_ge,
-                    env = ENV,
-                    gen = GEN,
-                    rep = REP,
-                    resp = c(GY, HM))
-mtsi_index <- mtsi(mtsi_model, index = 'waasb')
+mtsi_model <-
+    waasb(data_ge,
+    env = ENV,
+    gen = GEN,
+    rep = REP,
+    resp = c(GY, HM))
+mtsi_index <-
+    mtsi(mtsi_model, index = 'waasb')
 
 
 # Based on mean performance and stability (using pipe operator \%>\%)
 # GY: higher is better
 # HM: lower is better
 
-mtsi_index2 <- data_ge \%>\%
+mtsi_index2 <-
+ data_ge \%>\%
  waasb(ENV, GEN, REP,
        resp = c(GY, HM),
        mresp = c("h, l")) \%>\%
@@ -100,6 +129,9 @@ Olivoto, T., A.D.C. L{\'{u}}cio, J.A.G. da silva, B.G. Sari, and
 M.I. Diel. 2019. Mean performance and stability in multi-environment trials
 II: Selection based on multiple traits. Agron. J. 111:2961-2969.
 \doi{10.2134/agronj2019.03.0220}
+}
+\seealso{
+\code{\link[=mgidi]{mgidi()}}, \code{\link[=waasb]{waasb()}}, \code{\link[=get_model_data]{get_model_data()}}
 }
 \author{
 Tiago Olivoto \email{tiagoolivoto@gmail.com}

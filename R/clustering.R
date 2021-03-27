@@ -1,79 +1,86 @@
 #' Clustering analysis
-#'
+#' @description
+#' `r badge('stable')`
+#' \loadmathjax
 #' Performs clustering analysis with selection of variables.
-#'
-#' When \code{selvar = TRUE} a variable selection algorithm is executed. The
+#' @details
+#' When `selvar = TRUE` a variable selection algorithm is executed. The
 #' objective is to select a group of variables that most contribute to explain
 #' the variability of the original data. The selection of the variables is based
-#' on eigenvalue/eigenvectors solution based on the following steps. \bold{1:}
-#' compute the distance matrix and the cophenetic correlation with the original
-#' variables (all numeric variables in dataset); \bold{2:} compute the
-#' eigenvalues and eigenvectors of the correlation matrix between the variables;
-#' \bold{3:} delete the variable with the largest weight (highest eigenvector in
-#' the lowest eigenvalue); \bold{4:} compute the distance matrix and cophenetic
-#' correlation with the remaining variables; \bold{5:} compute the Mantel's
-#' correlation between the obtained distances matrix and the original distance
-#' matrix; \bold{6:} iterate steps 2 to 5 \emph{p} - 2 times, where \emph{p} is
-#' the number of original variables. At the end of the \emph{p} - 2 iterations,
-#' a summary of the models is returned. The distance is calculated with the
-#' variables that generated the model with the largest cophenetic correlation. I
-#' suggest a careful evaluation aiming at choosing a parsimonious model, i.e.,
-#' the one with the fewer number of variables, that presents acceptable
-#' cophenetic correlation and high similarity with the original distances.
+#' on eigenvalue/eigenvectors solution based on the following steps.
+#' 1. compute the distance matrix and the cophenetic correlation with the original
+#' variables (all numeric variables in dataset);
+#' 2. compute the eigenvalues and eigenvectors of the correlation matrix between
+#' the variables;
+#' 3. Delete the variable with the largest weight (highest eigenvector in
+#' the lowest eigenvalue);
+#' 4. Compute the distance matrix and cophenetic correlation with the remaining
+#' variables;
+#' 5. Compute the Mantel's correlation between the obtained distances matrix and
+#' the original distance matrix;
+#' 6. Iterate steps 2 to 5 *p* - 2 times, where *p* is the number of original
+#' variables.
+#'
+#' At the end of the *p* - 2 iterations, a summary of the models is returned.
+#' The distance is calculated with the variables that generated the model with
+#' the largest cophenetic correlation. I suggest a careful evaluation aiming at
+#' choosing a parsimonious model, i.e., the one with the fewer number of
+#' variables, that presents acceptable cophenetic correlation and high
+#' similarity with the original distances.
 #'
 #'@param .data The data to be analyzed. It can be a data frame, possible with
-#'  grouped data passed from \code{\link[dplyr]{group_by}()}.
-#' @param ... The variables in \code{.data} to compute the distances. Set to
-#'   \code{NULL}, i.e., all the numeric variables in \code{.data} are used.
+#'  grouped data passed from [dplyr::group_by()].
+#' @param ... The variables in `.data` to compute the distances. Set to
+#'   `NULL`, i.e., all the numeric variables in `.data` are used.
 #'@param by One variable (factor) to compute the function by. It is a shortcut
-#'  to \code{\link[dplyr]{group_by}()}. To compute the statistics by more than
+#'  to [dplyr::group_by()]. To compute the statistics by more than
 #'  one grouping variable use that function.
 #' @param scale Should the data be scaled before computing the distances? Set to
 #'   FALSE. If TRUE, then, each observation will be divided by the standard
-#'   deviation of the variable \code{Z_{ij} = X_{ij} / sd(j)}
-#' @param selvar Logical argument, set to \code{FALSE}. If \code{TRUE}, then an
+#'   deviation of the variable \mjseqn{Z_{ij} = X_{ij} / sd_j}
+#' @param selvar Logical argument, set to `FALSE`. If `TRUE`, then an
 #'   algorithm for selecting variables is implemented. See the section
-#'   \bold{Details} for additional information.
-#' @param verbose Logical argument. If \code{TRUE} (default) then the results
+#'   **Details** for additional information.
+#' @param verbose Logical argument. If `TRUE` (default) then the results
 #'   for variable selection are shown in the console.
 #' @param distmethod The distance measure to be used. This must be one of
-#'   \code{'euclidean'}, \code{'maximum'}, \code{'manhattan'},
-#'   \code{'canberra'}, \code{'binary'}, \code{'minkowski'}, \code{'pearson'},
-#'   \code{'spearman'}, or \code{'kendall'}. The last three are
+#'   `'euclidean'`, `'maximum'`, `'manhattan'`,
+#'   `'canberra'`, `'binary'`, `'minkowski'`, `'pearson'`,
+#'   `'spearman'`, or `'kendall'`. The last three are
 #'   correlation-based distance.
 #' @param clustmethod The agglomeration method to be used. This should be one of
-#'   \code{'ward.D'}, \code{'ward.D2'}, \code{'single'}, \code{'complete'},
-#'   \code{'average'} (= UPGMA), \code{'mcquitty'} (= WPGMA), \code{'median'} (=
-#'   WPGMC) or \code{'centroid'} (= UPGMC).
-#' @param nclust The number of clusters to be formed. Set to \code{NULL}
+#'   `'ward.D'`, `'ward.D2'`, `'single'`, `'complete'`,
+#'   `'average'` (= UPGMA), `'mcquitty'` (= WPGMA), `'median'` (=
+#'   WPGMC) or `'centroid'` (= UPGMC).
+#' @param nclust The number of clusters to be formed. Set to `NA`
 #' @return
 #'
-#' * \strong{data} The data that was used to compute the distances.
+#' * **data** The data that was used to compute the distances.
 #'
-#' * \strong{cutpoint} The cutpoint of the dendrogram according to Mojena (1977).
+#' * **cutpoint** The cutpoint of the dendrogram according to Mojena (1977).
 #'
-#' * \strong{distance} The matrix with the distances.
+#' * **distance** The matrix with the distances.
 #'
-#' * \strong{de} The distances in an object of class \code{dist}.
+#' * **de** The distances in an object of class `dist`.
 #'
-#' * \strong{hc} The hierarchical clustering.
+#' * **hc** The hierarchical clustering.
 #'
-#' * \strong{Sqt} The total sum of squares.
+#' * **Sqt** The total sum of squares.
 #'
-#' * \strong{tab} A table with the clusters and similarity.
+#' * **tab** A table with the clusters and similarity.
 #'
-#' * \strong{clusters} The sum of square and the mean of the clusters for each
+#' * **clusters** The sum of square and the mean of the clusters for each
 #'   variable.
 #'
-#' * \strong{cofgrap} If \code{selectvar = TRUE}, then, \code{cofpgrap} is a
+#' * **cofgrap** If `selectvar = TRUE`, then, `cofpgrap` is a
 #'   ggplot2-based graphic showing the cophenetic correlation for each model
-#'   (with different number of variables). Else, will be a \code{NULL} object.
+#'   (with different number of variables). Else, will be a `NULL` object.
 #'
-#' * \strong{statistics} If \code{selectvar = TRUE}, then, \code{statistics} shows
+#' * **statistics** If `selectvar = TRUE`, then, `statistics` shows
 #'   the summary of the models fitted with different number of variables,
 #'   including cophenetic correlation, Mantel's correlation with the original
 #'   distances (all variables) and the p-value associated with the Mantel's
-#'   test. Else, will be a \code{NULL} object.
+#'   test. Else, will be a `NULL` object.
 #' @md
 #' @author Tiago Olivoto \email{tiagoolivoto@@gmail.com}
 #' @references Mojena, R. 2015. Hierarchical grouping methods and stopping
@@ -115,7 +122,7 @@ clustering <- function(.data,
                        verbose = TRUE,
                        distmethod = "euclidean",
                        clustmethod = "average",
-                       nclust = NULL) {
+                       nclust = NA) {
   if (!missing(by)){
     if(length(as.list(substitute(by))[-1L]) != 0){
       stop("Only one grouping variable can be used in the argument 'by'.\nUse 'group_by()' to pass '.data' grouped by more than one variable.", call. = FALSE)
@@ -160,144 +167,143 @@ clustering <- function(.data,
       has_text_in_num(data)
     }
   }
-    if (scale == TRUE) {
-      data <- data.frame(scale(data, center = FALSE, scale = apply(data, 2, sd, na.rm = TRUE)))
-    } else {
-      data <- data
-    }
-    if (selvar == TRUE) {
-      n <- (ncol(data) - 1)
-      statistics <- data.frame(matrix(nrow = n, ncol = 6))
-      ModelEstimates <- list()
-      modelcode <- 1
-      namesv <- "-"
-      original <- data
-      if (distmethod %in% c("pearson", "spearman", "kendall")) {
-        dein <- as.dist(cor(t(data), method = distmethod))
-      } else {
-        dein <- dist(data, method = distmethod, diag = T,
-                     upper = T)
-      }
-      for (i in 1:n) {
-        if (distmethod %in% c("pearson", "spearman",
-                              "kendall")) {
-          de <- as.dist(cor(t(data), method = distmethod))
-        } else {
-          de <- dist(data, method = distmethod, diag = T,
-                     upper = T)
-        }
-        hc <- hclust(de, method = clustmethod)
-        d2 <- cophenetic(hc)
-        cof <- cor(d2, de)
-        mant <- mantel_test(de, dein, nboot = 1000)
-        mantc <- mant[[1]]
-        mantp <- mant[[3]]
-        evect <- data.frame(t(prcomp(data)$rotation))
-        var <- abs(evect)[nrow(evect), ]
-        names <- apply(var, 1, function(x) which(x ==
-                                                   max(x)))
-        npred <- ncol(data)
-        statistics[i, 1] <- paste("Model", modelcode)
-        statistics[i, 2] <- namesv
-        statistics[i, 3] <- cof
-        statistics[i, 4] <- npred
-        statistics[i, 5] <- mantc
-        statistics[i, 6] <- mantp
-        mat <- as.matrix(de)
-        mat <- as.data.frame(mat)
-        Results <- list(nvars = npred, excluded = namesv,
-                        namevars = names(data), distance = mat, cormantel = mantc,
-                        pvmant = mantp)
-        namesv <- names(data[names])
-        data2 <- data.frame(data[-(match(c(namesv), names(data)))])
-        data <- data2
-        ModelEstimates[[paste("Model", modelcode)]] <- Results
-        names(statistics) <- c("Model", "excluded", "cophenetic",
-                               "remaining", "cormantel", "pvmantel")
-        if (verbose == TRUE) {
-          cat(paste("Model ", modelcode,
-                    " with ", npred, " variables. '", namesv,
-                    "' excluded in this step (", round(modelcode/n *
-                                                        100, 1), "%).\n", sep = ""))
-        }
-        modelcode <- modelcode + 1
-      }
-      cat("Done!", "\n")
-      cat("--------------------------------------------------------------------------",
-          "\n")
-      cat("\nSummary of the adjusted models", "\n")
-      cat("--------------------------------------------------------------------------",
-          "\n")
-      print(statistics, row.names = F)
-      cat("--------------------------------------------------------------------------")
-      model <- statistics$Model[which.max(statistics$cophenetic)]
-      predvar <- ModelEstimates[[model]]$namevars
-      data <- data.frame(original[(match(c(predvar), names(original)))])
-      if (verbose == TRUE) {
-        cat("\nSuggested variables to be used in the analysis",
-            "\n")
-        cat("--------------------------------------------------------------------------",
-            "\n")
-        cat("The clustering was calculated with the ",
-            model, "\nThe variables included in this model were...\n",
-            predvar, "\n")
-        cat("--------------------------------------------------------------------------")
-      }
-    } else {
-      data <- data
-      cofgrap <- NULL
-      statistics <- NULL
-    }
-    if (distmethod %in% c("pearson", "spearman", "kendall")) {
-      de <- as.dist(1 - cor(t(data), method = distmethod))
-    } else {
-      de <- dist(data, method = distmethod, diag = T, upper = T)
-    }
-    mat <- as.matrix(de)
-    hc <- hclust(de, method = clustmethod)
-    d2 <- cophenetic(hc)
-    cof <- cor(d2, de)
-    k <- 1.25
-    pcorte <- mean(hc$height) + k * sd(hc$height)
-    if (!missing(nclust)) {
-      groups <- cutree(hc, k = nclust)
-      Mgroups <- cbind(data, groups)
-      distance <- hc$height[(length(hc$height) - nclust):length(hc$height)]
-      Sim <- (1 - distance/max(de))
-      Passos <- 1:length(Sim)
-      Simgroups <- length(Sim):1
-      similarity <- Sim * 100
-      Tab <- cbind(Passos, Simgroups, round(similarity,
-                                            3), round(distance, 2))
-      colnames(Tab) <- c("Steps", "Groups", "Similarity",
-                         "Distance")
-      TabResgroups <- NULL
-      MGr <- cbind(data, groups)
-      for (i in 1:nclust) {
-        NewGroups <- subset(MGr, groups == i)
-        GrupCalc <- NewGroups[, 1:(ncol(NewGroups) -
-                                     1)]
-        Qtd.Elementos <- nrow(NewGroups)
-        if (Qtd.Elementos == 1)
-          Media <- GrupCalc else Media <- apply(GrupCalc, 2, mean)
-        if (Qtd.Elementos == 1)
-          SqG <- 0 else SqG <- sum(sweep(GrupCalc, 2, Media)^2)
-        TabResgroups <- rbind(TabResgroups, c(i, Qtd.Elementos,
-                                              SqG, Media))
-      }
-      colnames(TabResgroups) <- c("Cluster", "Number of Elements",
-                                  "Sum_sq", paste(colnames(TabResgroups[, 4:(ncol(TabResgroups))])))
-    } else {
-      TabResgroups <- NULL
-      Tab <- NULL
-    }
-    Sqt <- sum(sweep(data, 2, apply(data, 2, mean))^2)
-    return(structure(list(data = data, cutpoint = pcorte,
-                          distance = mat, de = de, hc = as.dendrogram(hc),
-                          cophenetic = cof, Sqt = Sqt, tab = as.data.frame(Tab),
-                          clusters = as.data.frame(TabResgroups), statistics = statistics),
-                     class = "clustering"))
+  if (scale == TRUE) {
+    data <- data.frame(scale(data, center = FALSE, scale = apply(data, 2, sd, na.rm = TRUE)))
+  } else {
+    data <- data
   }
+  if (selvar == TRUE) {
+    n <- (ncol(data) - 1)
+    statistics <- data.frame(matrix(nrow = n, ncol = 6))
+    ModelEstimates <- list()
+    modelcode <- 1
+    namesv <- "-"
+    original <- data
+    if (distmethod %in% c("pearson", "spearman", "kendall")) {
+      dein <- as.dist(cor(t(data), method = distmethod))
+    } else {
+      dein <- dist(data, method = distmethod, diag = T,
+                   upper = T)
+    }
+    pb <- progress(max = n)
+    for (i in 1:n) {
+      if (distmethod %in% c("pearson", "spearman", "kendall")) {
+        de <- as.dist(cor(t(data), method = distmethod))
+      } else {
+        de <- dist(data, method = distmethod, diag = T,
+                   upper = T)
+      }
+      hc <- hclust(de, method = clustmethod)
+      d2 <- cophenetic(hc)
+      cof <- cor(d2, de)
+      mant <- mantel_test(de, dein, nboot = 1000)
+      mantc <- mant[[1]]
+      mantp <- mant[[3]]
+      evect <- data.frame(t(prcomp(data)$rotation))
+      var <- abs(evect)[nrow(evect), ]
+      names <- apply(var, 1, function(x) which(x == max(x)))
+      npred <- ncol(data)
+      statistics[i, 1] <- paste("Model", modelcode)
+      statistics[i, 2] <- namesv
+      statistics[i, 3] <- cof
+      statistics[i, 4] <- npred
+      statistics[i, 5] <- mantc
+      statistics[i, 6] <- mantp
+      mat <- as.matrix(de)
+      mat <- as.data.frame(mat)
+      Results <- list(nvars = npred, excluded = namesv,
+                      namevars = names(data), distance = mat, cormantel = mantc,
+                      pvmant = mantp)
+      namesv <- names(data[names])
+      data2 <- data.frame(data[-(match(c(namesv), names(data)))])
+      data <- data2
+      ModelEstimates[[paste("Model", modelcode)]] <- Results
+      names(statistics) <- c("Model", "excluded", "cophenetic",
+                             "remaining", "cormantel", "pvmantel")
+      if (verbose == TRUE) {
+        run_progress(pb, actual = i,
+                     sleep = 0.1,
+                     text = paste0(namesv, " excluded in this step"))
+      }
+      modelcode <- modelcode + 1
+    }
+    cat("--------------------------------------------------------------------------\n")
+    cat("\nSummary of the adjusted models", "\n")
+    cat("--------------------------------------------------------------------------\n")
+    print(statistics, row.names = F)
+    cat("--------------------------------------------------------------------------\n")
+    model <- statistics$Model[which.max(statistics$cophenetic)]
+    predvar <- ModelEstimates[[model]]$namevars
+    data <- data.frame(original[(match(c(predvar), names(original)))])
+    if (verbose == TRUE) {
+      cat("Suggested variables to be used in the analysis\n")
+      cat("--------------------------------------------------------------------------\n")
+      cat("The clustering was calculated with the ",
+          model, "\nThe variables included in this model were...\n",
+          predvar, "\n")
+      cat("--------------------------------------------------------------------------\n\n")
+    }
+  } else {
+    data <- data
+    cofgrap <- NULL
+    statistics <- NULL
+  }
+  if (distmethod %in% c("pearson", "spearman", "kendall")) {
+    de <- as.dist(1 - cor(t(data), method = distmethod))
+  } else {
+    de <- dist(data, method = distmethod, diag = T, upper = T)
+  }
+  mat <- as.matrix(de)
+  hc <- hclust(de, method = clustmethod)
+  d2 <- cophenetic(hc)
+  cof <- cor(d2, de)
+  k <- 1.25
+  pcorte <- mean(hc$height) + k * sd(hc$height)
+  if (!is.na(nclust)) {
+    groups <- cutree(hc, k = nclust)
+    Mgroups <- cbind(data, groups)
+    distance <- hc$height[(length(hc$height) - nclust):length(hc$height)]
+    Sim <- (1 - distance/max(de))
+    Passos <- 1:length(Sim)
+    Simgroups <- length(Sim):1
+    similarity <- Sim * 100
+    Tab <- cbind(Passos, Simgroups, round(similarity,
+                                          3), round(distance, 2))
+    colnames(Tab) <- c("Steps", "Groups", "Similarity",
+                       "Distance")
+    TabResgroups <- NULL
+    MGr <- cbind(data, groups)
+    for (i in 1:nclust) {
+      NewGroups <- subset(MGr, groups == i)
+      GrupCalc <- NewGroups[, 1:(ncol(NewGroups) -
+                                   1)]
+      Qtd.Elementos <- nrow(NewGroups)
+      if (Qtd.Elementos == 1)
+        Media <- GrupCalc else Media <- apply(GrupCalc, 2, mean)
+      if (Qtd.Elementos == 1)
+        SqG <- 0 else SqG <- sum(sweep(GrupCalc, 2, Media)^2)
+      TabResgroups <- rbind(TabResgroups, c(i, Qtd.Elementos,
+                                            SqG, Media))
+    }
+    colnames(TabResgroups) <- c("Cluster", "Number of Elements",
+                                "Sum_sq", paste(colnames(TabResgroups[, 4:(ncol(TabResgroups))])))
+  } else {
+    TabResgroups <- NULL
+    Tab <- NULL
+  }
+  Sqt <- sum(sweep(data, 2, apply(data, 2, mean))^2)
+  return(list(data = data,
+              cutpoint = pcorte,
+              distance = mat,
+              de = de,
+              hc = as.dendrogram(hc),
+              cophenetic = cof,
+              Sqt = Sqt,
+              tab = as.data.frame(Tab),
+              clusters = as.data.frame(TabResgroups),
+              statistics = statistics) %>%
+           set_class("clustering"))
+}
 
 
 
@@ -306,14 +312,14 @@ clustering <- function(.data,
 #' Plot an object of class clustering
 #'
 #'
-#' @param x An object of class \code{clustering}
+#' @param x An object of class `clustering`
 #' @param horiz Logical indicating if the dendrogram should be drawn
 #'   horizontally or not.
 #' @param type The type of plot. Must be one of the 'dendrogram' or
 #'   'cophenetic'.
-#' @param ... Other arguments passed from the function \code{plot.dendrogram} or
-#'   \code{abline}.
-#' @return An object of class \code{gg, ggplot} if \code{type == "cophenetic"}.
+#' @param ... Other arguments passed from the function `plot.dendrogram` or
+#'   `abline`.
+#' @return An object of class `gg, ggplot` if `type == "cophenetic"`.
 #' @method plot clustering
 #' @export
 #' @author Tiago Olivoto \email{tiagoolivoto@@gmail.com}

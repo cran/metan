@@ -11,6 +11,7 @@ plot_scores(
   first = "PC1",
   second = "PC2",
   repel = TRUE,
+  repulsion = 1,
   polygon = FALSE,
   title = TRUE,
   plot_theme = theme_metan(),
@@ -23,10 +24,14 @@ plot_scores(
   y.lab = NULL,
   shape.gen = 21,
   shape.env = 23,
-  size.shape = 2.2,
+  size.shape.gen = 2.2,
+  size.shape.env = 2.2,
+  size.shape = deprecated(),
   size.bor.tick = 0.3,
   size.tex.lab = 12,
-  size.tex.pa = 3.5,
+  size.tex.pa = deprecated(),
+  size.tex.gen = 3.5,
+  size.tex.env = 3.5,
   size.line = 0.5,
   size.segm.line = 0.5,
   col.bor.gen = "black",
@@ -34,11 +39,12 @@ plot_scores(
   col.line = "black",
   col.gen = "blue",
   col.env = "forestgreen",
-  col.alpha.gen = 0.9,
-  col.alpha.env = 0.9,
+  col.alpha.gen = NA,
+  col.alpha.env = NA,
   col.segm.gen = transparent_color(),
   col.segm.env = "forestgreen",
-  repulsion = 1,
+  highlight = NULL,
+  col.highlight = "red",
   leg.lab = c("Env", "Gen"),
   line.type = "solid",
   line.alpha = 0.9,
@@ -53,19 +59,19 @@ plot_scores(
 )
 }
 \arguments{
-\item{x}{An object fitted with the functions \code{\link{performs_ammi}},
-\code{\link{waas}}, \code{\link{waas_means}}, or \code{\link{waasb}}.}
+\item{x}{An object fitted with the functions \code{\link[=performs_ammi]{performs_ammi()}},
+\code{\link[=waas]{waas()}}, \code{\link[=waas_means]{waas_means()}}, or \code{\link[=waasb]{waasb()}}.}
 
 \item{var}{The variable to plot. Defaults to \code{var = 1} the first
 variable of \code{x}.}
 
 \item{type}{type of biplot to produce
 \itemize{
-\item \code{type = 1} Produces an AMMI1 biplot (Y x PC1) to make inferences
-related to stability and productivity.
-\item \code{type = 2} The default, produces an AMMI2 biplot (PC1 x PC2) to make
-inferences related to the interaction effects. Use the arguments \code{first}
-or \code{second} to change the default IPCA shown in the plot.
+\item \code{type = 1} The default. Produces an AMMI1 biplot (Y x PC1) to make
+inferences related to stability and productivity.
+\item \code{type = 2} Produces an AMMI2 biplot (PC1 x PC2) to make inferences
+related to the interaction effects. Use the arguments \code{first} or
+\code{second} to change the default IPCA shown in the plot.
 \item \code{type = 3} Valid for objects of class \code{waas} or \code{waasb},
 produces a biplot showing the GY x WAASB.
 \item \code{type = 4} Produces a plot with the Nominal yield x Environment PC.
@@ -79,6 +85,9 @@ the \code{y} axis.}
 \item{repel}{If \code{TRUE} (default), the text labels repel away from each
 other and away from the data points.}
 
+\item{repulsion}{Force of repulsion between overlapping text labels. Defaults
+to \code{1}.}
+
 \item{polygon}{Logical argument. If \code{TRUE}, a polygon is drawn when
 \code{type = 2}.}
 
@@ -87,15 +96,14 @@ automatically generated titles}
 
 \item{plot_theme}{The graphical theme of the plot. Default is
 \code{plot_theme = theme_metan()}. For more details, see
-\code{\link[ggplot2]{theme}}.}
+\code{\link[ggplot2:theme]{ggplot2::theme()}}.}
 
 \item{axis.expand}{Multiplication factor to expand the axis limits by to
 enable fitting of labels. Default is \code{1.1}.}
 
 \item{x.lim, y.lim}{The range of x and y axes, respectively. Default is
 \code{NULL} (maximum and minimum values of the data set). New values can be
-inserted as \code{x.lim = c(x.min, x.max)} or \code{y.lim = c(y.min,
-  y.max)}.}
+inserted as \code{x.lim = c(x.min, x.max)} or \code{y.lim = c(y.min, y.max)}.}
 
 \item{x.breaks, y.breaks}{The breaks to be plotted in the x and y axes,
 respectively. Defaults to \code{waiver()} (automatic breaks). New values
@@ -112,14 +120,19 @@ indication in the biplot. Default is \code{21} (circle) for genotypes and
 \code{21} (circle), \code{22} (square), \code{23} (diamond), \code{24} (up
 triangle), and \code{25} (low triangle).}
 
-\item{size.shape}{The size of the shape (both for genotypes and
-environments). Default is \code{2.2}.}
+\item{size.shape.gen, size.shape.env}{The size of the shapes for genotypes and
+environments respectively. Defaults to \code{2.2}.}
+
+\item{size.shape}{\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#deprecated}{\figure{lifecycle-deprecated.svg}{options: alt='[Deprecated]'}}}{\strong{[Deprecated]}}}
 
 \item{size.bor.tick}{The size of tick of shape. Default is \code{0.3}. The
-size of the shape will be \code{size.shape + size.bor.tick}}
+size of the shape will be \code{max(size.shape.gen, size.shape.env) + size.bor.tick}}
 
-\item{size.tex.lab, size.tex.pa}{The size of the text for labels (Defaults to
-12) and plot area (Defaults to 3.5), respectively.}
+\item{size.tex.lab, size.tex.gen, size.tex.env}{The size of the text for axis
+labels (Defaults to 12), genotypes labels, and environments labels
+(Defaults to 3.5).}
+
+\item{size.tex.pa}{\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#deprecated}{\figure{lifecycle-deprecated.svg}{options: alt='[Deprecated]'}}}{\strong{[Deprecated]}}}
 
 \item{size.line}{The size of the line that indicate the means in the biplot.
 Default is \code{0.5}.}
@@ -139,23 +152,24 @@ one or a vector of colors with the same length of the number of
 genotypes/environments.}
 
 \item{col.alpha.gen, col.alpha.env}{The alpha value for the color for
-genotypes and environments, respectively. Default is \code{0.9}. Values
-must be between \code{0} (full transparency) to \code{1} (full color).}
+genotypes and environments, respectively. Defaults to \code{NA}. Values must be
+between \code{0} (full transparency) to \code{1} (full color).}
 
 \item{col.segm.gen, col.segm.env}{The color of segment for genotypes (Defaults
 to \code{transparent_color()}) and environments (Defaults to 'forestgreen'),
-respectively. Valid arguments for plots with \code{type = 1} or \code{type
-  = 2} graphics.}
+respectively. Valid arguments for plots with \code{type = 1} or \code{type = 2} graphics.}
 
-\item{repulsion}{Force of repulsion between overlapping text labels. Defaults
-to 1.}
+\item{highlight}{Genotypes/environments to be highlight in the plot. Defaults
+to \code{NULL}.}
+
+\item{col.highlight}{The color for shape/labels when a value is provided in
+\code{highlight.}}
 
 \item{leg.lab}{The labs of legend. Default is \code{Gen} and \code{Env}.}
 
 \item{line.type}{The type of the line that indicate the means in the biplot.
 Default is \code{'solid'}. Other values that can be attributed are:
-\code{'blank'}, no lines in the biplot, \code{'dashed', 'dotted',
-  'dotdash', 'longdash', and 'twodash'}.}
+\code{'blank'}, no lines in the biplot, \verb{'dashed', 'dotted', 'dotdash', 'longdash', and 'twodash'}.}
 
 \item{line.alpha}{The alpha value that combine the line with the background
 to create the appearance of partial or full transparency. Default is
@@ -167,7 +181,7 @@ color).}
 
 \item{file.type}{The type of file to be exported. Valid parameter if
 \code{export = T|TRUE}.  Default is \code{'pdf'}. The graphic can also be
-exported in \code{*.tiff} format by declaring \code{file.type = 'tiff'}.}
+exported in \verb{*.tiff} format by declaring \code{file.type = 'tiff'}.}
 
 \item{export}{Export (or not) the plot. Default is \code{FALSE}.}
 
@@ -183,13 +197,14 @@ exported in \code{*.tiff} format by declaring \code{file.type = 'tiff'}.}
 \item{...}{Currently not used.}
 }
 \value{
-An object of class \code{gg, ggplot}.
+An object of class \verb{gg, ggplot}.
 }
 \description{
+\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#stable}{\figure{lifecycle-stable.svg}{options: alt='[Stable]'}}}{\strong{[Stable]}}
+
 Plot scores of genotypes and environments in different graphical
 interpretations.
-}
-\details{
+
 Biplots type 1 and 2 are well known in AMMI analysis. In the plot type 3, the
 scores of both genotypes and environments are plotted considering the
 response variable and the WAASB, an stability index that considers all
@@ -214,13 +229,14 @@ model <- waas(data_ge,
 plot_scores(model)
 
 # PC1 x PC2 (variable HM)
+#
 plot_scores(model,
-            polygon = TRUE, # Draw a convex hull polygon
-            var = "HM",     # or var = 2 to select variable
-            type = 2)       # type of biplot
+            polygon = TRUE,            # Draw a convex hull polygon
+            var = "HM",                # or var = 2 to select variable
+            highlight = c("G1", "G2"), # Highlight genotypes 2 and 3
+            type = 2)                  # type of biplot
 
 # PC3 x PC4 (variable HM)
-#
 # Change size of plot fonts and colors
 # Minimal theme
 plot_scores(model,
@@ -231,7 +247,8 @@ plot_scores(model,
            col.gen = "black",
            col.env = "gray",
            col.segm.env = "gray",
-           size.tex.pa = 2,
+           size.tex.gen = 5,
+           size.tex.env = 2,
            size.tex.lab = 16,
            plot_theme = theme_metan_minimal())
 
@@ -239,10 +256,10 @@ plot_scores(model,
 waasb_model <- waasb(data_ge, ENV, GEN, REP, GY)
 
 # GY x WAASB
+# Highlight genotypes 2 and 8
 plot_scores(waasb_model,
             type = 3,
-            size.tex.pa = 2,
-            size.tex.lab = 16)
+            highlight = c("G2", "G8"))
 }
 }
 \references{
@@ -252,7 +269,7 @@ trials I: Combining features of AMMI and BLUP techniques. Agron. J.
 111:2949-2960. \doi{10.2134/agronj2019.03.0220}
 }
 \seealso{
-\code{\link{plot_eigen}}
+\code{\link[=plot_eigen]{plot_eigen()}}
 }
 \author{
 Tiago Olivoto \email{tiagoolivoto@gmail.com}

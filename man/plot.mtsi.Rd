@@ -10,6 +10,7 @@
   type = "index",
   position = "fill",
   genotypes = "selected",
+  title = TRUE,
   radar = TRUE,
   arrange.label = FALSE,
   x.lab = NULL,
@@ -30,11 +31,10 @@
 \arguments{
 \item{x}{An object of class \code{mtsi}}
 
-\item{SI}{An integer [0-100]. The selection intensity in percentage of the
+\item{SI}{An integer (0-100). The selection intensity in percentage of the
 total number of genotypes.}
 
-\item{type}{The type of the plot. Defaults to \code{"index"}. Use \code{type
-= "contribution"} to show the contribution of each factor to the MGIDI
+\item{type}{The type of the plot. Defaults to \code{"index"}. Use \code{type = "contribution"} to show the contribution of each factor to the MGIDI
 index of the selected genotypes.}
 
 \item{position}{The position adjustment when \code{type = "contribution"}.
@@ -47,6 +47,9 @@ genotype.}
 be shown in the plot. By default (\code{genotypes = "selected"} only
 selected genotypes are shown. Use \code{genotypes = "all"} to plot the
 contribution for all genotypes.)}
+
+\item{title}{Logical values (Defaults to \code{TRUE}) to include
+automatically generated titles.}
 
 \item{radar}{Logical argument. If true (default) a radar plot is generated
 after using \code{coord_polar()}.}
@@ -81,10 +84,10 @@ prioritizing the first, last, and middle labels.}
 
 \item{legend.position}{The position of the legend.}
 
-\item{...}{Other arguments to be passed from  \code{\link[ggplot2]{theme}()}.}
+\item{...}{Other arguments to be passed from  \code{\link[ggplot2:theme]{ggplot2::theme()}}.}
 }
 \value{
-An object of class \code{gg, ggplot}.
+An object of class \verb{gg, ggplot}.
 }
 \description{
 Makes a radar plot showing the multitrait stability index proposed by Olivoto

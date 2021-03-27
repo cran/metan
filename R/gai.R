@@ -1,11 +1,13 @@
 #' Geometric adaptability index
+#' @description
+#' `r badge('stable')`
 #'
 #' Performs a stability analysis based on the geometric mean (GAI), according to
 #' the following model (Mohammadi and Amri, 2008):
 #' \loadmathjax
 #'  \mjsdeqn{GAI = \sqrt[E]{{\mathop {\bar Y}\nolimits_1  + \mathop {\bar Y}\nolimits_2  + ... + \mathop {\bar Y}\nolimits_i }}}
 #'  where \mjseqn{\bar Y_1}, \mjseqn{\bar Y_2}, and \mjseqn{\bar Y_i} are
-#'  the mean yields of the first, second and \emph{i}-th genotypes across
+#'  the mean yields of the first, second and *i*-th genotypes across
 #'  environments, and E is the number of environments
 #'
 #'
@@ -14,18 +16,17 @@
 #' @param env The name of the column that contains the levels of the
 #'   environments.
 #' @param gen The name of the column that contains the levels of the genotypes.
-#' @param rep The name of the column that contains the levels of the
-#'   replications/blocks.
+#' @param rep `r badge('deprecated')`
 #' @param resp The response variable(s). To analyze multiple variables in a
-#'   single procedure use, for example, \code{resp = c(var1, var2, var3)}.
-#' @param verbose Logical argument. If \code{verbose = FALSE} the code will run
+#'   single procedure use, for example, `resp = c(var1, var2, var3)`.
+#' @param verbose Logical argument. If `verbose = FALSE` the code will run
 #'   silently.
-#' @return An object of class \code{gai}, which is a list containing the results
-#'   for each variable used in the argument \code{resp}. For each variable, a
+#' @return An object of class `gai`, which is a list containing the results
+#'   for each variable used in the argument `resp`. For each variable, a
 #'   tibble with the following columns is returned.
-#' * \strong{GEN} the genotype's code.
-#' * \strong{GAI} Geometric adaptability index
-#' * \strong{GAI_R} The rank for the GAI value.
+#' * **GEN** the genotype's code.
+#' * **GAI** Geometric adaptability index
+#' * **GAI_R** The rank for the GAI value.
 #' @md
 #' @author Tiago Olivoto \email{tiagoolivoto@@gmail.com}
 #' @references
@@ -41,22 +42,20 @@
 #' out <- gai(data_ge2, ENV, GEN, REP, c(EH, PH, EL, CD, ED, NKE))
 #' }
 #'
-gai <- function(.data, env, gen, rep, resp, verbose = TRUE) {
+gai <- function(.data, env, gen, rep = "deprecated", resp, verbose = TRUE) {
   factors  <-
     .data %>%
-    select({{env}}, {{gen}}, {{rep}}) %>%
+    select({{env}}, {{gen}}) %>%
     mutate(across(everything(), as.factor))
   vars <-
     .data %>%
     select({{resp}}, -names(factors)) %>%
     select_numeric_cols()
-  factors %<>% set_names("ENV", "GEN", "REP")
+  factors %<>% set_names("ENV", "GEN")
   listres <- list()
   nvar <- ncol(vars)
   if (verbose == TRUE) {
-    pb <- progress_bar$new(
-      format = "Evaluating the variable :what [:bar]:percent",
-      clear = FALSE, total = nvar, width = 90)
+    pb <- progress(max = nvar, style = 4)
   }
   for (var in 1:nvar) {
     data <- factors %>%
@@ -67,14 +66,16 @@ gai <- function(.data, env, gen, rep, resp, verbose = TRUE) {
     }
     temp <-
       make_mat(data, ENV, GEN, Y) %>%
-      gmean() %>%
+      gmean(na.rm = TRUE) %>%
       t() %>%
       as.data.frame() %>%
       rownames_to_column("GEN") %>%
       mutate(rank = rank(-V1)) %>%
       set_names("GEN", "GAI", "GAI_R")
     if (verbose == TRUE) {
-      pb$tick(tokens = list(what = names(vars[var])))
+      run_progress(pb,
+                   actual = var,
+                   text = paste("Evaluating trait", names(vars[var])))
     }
     listres[[paste(names(vars[var]))]] <- temp
   }
