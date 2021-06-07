@@ -52,7 +52,9 @@
 #' * `"MSE"` The mean square of error.
 #' * `"CV"` The coefficient of variation.
 #' * `"h2"` The broad-sence heritability
-#' * `"MSE"` The accucary of selection (square root of h2).
+#' * `"AS"` The accucary of selection (square root of h2).
+#' * `"FMAX"` The Hartley's test (the ratio of the largest MSE to the smallest
+#' MSE).
 #'
 #'
 #'  **Objects of class `anova_joint` or `gafem`:**
@@ -121,6 +123,8 @@
 #' * `"scores"` The scores for genotypes and environments for all the
 #' analyzed traits (default).
 #' * `"exp_var"` The eigenvalues and explained variance.
+#' * `"projection"` The projection of each genotype in the AEC coordinates in
+#' the stability GGE plot
 #'
 #'  **Objects of class `gytb`:**
 #' * `"gyt"` Genotype by yield*trait table (Default).
@@ -377,7 +381,7 @@ get_model_data <- function(x,
                       "env_stratification", "fai_blup", "sh", "mps", "mtmps"))) {
     stop("Invalid class in object ", call_f[["x"]], ". See ?get_model_data for more information.", call. = FALSE)
   }
-  if (!is.null(what) && substr(what, 1, 2) == "PC") {
+  if (!is.null(what) && what != "PCA" && substr(what, 1, 2) == "PC") {
     npc <- ncol(x[[1]][["model"]] %>%
                   select(starts_with("PC")) %>%
                   select(matches("PC\\d+")))
@@ -412,8 +416,8 @@ get_model_data <- function(x,
   check18 <- c("Mean_rp", "Sem_rp", "Wi", "rank")
   check19 <- c("ge_means", "env_means", "gen_means")
   check20 <- c("Y", "h2", "Sum Sq", "Mean Sq", "F value", "Pr(>F)", "fitted", "resid", "stdres", "se.fit", "details")
-  check21 <- c("MEAN", "DFG", "MSG", "FCG", "PFG", "DFB", "MSB", "FCB", "PFB", "DFCR", "MSCR", "FCR", "PFCR", "DFIB_R", "MSIB_R", "FCIB_R", "PFIB_R", "DFE", "MSE", "CV", "h2", "AS")
-  check22 <- c("scores", "exp_var")
+  check21 <- c("MEAN", "DFG", "MSG", "FCG", "PFG", "DFB", "MSB", "FCB", "PFB", "DFCR", "MSCR", "FCR", "PFCR", "DFIB_R", "MSIB_R", "FCIB_R", "PFIB_R", "DFE", "MSE", "CV", "h2", "AS", "FMAX")
+  check22 <- c("scores", "exp_var", "projection")
   check23 <- c("coefs", "loads", "crossloads", "canonical")
   check24 <- c("gyt", "stand_gyt", "si")
   check25 <- c("ACV", "ACV_R")
@@ -436,12 +440,13 @@ get_model_data <- function(x,
   check32 <- c("observed", "performance", "performance_res", "stability",
                "stability_res", "mps_ind", "h2", "perf_method", "wmper",
                "sense_mper", "stab_method", "wstab", "sense_stab")
-  if (!is.null(what) && what %in% check3 && !has_class(x, c("waasb", "waasb_group", "gamem", "gamem_group", "gafem", "anova_joint"))) {
+  if (!is.null(what) && what %in% check3 && !has_class(x, c("waasb", "waas", "waasb_group", "gamem", "gamem_group", "gafem", "anova_joint"))) {
     stop("Invalid argument 'what'. It can only be used with an oject of class 'waasb' or 'gamem', 'gafem, or 'anova_joint'. Please, check and fix.")
   }
   if (!type %in% c("GEN", "ENV")) {
     stop("Argument 'type' invalid. It must be either 'GEN' or 'ENV'.")
   }
+
   if(has_class(x, "mps")){
     if (is.null(what)){
       what <- "mps_ind"
@@ -516,6 +521,7 @@ get_model_data <- function(x,
         mutate(data = map(data, ~.x %>% .[[what]])) %>%
         unnest(data)
     } else{
+
       bind <- x[[what]]
     }
   }
@@ -559,7 +565,7 @@ get_model_data <- function(x,
     if(what == "scores"){
       npc <- length(x[[1]]$varexpl)
       bind <- lapply(x, function(x) {
-        rbind(x$ coordgen %>%
+        rbind(x$coordgen %>%
                 as.data.frame() %>%
                 set_names(paste("PC", 1:npc, sep = "")) %>%
                 add_cols(TYPE = "GEN",
@@ -571,7 +577,8 @@ get_model_data <- function(x,
                 add_cols(TYPE = "ENV",
                          CODE = x$labelenv,
                          .before = 1))
-      })
+      }) %>%
+        rbind_fill_id(.id = "TRAIT")
     }
     if(what == "exp_var"){
       bind <- lapply(x, function(x) {
@@ -579,10 +586,34 @@ get_model_data <- function(x,
                Eigenvalue = x$eigenvalues,
                Variance = x$varexpl,
                Accumulated = cumsum(Variance))
-      })
+      }) %>%
+        rbind_fill_id(.id = "TRAIT")
+    }
+    if(what == "projection"){
+      bind <- lapply(x, function(x) {
+        coord_gen <-  x$coordgen[, c(1, 2)]
+        coord_env <-  x$coordenv[, c(1, 2)]
+        med1 <- mean(coord_env[, 1])
+        med2 <- mean(coord_env[, 2])
+        labgen <- x$labelgen
+        x1 <- NULL
+        for (i in 1:nrow(x$ge_mat)) {
+          x <- solve(matrix(c(-med2, med1, med1, med2), nrow = 2),
+                     matrix(c(0, med2 * coord_gen[i, 2] + med1 * coord_gen[i, 1]), ncol = 1))
+          x1 <- rbind(x1, t(x))
+        }
+        plotdata <- data.frame(coord_gen,
+                               type = "genotype",
+                               GEN = labgen) %>%
+          mutate(x1_x = x1[, 1],
+                 x1_y = x1[, 2],
+                 PROJECTION = sqrt((x1_x - X1)^2 + (x1_y - X2)^2))
+      }) %>%
+        rbind_fill_id(.id = "TRAIT") %>%
+        select(TRAIT, GEN, PROJECTION) %>%
+        arrange(PROJECTION)
     }
   }
-
   if(has_class(x, "gytb")){
     if (is.null(what)){
       what <- "gyt"
@@ -972,12 +1003,22 @@ get_model_data <- function(x,
     if (!what %in% c(check21)) {
       stop("Invalid value in 'what' for object of class, ", class(x), ". Allowed are ", paste(check21, collapse = ", "), call. = FALSE)
     }
+    if(what == "FMAX"){
+      bind <-
+      sapply(x, function(x) {
+        x[["MSRratio"]]
+      }) %>%
+        as.data.frame() %>%
+        rownames_to_column("TRAIT") %>%
+        setNames(c("TRAIT", "F_RATIO"))
+    } else{
     bind <- sapply(x, function(x) {
       x[["individual"]][[what]]
     }) %>%
       as_tibble() %>%
       mutate(ENV = x[[1]][["individual"]][["ENV"]]) %>%
       column_to_first(ENV)
+    }
   }
   if (has_class(x, c("anova_joint", "gafem", "gafem_group"))) {
     if(has_class(x, c("gafem_group"))){
@@ -1028,6 +1069,7 @@ get_model_data <- function(x,
     }
     }
   }
+
 
   if(has_class(x,  "ge_means")){
     if (is.null(what)){
@@ -1318,8 +1360,16 @@ get_model_data <- function(x,
     if (is.null(what)){
       what <- "WAAS"
     }
-    if (!what %in% c(check1, check2)) {
+    if (!what %in% c("details", check1, check2)) {
       stop("Invalid value in 'what' for object of class '", class(x), "'. Allowed are ", paste(check1, collapse = ", "), call. = FALSE)
+    }
+    if (what == "details") {
+      bind <- sapply(x, function(x) {
+        val <- x[["Details"]][["Values"]] %>% as.character()
+      }) %>%
+        as_tibble() %>%
+        mutate(Parameters = x[[1]][["Details"]][["Parameters"]]) %>%
+        column_to_first(Parameters)
     }
     if (what %in% check1 | what  %in% check2) {
       bind <- sapply(x, function(x) {
@@ -1331,14 +1381,6 @@ get_model_data <- function(x,
         dplyr::filter(TYPE == {{type}}) %>%
         remove_cols(TYPE) %>%
         column_to_first(GEN)
-    }
-    if (what == "details") {
-      bind <- sapply(x, function(x) {
-        val <- x[["Details"]][["Values"]] %>% as.character()
-      }) %>%
-        as_tibble() %>%
-        mutate(Parameters = x[[1]][["Details"]][["Parameters"]]) %>%
-        column_to_first(Parameters)
     }
   }
 

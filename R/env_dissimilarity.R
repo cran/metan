@@ -45,8 +45,7 @@
 #'   is given by \eqn{C = \sqrt{(1-r)^3\times Q1\times Q2}}.
 #' @references
 #' Cruz, C.D., Castoldi, F. (1991). Decomposicao da interacao genotipos x
-#' ambientes em partes simples e complexa. Ceres, 38:422-430. Available at:
-#' <http://www.ceres.ufv.br/ojs/index.php/ceres/article/view/2165/>.
+#' ambientes em partes simples e complexa. Ceres, 38:422-430.
 #'
 #' Robertson, A. (1959). Experimental design on the measurement of
 #' heritabilities and genetic correlations. biometrical genetics. New York:
@@ -55,6 +54,7 @@
 #' @author Tiago Olivoto \email{tiagoolivoto@@gmail.com}
 #' @examples
 #' \donttest{
+#' library(metan)
 #' mod <- env_dissimilarity(data_ge, ENV, GEN, REP, GY)
 #' print(mod)
 #' }
@@ -63,14 +63,13 @@ env_dissimilarity <- function(.data,
                               gen,
                               rep,
                               resp){
-  factors  <- .data %>%
-    select(ENV = {{env}},
-           GEN = {{gen}},
-           REP = {{rep}}) %>%
+  factors  <-
+    .data %>%
+    select({{env}}, {{gen}}, {{rep}}) %>%
     mutate(across(everything(), as.factor))
-  vars <- .data %>%
-    select({{resp}}, -!!colnames(factors)) %>%
-    select_numeric_cols()
+  vars <- .data %>% select({{resp}}, -names(factors))
+  vars %<>% select_numeric_cols()
+  factors %<>% set_names("ENV", "GEN", "REP")
   listres <- list()
   nvar <- ncol(vars)
   for (var in 1:nvar) {
