@@ -753,9 +753,11 @@ get_model_data <- function(x,
       }
       if (what == "data") {
         bind <-
-          map(x, ~.x[["residuals"]] %>% select_cols(GEN, Y) %>% means_by(GEN)) %>%
+          map(x, ~.x[["residuals"]] %>% select_cols(1:Y)) %>%
           rbind_fill_id(.id = "VAR") %>%
-          pivot_wider(names_from = VAR, values_from = Y)
+          pivot_wider(names_from = VAR,
+                      values_from = Y,
+                      values_fn = {mean})
       }
       if (what == "gcov") {
         data <- gmd(x, "data", verbose = FALSE)
@@ -903,15 +905,15 @@ get_model_data <- function(x,
         }
         if (what == "blupge") {
           list <- lapply(x, function(x){
-            x[["residuals"]] %>% means_by(GEN) %>% select_cols(GEN, .fitted)
+            x[["residuals"]] %>% means_by(ENV, GEN) %>% select_cols(ENV, GEN, .fitted)
           })
           bind <-  suppressWarnings(
             lapply(seq_along(list),
                    function(i){
-                     set_names(list[[i]], "GEN", names(list)[i])
+                     set_names(list[[i]], "ENV", "GEN", names(list)[i])
                    }) %>%
-              reduce(full_join, by = "GEN") %>%
-              arrange(GEN)
+              reduce(full_join, by = c("ENV", "GEN")) %>%
+              arrange(ENV, GEN)
           )
         }
         if (what == "blueg") {
