@@ -16,7 +16,6 @@
 #' @param env The name of the column that contains the levels of the
 #'   environments.
 #' @param gen The name of the column that contains the levels of the genotypes.
-#' @param rep `r badge('deprecated')`
 #' @param resp The response variable(s). To analyze multiple variables in a
 #'   single procedure use, for example, `resp = c(var1, var2, var3)`.
 #' @param verbose Logical argument. If `verbose = FALSE` the code will run
@@ -39,10 +38,13 @@
 #' @examples
 #' \donttest{
 #' library(metan)
-#' out <- gai(data_ge2, ENV, GEN, REP, c(EH, PH, EL, CD, ED, NKE))
+#' out <- gai(data_ge2,
+#'            env = ENV,
+#'            gen = GEN,
+#'            resp = c(EH, PH, EL, CD, ED, NKE))
 #' }
 #'
-gai <- function(.data, env, gen, rep = "deprecated", resp, verbose = TRUE) {
+gai <- function(.data, env, gen, resp, verbose = TRUE) {
   factors  <-
     .data %>%
     select({{env}}, {{gen}}) %>%

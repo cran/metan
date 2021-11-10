@@ -46,7 +46,9 @@ arrange_ggplot(a, b, c, tag_levels = "a", ncol = 1)
 
 ## -----------------------------------------------------------------------------
 predicted <- predict(ammi_model, naxis = c(4, 6))
-make_mat(predicted$GY, GEN, ENV, YpredAMMI) %>% 
+predicted %>% 
+   subset(TRAIT == "GY") %>% 
+   make_mat(GEN, ENV, YpredAMMI) %>% 
   round_cols()
 
 ## ----warning=FALSE------------------------------------------------------------
