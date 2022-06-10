@@ -12,6 +12,7 @@ plot_scores(
   second = "PC2",
   repel = TRUE,
   repulsion = 1,
+  max_overlaps = 20,
   polygon = FALSE,
   title = TRUE,
   plot_theme = theme_metan(),
@@ -37,17 +38,20 @@ plot_scores(
   col.line = "black",
   col.gen = "blue",
   col.env = "forestgreen",
-  col.alpha.gen = NA,
-  col.alpha.env = NA,
+  col.alpha.gen = 1,
+  col.alpha.env = 1,
   col.segm.gen = transparent_color(),
   col.segm.env = "forestgreen",
   highlight = NULL,
   col.highlight = "red",
+  col.alpha.highlight = 1,
+  size.tex.highlight = 5.5,
+  size.shape.highlight = 3.2,
   leg.lab = c("Env", "Gen"),
   line.type = "solid",
   line.alpha = 0.9,
-  resolution = 300,
-  file.type = "pdf",
+  resolution = deprecated(),
+  file.type = "png",
   export = FALSE,
   file.name = NULL,
   width = 8,
@@ -85,6 +89,8 @@ other and away from the data points.}
 
 \item{repulsion}{Force of repulsion between overlapping text labels. Defaults
 to \code{1}.}
+
+\item{max_overlaps}{Exclude text labels that overlap too many things. Defaults to 20.}
 
 \item{polygon}{Logical argument. If \code{TRUE}, a polygon is drawn when
 \code{type = 2}.}
@@ -157,7 +163,16 @@ respectively. Valid arguments for plots with \code{type = 1} or \code{type = 2} 
 to \code{NULL}.}
 
 \item{col.highlight}{The color for shape/labels when a value is provided in
-\code{highlight.}}
+\code{highlight.} Defaults to \code{"red"}.}
+
+\item{col.alpha.highlight}{The alpha value for the color of the highlighted
+genotypes. Defaults to \code{1}.}
+
+\item{size.tex.highlight}{The size of the text for the highlighted genotypes.
+Defaults to \code{5.5}.}
+
+\item{size.shape.highlight}{The size of the shape for the highlighted
+genotypes. Defaults to \code{3.2}.}
 
 \item{leg.lab}{The labs of legend. Default is \code{Gen} and \code{Env}.}
 
@@ -170,14 +185,13 @@ to create the appearance of partial or full transparency. Default is
 \code{0.4}. Values must be between '0' (full transparency) to '1' (full
 color).}
 
-\item{resolution}{The resolution of the plot. Parameter valid if
-\code{file.type = 'tiff'} is used. Default is \code{300} (300 dpi)}
+\item{resolution}{deprecated}
 
-\item{file.type}{The type of file to be exported. Valid parameter if
-\code{export = T|TRUE}.  Default is \code{'pdf'}. The graphic can also be
-exported in \verb{*.tiff} format by declaring \code{file.type = 'tiff'}.}
+\item{file.type}{The type of file to be exported. Currently recognises the extensions
+eps/ps, tex, pdf, jpeg, tiff, png (default), bmp, svg and wmf (windows only).}
 
-\item{export}{Export (or not) the plot. Default is \code{FALSE}.}
+\item{export}{Export (or not) the plot. Default is \code{FALSE}. If \code{TRUE}, calls the
+\code{\link[ggplot2:ggsave]{ggplot2::ggsave()}} function.}
 
 \item{file.name}{The name of the file for exportation, default is
 \code{NULL}, i.e. the files are automatically named.}

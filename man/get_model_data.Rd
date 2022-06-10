@@ -182,6 +182,21 @@ the stability GGE plot
 \strong{Objects of class \code{mtsi}:} See the \strong{Value} section of
 \code{\link[=mtsi]{mtsi()}} to see valid options for \code{what} argument.
 
+**Objects of class \code{path_coeff}
+\itemize{
+\item \code{"coef"} Path coefficients
+\item \code{"eigenval"} Eigenvalues and eigenvectors.
+\item \code{"vif "} Variance Inflation Factor
+}
+
+**Objects of class \code{path_coeff_seq}
+\itemize{
+\item \code{"resp_fc"} Coefficients of primary predictors and response
+\item \code{"resp_sc"} Coefficients of secondary predictors and response
+\item \code{"resp_sc2"} contribution to the total effects through primary traits
+\item \code{"fc_sc_coef"} Coefficients of secondary predictors and primary predictors.
+}
+
 \strong{Objects of class \code{Shukla}:}
 \itemize{
 \item \code{"rMean"} Rank for the mean.
@@ -303,17 +318,6 @@ or its ranks.
 \donttest{
 library(metan)
 
-#################### joint-regression analysis #####################
-ge_r <- ge_reg(data_ge2,
-               env = ENV,
-               gen = GEN,
-               rep =  REP,
-               resp = c(PH, EH, CD, CL, ED))
-get_model_data(ge_r)
-# Significance of deviations from the regression
-# Use gmd(), a shortcut for get_model_data
-gmd(ge_r, "pval_f")
-
 
 #################### WAASB index #####################
 # Fitting the WAAS index
@@ -326,9 +330,6 @@ AMMI <- waasb(data_ge2,
 # Getting the weighted average of absolute scores
 gmd(AMMI, what = "WAASB")
 
-# And the rank for the WAASB index.
-gmd(AMMI, what = "OrWAASB")
-
 
 #################### BLUP model #####################
 # Fitting a mixed-effect model
@@ -337,21 +338,13 @@ blup <- gamem_met(data_ge2,
                   env = ENV,
                   gen = GEN,
                   rep = REP,
-                  resp = c(PH, ED, TKW, NKR))
+                  resp = c(PH, ED))
 
 # Getting p-values for likelihood-ratio test
 gmd(blup, what = "lrt")
 
 # Getting the variance components
 gmd(blup, what = "vcomp")
-
-# Getting the genetic parameters
-gmd(blup)
-
-### BLUP-based stability indexes ###
-blup \%>\%
-blup_indexes() \%>\%
-gmd("HMRPGV_R")
 
 }
 

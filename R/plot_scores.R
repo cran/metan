@@ -37,6 +37,7 @@
 #'   other and away from the data points.
 #' @param repulsion Force of repulsion between overlapping text labels. Defaults
 #'   to `1`.
+#' @param max_overlaps Exclude text labels that overlap too many things. Defaults to 20.
 #' @param polygon Logical argument. If `TRUE`, a polygon is drawn when
 #'   `type = 2`.
 #' @param title Logical values (Defaults to `TRUE`) to include
@@ -93,7 +94,13 @@
 #' @param highlight Genotypes/environments to be highlight in the plot. Defaults
 #'   to `NULL`.
 #' @param col.highlight The color for shape/labels when a value is provided in
-#'   `highlight.`
+#'   `highlight.` Defaults to `"red"`.
+#' @param col.alpha.highlight The alpha value for the color of the highlighted
+#'   genotypes. Defaults to `1`.
+#' @param size.tex.highlight The size of the text for the highlighted genotypes.
+#'   Defaults to `5.5`.
+#' @param size.shape.highlight The size of the shape for the highlighted
+#'   genotypes. Defaults to `3.2`.
 #' @param leg.lab The labs of legend. Default is `Gen` and `Env`.
 #' @param line.type The type of the line that indicate the means in the biplot.
 #'   Default is `'solid'`. Other values that can be attributed are:
@@ -103,14 +110,13 @@
 #'   to create the appearance of partial or full transparency. Default is
 #'   `0.4`. Values must be between '0' (full transparency) to '1' (full
 #'   color).
-#' @param resolution The resolution of the plot. Parameter valid if
-#'   `file.type = 'tiff'` is used. Default is `300` (300 dpi)
-#' @param file.type The type of file to be exported. Valid parameter if
-#'   `export = T|TRUE`.  Default is `'pdf'`. The graphic can also be
-#'   exported in `*.tiff` format by declaring `file.type = 'tiff'`.
-#' @param export Export (or not) the plot. Default is `FALSE`.
+#' @param resolution deprecated
+#' @param export Export (or not) the plot. Default is `FALSE`. If `TRUE`, calls the
+#'   [ggplot2::ggsave()] function.
 #' @param file.name The name of the file for exportation, default is
 #'   `NULL`, i.e. the files are automatically named.
+#' @param file.type The type of file to be exported. Currently recognises the extensions
+#'   eps/ps, tex, pdf, jpeg, tiff, png (default), bmp, svg and wmf (windows only).
 #' @param width The width 'inch' of the plot. Default is `8`.
 #' @param height The height 'inch' of the plot. Default is `7`.
 #' @param color Should type 4 plot have colors? Default to `TRUE`.
@@ -179,6 +185,7 @@ plot_scores <- function(x,
                         second = "PC2",
                         repel = TRUE,
                         repulsion = 1,
+                        max_overlaps = 20,
                         polygon = FALSE,
                         title = TRUE,
                         plot_theme = theme_metan(),
@@ -204,23 +211,29 @@ plot_scores <- function(x,
                         col.line = "black",
                         col.gen = "blue",
                         col.env = "forestgreen",
-                        col.alpha.gen = NA,
-                        col.alpha.env = NA,
+                        col.alpha.gen = 1,
+                        col.alpha.env = 1,
                         col.segm.gen = transparent_color(),
                         col.segm.env = "forestgreen",
                         highlight = NULL,
                         col.highlight = "red",
+                        col.alpha.highlight = 1,
+                        size.tex.highlight = 5.5,
+                        size.shape.highlight = 3.2,
                         leg.lab = c("Env", "Gen"),
                         line.type = "solid",
                         line.alpha = 0.9,
-                        resolution = 300,
-                        file.type = "pdf",
+                        resolution = deprecated(),
+                        file.type = "png",
                         export = FALSE,
                         file.name = NULL,
                         width = 8,
                         height = 7,
                         color = TRUE,
                         ...) {
+  if(is_present(resolution)){
+    warning("`resolution` is deprecated as of metan 1.17.")
+  }
   varname <- names(x)[var]
   x <- x[[var]]
   df <-
@@ -231,17 +244,25 @@ plot_scores <- function(x,
     not_in_code <- highlight[which(!highlight %in% df$Code)]
     stop(paste(not_in_code, collapse = ", "), " not present in the labels. Please, check and fix it.", call. = FALSE)
   }
-  if (test){
-    df %<>%
-      mutate(type2 = ifelse(Code %in% highlight, "Selected", type),
-             Color = case_when(type2 == "Selected" ~ col.highlight,
-                               type2 == "GEN" ~ col.gen,
-                               type2 == "ENV" ~ col.env))
-  }
+  df %<>%
+    mutate(type2 = ifelse(Code %in% highlight, "Selected", type),
+           Color = case_when(type2 == "Selected" ~ col.highlight,
+                             type2 == "GEN" ~ col.gen,
+                             type2 == "ENV" ~ col.env),
+           size.text = case_when(type2 == "Selected" ~ size.tex.highlight,
+                                 type2 == "GEN" ~ size.tex.gen,
+                                 type2 == "ENV" ~ size.tex.env),
+           size.shape = case_when(type2 == "Selected" ~ size.shape.highlight,
+                                  type2 == "GEN" ~ size.shape.gen,
+                                  type2 == "ENV" ~ size.shape.env),
+           alpha.col = case_when(type2 == "Selected" ~ col.alpha.highlight,
+                                 type2 == "GEN" ~ col.alpha.gen,
+                                 type2 == "ENV" ~ col.alpha.env),
+           alpha.col.line = ifelse(type2 == "ENV", col.alpha.env, 0))
   if (polygon == TRUE & type != 2) {
     stop("The polygon can be drawn with type 2 graphic only.", call. = FALSE)
   }
-  if (class(x) == "performs_ammi" & type == 3) {
+  if (inherits(x, "performs_ammi") & type == 3) {
     stop("Biplot type invalid. Type 3 biplot can only be made with objects of class 'waas' or 'waasb'.", call. = FALSE)
   }
   size.tex.leg <- max(size.tex.env, size.tex.gen)/0.2917
@@ -249,9 +270,6 @@ plot_scores <- function(x,
   nenv <- nrow(subset(df, type == "ENV"))
   ngen <- nrow(subset(df, type == "GEN"))
   color.bor <- c(rep(col.bor.gen, ngen), rep(col.bor.env, nenv))
-  alpha.col <- c(rep(col.alpha.gen, ngen), rep(col.alpha.env, nenv))
-  size.shape <- c(rep(size.shape.gen, ngen), rep(size.shape.env, nenv))
-  size.text <- c(rep(size.tex.gen, ngen), rep(size.tex.env, nenv))
 
   if (type == 1) {
     df <- df
@@ -269,7 +287,7 @@ plot_scores <- function(x,
       }
     }
     x.lab = ifelse(is.null(x.lab) == F, x.lab, paste0(varname))
-    if (is.null(x.lim) == FALSE) {
+    if (!is.null(x.lim)) {
       x.lim <- x.lim
     } else {
       x.lim <- c(min(df$Y) - (min(df$Y) * axis.expand - min(df$Y)),
@@ -282,6 +300,7 @@ plot_scores <- function(x,
       y.lim <- c(min(df$PC1 * axis.expand), max(df$PC1 * axis.expand))
     }
     mean <- mean(df$Y)
+
     p1 <- ggplot2::ggplot(df, aes(Y, PC1)) +
       geom_vline(xintercept = mean(df$Y),
                  linetype = line.type,
@@ -301,24 +320,25 @@ plot_scores <- function(x,
                        yend = PC1,
                        size = type,
                        color = type,
-                       group = type)) +
+                       group = type),
+                   alpha = df$alpha.col.line) +
       {if(!test)geom_point(aes(shape = type, fill = type),
-                           size = size.shape,
+                           alpha = df$alpha.col,
+                           size = df$size.shape,
                            stroke = size.bor.tick,
-                           color = color.bor,
-                           alpha = alpha.col)} +
+                           color = color.bor)} +
       {if(test)geom_point(aes(shape = type),
-                          alpha = alpha.col,
-                          size = size.shape,
+                          alpha = df$alpha.col,
+                          size = df$size.shape,
                           fill = df$Color,
                           stroke = size.bor.tick,
-                          color = color.bor)} +
+                          color = color.bor)}+
       plot_theme %+replace%
       theme(aspect.ratio = 1,
             axis.text = element_text(size = size.tex.lab, colour = "black"),
             axis.title = element_text(size = size.tex.lab, colour = "black"),
             legend.text = element_text(size = size.tex.leg)) +
-      labs(x = paste(x.lab), y = paste(y.lab)) +
+      labs(x = x.lab, y = y.lab) +
       scale_x_continuous(limits = x.lim, breaks = x.breaks) +
       scale_y_continuous(limits = y.lim, breaks = y.breaks) +
       scale_color_manual(name = "", values = c(col.segm.env, col.segm.gen), theme(legend.position = "none")) +
@@ -329,38 +349,26 @@ plot_scores <- function(x,
       {if(repel)geom_text_repel(aes(Y, PC1, label = Code),
                                 color = df$Color,
                                 force = repulsion,
-                                size =  size.text ,
-                                alpha = alpha.col)} +
+                                size =  df$size.text,
+                                alpha = df$alpha.col,
+                                max.overlaps = max_overlaps)} +
       {if(!repel)geom_text(aes(Y, PC1, label = Code),
-                           alpha = alpha.col,
+                           alpha = df$alpha.col,
                            color = df$Color,
-                           size = size.text,
+                           size = df$size.text,
                            hjust = "outward",
                            vjust = "outward")} +
       {if(title)ggtitle("AMMI1 Biplot")}
     if (export == FALSE) {
       return(p1)
-    } else if (file.type == "pdf") {
-      if (is.null(file.name)) {
-        pdf("GY x PC1.pdf", width = width, height = height)
-      } else pdf(paste0(file.name, ".pdf"), width = width,
-                 height = height)
-      plot(p1)
-      dev.off()
-    }
-    if (file.type == "tiff") {
-      if (is.null(file.name)) {
-        tiff(filename = "GY x PC1.tiff", width = width,
-             height = height, units = "in", compression = "lzw",
-             res = resolution)
-      } else tiff(filename = paste0(file.name, ".tiff"),
-                  width = width, height = height, units = "in",
-                  compression = "lzw", res = resolution)
-      plot(p1)
-      dev.off()
+    } else{
+      if(is.null(file.name)) {
+        ggsave("GY x PC1.png", p1, width = width, height = height)
+      } else{
+        ggsave(paste0(file.name, ".", file.type), p1, width = width, height = height)
+      }
     }
   }
-
 
   if (type == 2) {
     first <- tidy_strings(first, sep = "")
@@ -398,22 +406,14 @@ plot_scores <- function(x,
       y.lab <- paste0(second, " (", round(x$proportion[as.numeric(substr(second, 3, nchar(second)))], 2), "%)")
       x.lab <- paste0(first, " (", round(x$proportion[as.numeric(substr(first, 3, nchar(first)))], 2), "%)")
     }
-    df <- df %>%
-      select_cols(type, Code, all_of(first), all_of(second)) %>%
-      mutate(Color = ifelse(type == "ENV", col.env, col.gen))
-    if (test){
-      df %<>%
-        mutate(type2 = ifelse(Code %in% highlight, "Selected", type),
-               Color = case_when(type2 == "Selected" ~ col.highlight,
-                                 type2 == "GEN" ~ col.gen,
-                                 type2 == "ENV" ~ col.env))
-    }
-    if (is.null(x.lim) == FALSE) {
+    df <- df %>% select_cols(type, Code, all_of(first), all_of(second), Color, size.text,
+                             size.shape, alpha.col, alpha.col.line)
+    if (!is.null(x.lim)) {
       x.lim <- x.lim
     } else {
       x.lim <- c(min(df[[first]] * axis.expand), max(df[[first]] * axis.expand))
     }
-    if (is.null(y.lim) == FALSE) {
+    if (!is.null(y.lim)) {
       y.lim <- y.lim
     } else {
       y.lim <- c(min(df[[second]] * axis.expand), max(df[[second]] * axis.expand))
@@ -437,25 +437,25 @@ plot_scores <- function(x,
                        yend = !!sym(second),
                        size = type,
                        color = type,
-                       group = type)) +
+                       group = type),
+                   alpha = df$alpha.col.line) +
       {if(!test)geom_point(aes(shape = type, fill = type),
-                           size = size.shape,
+                           alpha = df$alpha.col,
+                           size = df$size.shape,
                            stroke = size.bor.tick,
-                           color = color.bor,
-                           alpha = alpha.col)} +
+                           color = color.bor)} +
       {if(test)geom_point(aes(shape = type),
+                          alpha = df$alpha.col,
+                          size = df$size.shape,
                           fill = df$Color,
-                          size = size.shape,
                           stroke = size.bor.tick,
-                          color = color.bor,
-                          alpha = alpha.col)} +
-
+                          color = color.bor)}+
       plot_theme %+replace%
       theme(aspect.ratio = 1,
             axis.text = element_text(size = size.tex.lab, colour = "black"),
             axis.title = element_text(size = size.tex.lab, colour = "black"),
             legend.text = element_text(size = size.tex.leg)) +
-      labs(x = paste(x.lab), y = paste(y.lab)) +
+      labs(x = x.lab, y = y.lab) +
       scale_x_continuous(limits = x.lim, breaks = x.breaks) +
       scale_y_continuous(limits = y.lim, breaks = y.breaks) +
       scale_color_manual(name = "", values = c(col.segm.env, col.segm.gen), theme(legend.position = "none")) +
@@ -466,12 +466,13 @@ plot_scores <- function(x,
       {if(repel)geom_text_repel(aes(!!sym(first), !!sym(second), label = Code),
                                 force = repulsion,
                                 color = df$Color,
-                                size =  size.text,
-                                alpha = alpha.col)} +
+                                size = df$size.text,
+                                alpha = df$alpha.col,
+                                max.overlaps = max_overlaps)} +
       {if(!repel)geom_text(aes(!!sym(first), !!sym(second), label = Code),
                            color = df$Color,
-                           size =  size.text,
-                           alpha = alpha.col,
+                           size =  df$size.text,
+                           alpha = df$alpha.col,
                            hjust = "outward",
                            vjust = "outward")} +
       {if(title)ggtitle("AMMI2 Biplot")}
@@ -513,15 +514,18 @@ plot_scores <- function(x,
       rownames(segs) <- NULL
       colnames(segs) <- NULL
       segs <- data.frame(segs)
-      p2 <- p2 + geom_segment(aes(x = X1, y = X2),
-                              xend = 0,
-                              yend = 0,
-                              linetype = 2,
-                              size = size.segm.line,
-                              color = col.gen,
-                              data = segs,
-                              show.legend = FALSE,
-                              inherit.aes = FALSE) +
+      p2 <-
+        p2 +
+        geom_segment(aes(x = X1, y = X2),
+                     xend = 0,
+                     yend = 0,
+                     linetype = 2,
+                     size = size.segm.line,
+                     color = col.gen,
+                     data = segs,
+                     show.legend = FALSE,
+                     inherit.aes = FALSE,
+                     alpha = line.alpha) +
         geom_polygon(data = gen[indice, ],
                      fill = NA,
                      col = col.gen,
@@ -529,24 +533,12 @@ plot_scores <- function(x,
     }
     if (export == FALSE) {
       return(p2)
-    } else if (file.type == "pdf") {
-      if (is.null(file.name)) {
-        pdf("PC1 x PC2.pdf", width = width, height = height)
-      } else pdf(paste0(file.name, ".pdf"), width = width,
-                 height = height)
-      plot(p2)
-      dev.off()
-    }
-    if (file.type == "tiff") {
-      if (is.null(file.name)) {
-        tiff(filename = "PC1 x PC2.tiff", width = width,
-             height = height, units = "in", compression = "lzw",
-             res = resolution)
-      } else tiff(filename = paste0(file.name, ".tiff"),
-                  width = width, height = height, units = "in",
-                  compression = "lzw", res = resolution)
-      plot(p2)
-      dev.off()
+    } else{
+      if(is.null(file.name)) {
+        ggsave("PC1 x PC2.png", p2, width = width, height = height)
+      } else{
+        ggsave(paste0(file.name, ".", file.type), p2, width = width, height = height)
+      }
     }
   }
 
@@ -555,13 +547,13 @@ plot_scores <- function(x,
     y.lab = ifelse(!is.null(y.lab), y.lab, paste0("Weighted average of the absolute scores"))
     x.lab = ifelse(!is.null(x.lab), x.lab, paste0(varname))
     if (class == "waasb") {
-      if (is.null(x.lim) == FALSE) {
+      if (!is.null(x.lim)) {
         x.lim <- x.lim
       } else {
         x.lim <- c(min(df$Y) - (min(df$Y) * axis.expand - min(df$Y)),
                    max(df$Y) + (max(df$Y) * axis.expand - max(df$Y)))
       }
-      if (is.null(y.lim) == FALSE) {
+      if (!is.null(y.lim)) {
         y.lim <- y.lim
       } else {
         y.lim <- c(min(df$WAASB) - (min(df$WAASB) * axis.expand - min(df$WAASB)),
@@ -582,32 +574,34 @@ plot_scores <- function(x,
                    size = size.line,
                    alpha = line.alpha)+
         {if(!test)geom_point(aes(shape = type, fill = type),
-                             size = size.shape,
+                             alpha = df$alpha.col,
+                             size = df$size.shape,
                              stroke = size.bor.tick,
-                             color = color.bor,
-                             alpha = alpha.col)} +
+                             color = color.bor)} +
         {if(test)geom_point(aes(shape = type),
+                            alpha = df$alpha.col,
+                            size = df$size.shape,
                             fill = df$Color,
-                            size = size.shape,
                             stroke = size.bor.tick,
-                            color = color.bor,
-                            alpha = alpha.col)} +
+                            color = color.bor)}+
+
         {if(repel)geom_text_repel(aes(Y, WAASB, label = (Code)),
                                   color = df$Color,
                                   force = repulsion,
-                                  size =  size.text,
-                                  alpha = alpha.col)} +
+                                  size =  df$size.text,
+                                  alpha = df$alpha.col,
+                                  max.overlaps = max_overlaps)} +
         {if(!repel)geom_text(aes(Y, WAASB, label = (Code)),
                              color = df$Color,
-                             size =  size.text,
-                             alpha = alpha.col,
+                             size =  df$size.text,
+                             alpha = df$alpha.col,
                              hjust = "outward",
                              vjust = "outward")} +
         {if(!test)scale_fill_manual(labels = leg.lab, values = c(col.env, col.gen))} +
         {if(test)scale_fill_identity()}
     }
     if (class %in% c("waas", "waas_means")) {
-      if (is.null(x.lim) == FALSE) {
+      if (!is.null(x.lim)) {
         x.lim <- x.lim
       } else {
         x.lim <- c(min(df$Y) - (min(df$Y) * axis.expand - min(df$Y)),
@@ -634,25 +628,26 @@ plot_scores <- function(x,
                    size = size.line,
                    alpha = line.alpha)+
         {if(!test)geom_point(aes(shape = type, fill = type),
+                             alpha = df$alpha.col,
+                             size = df$size.shape,
                              stroke = size.bor.tick,
-                             size =  size.text,
-                             color = color.bor,
-                             alpha = c(rep(col.alpha.gen, ngen), rep(col.alpha.env, nenv)))} +
+                             color = color.bor)} +
         {if(test)geom_point(aes(shape = type),
+                            alpha = df$alpha.col,
+                            size = df$size.shape,
                             fill = df$Color,
                             stroke = size.bor.tick,
-                            size =  size.text,
-                            color = color.bor,
-                            alpha = alpha.col)} +
+                            color = color.bor)}+
         {if(repel)geom_text_repel(aes(Y, WAAS, label = (Code)),
                                   force = repulsion,
                                   color = df$Color,
-                                  size =  size.text,
-                                  alpha = alpha.col)} +
+                                  size =  df$size.text,
+                                  alpha = df$alpha.col,
+                                  max.overlaps = max_overlaps)} +
         {if(!repel)geom_text(aes(Y, WAAS, label = Code),
                              color = df$Color,
-                             size =  size.text,
-                             alpha = alpha.col,
+                             size =  df$size.text,
+                             alpha = df$alpha.col,
                              hjust = "outward",
                              vjust = "outward")} +
         {if(!test)scale_fill_manual(labels = leg.lab, values = c(col.env, col.gen))} +
@@ -667,7 +662,7 @@ plot_scores <- function(x,
             axis.text = element_text(size = size.tex.lab, colour = "black"),
             axis.title = element_text(size = size.tex.lab, colour = "black"),
             legend.text = element_text(size = size.tex.leg)) +
-      labs(x = paste(x.lab), y = paste(y.lab)) +
+      labs(x = x.lab, y = y.lab) +
       scale_x_continuous(limits = x.lim, breaks = x.breaks) +
       scale_y_continuous(limits = y.lim, breaks = y.breaks) +
       annotate("text",
@@ -699,24 +694,12 @@ plot_scores <- function(x,
     }
     if (export == FALSE) {
       return(p3)
-    } else if (file.type == "pdf") {
-      if (is.null(file.name)) {
-        pdf("GY x WAASB.pdf", width = width, height = height)
-      } else pdf(paste0(file.name, ".pdf"), width = width,
-                 height = height)
-      plot(p3)
-      dev.off()
-    }
-    if (file.type == "tiff") {
-      if (is.null(file.name)) {
-        tiff(filename = "GY x WAAS.tiff", width = width,
-             height = height, units = "in", compression = "lzw",
-             res = resolution)
-      } else tiff(filename = paste0(file.name, ".tiff"),
-                  width = width, height = height, units = "in",
-                  compression = "lzw", res = resolution)
-      plot(p3)
-      dev.off()
+    } else{
+      if(is.null(file.name)) {
+        ggsave("GY x WAASB.png", p3, width = width, height = height)
+      } else{
+        ggsave(paste0(file.name, ".", file.type), p3, width = width, height = height)
+      }
     }
   }
 
@@ -746,7 +729,7 @@ plot_scores <- function(x,
     y.lab = ifelse(is.null(y.lab) == F, y.lab, paste0("Nominal Yield (Mg/ha)"))
     x.lab = ifelse(is.null(x.lab) == F, x.lab, paste0("Environment PC1 [square root of  (Mg/ha)]"))
 
-    if (is.null(x.lim) == FALSE) {
+    if (!is.null(x.lim)) {
       x.lim <- x.lim
     } else {
       x.lim <- c(min(data$envPC1), max(data$envPC1))
@@ -772,7 +755,8 @@ plot_scores <- function(x,
                                 aes(x = envPC1, y = minim, label = ENV),
                                 size = size.tex.env,
                                 force = repulsion,
-                                alpha = rep(col.alpha.env, nenv))} +
+                                alpha = rep(col.alpha.env, nenv),
+                                max.overlaps = max_overlaps)} +
       {if(!repel)geom_label(data = subset(data, envPC1 == min(envPC1)),
                             aes(label = GEN, color = GEN),
                             size = size.tex.gen,
@@ -795,35 +779,19 @@ plot_scores <- function(x,
       scale_x_continuous(limits = x.lim, breaks = x.breaks) +
       scale_y_continuous(limits = y.lim, breaks = y.breaks,
                          expand = expansion(mult = c(0.003, 0.1))) +
-      labs(x = paste(x.lab), y = y.lab)
+      labs(x = x.lab, y = y.lab)
     if(title == TRUE){
       p4 <- p4 + ggtitle("Nominal yield plot")
     }
     if (export == FALSE) {
       return(p4)
-    } else if (file.type == "pdf") {
-      if (is.null(file.name)) {
-        pdf("Adaptative reponses (AMMI1 model).pdf",
-            width = width, height = height)
-      } else pdf(paste0(file.name, ".pdf"), width = width,
-                 height = height)
-      plot(p4)
-      dev.off()
-
-    }
-    if (file.type == "tiff") {
-      if (is.null(file.name)) {
-        tiff(filename = "Adaptative reponses (AMMI1 model).tiff",
-             width = width, height = height, units = "in",
-             compression = "lzw", res = resolution)
-      } else tiff(filename = paste0(file.name, ".tiff"),
-                  width = width, height = height, units = "in",
-                  compression = "lzw", res = resolution)
-      plot(p4)
-      dev.off()
+    } else{
+      if(is.null(file.name)) {
+        ggsave("Adaptative reponses (AMMI1 model).png", p4, width = width, height = height)
+      } else{
+        ggsave(paste0(file.name, ".", file.type), p4, width = width, height = height)
+      }
     }
   }
-
 }
-
 

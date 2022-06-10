@@ -22,7 +22,7 @@
 #' \mjsdeqn{ASTAB = \sum_{n=1}^{N'}\lambda_{n}\gamma_{in}^{2}}
 #'
 #' * AMMI Stability Index (ASI) (Jambhulkar et al. 2017)
-#' \mjsdeqn{ASI = \sqrt{\left \[ PC_{1}^{2} \times \theta_{1}^{2} \right \]+\left\[ PC_{2}^{2} \times \theta_{2}^{2} \right \]}}
+#' \mjsdeqn{ASI = \sqrt{\left [ PC_{1}^{2} \times \theta_{1}^{2} \right ]+\left[ PC_{2}^{2} \times \theta_{2}^{2} \right ]}}
 #'
 #'
 #' * AMMI-stability value (ASV) (Purchase et al., 2000).
@@ -72,7 +72,6 @@
 #' names. For example, `order.y = c("h, h, l, h, l")`.
 #' @param level The confidence level. Defaults to 0.95.
 #' @return
-#'
 #' A list where each element contains the result AMMI-based stability indexes
 #' for one variable.
 #' @author Tiago Olivoto \email{tiagoolivoto@@gmail.com}
@@ -390,9 +389,6 @@ AMMI_indexes <- function(.data, order.y = NULL, level = 0.95) {
 #' print(model)
 #' }
 print.ammi_indexes <- function(x, which = "stats", export = FALSE, file.name = NULL, digits = 3, ...) {
-    if (!class(x) == "ammi_indexes") {
-        stop("The object must be of class 'ammi_indexes'")
-    }
     opar <- options(pillar.sigfig = digits)
     on.exit(options(opar))
     if (export == TRUE) {

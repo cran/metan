@@ -60,7 +60,7 @@
 #' @author Tiago Olivoto \email{tiagoolivoto@@gmail.com}
 #' @references
 #'   Annicchiarico, P. 1992. Cultivar adaptation and recommendation from alfalfa
-#'   trials in Northern Italy. Journal of Genetic \& Breeding, 46:269-278
+#'   trials in Northern Italy. Journal of Genetic & Breeding, 46:269-278
 #'
 #' Ajay BC, Aravind J, Abdul Fiyaz R, Bera SK, Kumar N, Gangadhar K, Kona P
 #' (2018). “Modified AMMI Stability Index (MASI) for stability analysis.”
@@ -338,9 +338,6 @@ print.ge_stats <- function(x,
                            file.name = NULL,
                            digits = 3,
                            ...) {
-  if (!class(x) == "ge_stats") {
-    stop("The object must be of class 'ge_stats'")
-  }
   if (export == TRUE) {
     file.name <- ifelse(is.null(file.name) == TRUE, "ge_stats print", file.name)
     sink(paste0(file.name, ".txt"))

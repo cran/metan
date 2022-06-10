@@ -192,15 +192,18 @@ extract_string <- function(.data,
 #' @name utils_num_str
 #' @export
 find_text_in_num <- function(.data, ...){
+  help_text <- function(x){
+    which(is.na(suppressWarnings(as.numeric(x))))
+  }
   if(!missing(...)){
     .data <- select_cols(.data, ...)
-    if(ncol(.data)>1){
-      stop("Only one variable is accepted.", call. = FALSE)
-    }
-    .data %<>% pull()
+    apply(.data, 2, help_text)
+
+  } else{
+    paste0("Line(s): ", paste0(help_text(.data), collapse = ","))
   }
-  which(is.na(suppressWarnings(as.numeric(.data))))
 }
+
 #' @name utils_num_str
 #' @export
 has_text_in_num <- function(.data){
@@ -641,14 +644,14 @@ column_to_rownames <- function(.data, var = "rowname"){
 }
 #' @name utils_rows_cols
 #' @export
-rownames_to_column <- function(.data, var = "rowname"){
-  df <- .data
-  if(var %in% colnames(df)){
-    stop("Variable '", var, "' already in data.", call. = FALSE)
+rownames_to_column <-  function(.data, var = "rowname"){
+  col_names <- colnames(.data)
+  if (var %in% col_names) {
+    stop("Column `", var, "` already exists in `.data`.")
   }
-  df %>%
-    mutate(`:=`(!!var, rownames(df)), .before = 1) %>%
-    remove_rownames()
+  .data[, var] <- rownames(.data)
+  rownames(.data) <- NULL
+  .data[, c(var, setdiff(col_names, var))]
 }
 #' @name utils_rows_cols
 #' @export
@@ -827,15 +830,19 @@ tidy_colnames <- function(.data, sep = "_"){
 #'    - `min_by()` For compuing minimum values.
 #'    - `n_by()` For getting the length.
 #'    - `sd_by()` For computing sample standard deviation.
+#'    - `var_by()` For computing sample variance.
 #'    - `sem_by()` For computing standard error of the mean.
 #'
 #' * **Useful functions for descriptive statistics. All of them work
 #' naturally with `\%>\%`, handle grouped data and multiple variables (all
 #' numeric variables from `.data` by default).**
 #'    - `av_dev()` computes the average absolute deviation.
-#'    - `ci_mean()` computes the confidence interval for the mean.
+#'    - `ci_mean_t()` computes the t-interval for the mean.
+#'    - `ci_mean_z()` computes the z-interval for the mean.
 #'    - `cv()` computes the coefficient of variation.
-#'    - `freq_table()` Computes frequency fable. Handles grouped data.
+#'    - `freq_table()` Computes a frequency table for either numeric and
+#'    categorical/discrete data. For numeric data, it is possible to define the
+#'    number of classes to be generated.
 #'    - `hmean(), gmean()` computes the harmonic and geometric means,
 #' respectively. The harmonic mean is the reciprocal of the arithmetic mean of
 #' the reciprocals. The geometric mean is the *n*th root of *n*
@@ -851,6 +858,7 @@ tidy_colnames <- function(.data, sep = "_"){
 #' deviation, respectively.
 #'    - `sem()` computes the standard error of the mean.
 #'    - `skew()` computes the skewness like used in SAS and SPSS.
+#'    - `ave_dev()` computes the average of the absolute deviations.
 #'    - `sum_dev()` computes the sum of the absolute deviations.
 #'    - `sum_sq()` computes the sum of the squared values.
 #'    - `sum_sq_dev()` computes the sum of the squared deviations.
@@ -858,6 +866,26 @@ tidy_colnames <- function(.data, sep = "_"){
 #'
 #' [desc_stat()] is wrapper function around the above ones and can be
 #' used to compute quickly all these statistics at once.
+#'
+#' @details  The function `freq_table()` computes a frequency table for either
+#'   numerical or categorical variables. If a variable is categorical or
+#'   discrete (integer values), the number of classes will be the number of
+#'   levels that the variable contains.
+#'
+#'If a variable (say, data) is continuous, the number of classes (k) is given by
+#'the square root of the number of samples (n) if `n =< 100` or `5 * log10(n)`
+#'if `n > 100`.
+#'
+#'The amplitude (\mjseqn{A}) of the data is used to define the size of the class (\mjseqn{c}),
+#'given by
+#'
+#' \loadmathjax
+#' \mjsdeqn{c = \frac{A}{n - 1}}
+#'
+#' The lower limit of the first class (LL1) is given by min(data) - c / 2. The
+#' upper limit is given by LL1 + c. The limits of the other classes are given in
+#' the same way. After the creation of the classes, the absolute and relative
+#' frequencies within each class are computed.
 #'
 #' @param .data A data frame or a numeric vector.
 #' @param ... The argument depends on the function used.
@@ -870,16 +898,36 @@ tidy_colnames <- function(.data, sep = "_"){
 #'  variable names to compute the statistics. If no variables are informed in n
 #'  `...`, the statistic will be computed for all numeric variables in
 #'  `.data`.
+#' @param .vars Used to select variables in the `*_by()` functions. One or more
+#'   unquoted expressions separated by commas. Variable names can be used as if
+#'   they were positions in the data frame, so expressions like `x:y` can be
+#'   used to select a range of variables. Defaults to `everything()`.
 #' @param na.rm If `FALSE`, the default, missing values are removed with a
 #'   warning. If `TRUE`, missing values are silently removed.
+#' @param var The variable to compute the frequency table. See `Details` for
+#'   more details.
+#' @param k The number of classes to be created. See `Details` for
+#'   more details.
+#' @param digits The number of significant figures to show. Defaults to 2.
+#' @param table A frequency table computed with [freq_table()].
+#' @param xlab,ylab The `x` and `y` labels.
+#' @param fill,color The color to fill the bars and color the border of the bar,
+#'   respectively.
+#' @param ygrid Shows a grid line on the `y` axis? Defaults to `TRUE`.
+#' freq_hist <- function(table,
 #' @param level The confidence level for the confidence interval of the mean.
 #'   Defaults to 0.95.
 #' @return
-#'  * Functions `*_by()` returns a tbl_df with the computed statistics by
+#'  * Functions `*_by()` returns a `tbl_df` with the computed statistics by
 #'  each level of the factor(s) declared in `...`.
-#'  * All other functions return a nammed integer if the input is a data frame
+#'  * All other functions return a named integer if the input is a data frame
 #'  or a numeric value if the input is a numeric vector.
+#'  * `freq_table()` Returns a list with the frequency table and the breaks used
+#'  for class definition. These breaks can be used to construct an histogram of
+#'  the variable.
 #' @md
+#' @references Ferreira, Daniel Furtado. 2009. Estatistica Basica. 2 ed. Vicosa,
+#'   MG: UFLA.
 #' @author Tiago Olivoto \email{tiagoolivoto@@gmail.com}
 #' @examples
 #' \donttest{
@@ -901,7 +949,7 @@ tidy_colnames <- function(.data, sep = "_"){
 #' # Grouped by levels of ENV
 #' data_ge2 %>%
 #'   group_by(ENV) %>%
-#'   ci_mean()
+#'   ci_mean_t()
 #'
 #' # standard error of the mean
 #' # Variable PH and EH
@@ -939,7 +987,7 @@ av_dev <- function(.data, ..., na.rm = FALSE) {
 }
 #' @name utils_stats
 #' @export
-ci_mean <- function(.data, ..., na.rm = FALSE, level = 0.95) {
+ci_mean_t <- function(.data, ..., na.rm = FALSE, level = 0.95) {
   funct <- function(df){
     if(na.rm == FALSE & has_na(df)){
       warning("NA values removed to compute the function. Use 'na.rm = TRUE' to suppress this warning.", call. = FALSE)
@@ -947,6 +995,32 @@ ci_mean <- function(.data, ..., na.rm = FALSE, level = 0.95) {
       na.rm <- TRUE
     }
     qt((0.5 + level/2), (length(which(!is.na(df))) - 1)) * sd(df, na.rm = na.rm)/sqrt(length(which(!is.na(df))))
+  }
+  if(is.null(nrow(.data))){
+    funct(.data)
+  } else{
+    if(missing(...)){
+      .data %>%
+        summarise(across(where(is.numeric), funct)) %>%
+        ungroup()
+    } else{
+      .data %>%
+        select_cols(group_vars(.), ...) %>%
+        summarise(across(where(is.numeric), funct)) %>%
+        ungroup()
+    }
+  }
+}
+#' @name utils_stats
+#' @export
+ci_mean_z <- function(.data, ..., na.rm = FALSE, level = 0.95) {
+  funct <- function(df){
+    if(na.rm == FALSE & has_na(df)){
+      warning("NA values removed to compute the function. Use 'na.rm = TRUE' to suppress this warning.", call. = FALSE)
+      message("To remove rows with NA use `remove_rows_na()'. \nTo remove columns with NA use `remove_cols_na()'.")
+      na.rm <- TRUE
+    }
+    qnorm((0.5 + level/2)) * sd(df, na.rm = na.rm)/sqrt(length(which(!is.na(df))))
   }
   if(is.null(nrow(.data))){
     funct(.data)
@@ -991,14 +1065,212 @@ cv <- function(.data, ..., na.rm = FALSE) {
 }
 #' @name utils_stats
 #' @export
-freq_table <- function(.data, ...){
+freq_table <- function(.data, var, k = NULL, digits = 3){
   if(is_grouped_df(.data)){
-    dplyr::do(.data, freq_table(., ...))
+    res <-
+      metan::doo(.data,
+                 ~freq_table(., {{var}}, k = k, digits = digits))
+    freqs <-
+      res %>%
+      mutate(freqs = map(data, ~.x %>% .[["freqs"]])) %>%
+      unnest(freqs) %>%
+      remove_cols(data)
+    breaks <-
+      res %>%
+      mutate(freqs = map(data, ~.x %>% .[["breaks"]])) %>%
+      remove_cols(data)
+    list_breaks <- breaks$freqs
+    names(list_breaks) <- breaks$cor_grao
+    return(list(freqs = freqs,
+                breaks = breaks))
+
+  } else{
+    # function to create a frequence table with continuous variable
+    # adapted from https://bendeivide.github.io/book-epaec/book-epaec.pdf
+    freq_quant <- function(data, k = NULL, digits = digits){
+      # the number of observations
+      n <- length(data)
+
+      # check the number of classes
+      if(is.null(k)){
+        if (n > 100) {
+          k <- round(5 * log10(n), 0)
+        } else{
+          k <- round(sqrt(n), 0)
+        }
+      } else{
+        k <- k
+      }
+      # data range
+      rang <- range(data)
+      # amplitude
+      A <- diff(rang)
+      # the size of the class
+      c <- round(A / (k - 1), digits = digits)
+
+      # lower and upper limit of the first class
+      LI1 <- min(rang) - c / 2
+      vi <- c(LI1,     rep(0, k - 1))
+      vs <- c(LI1 + c, rep(0, k - 1))
+
+      # build the other classes
+      for (i in 2:k) {
+        vi[i] <- vi[i - 1] + c
+        vs[i] <- vs[i - 1] + c
+      }
+      vi <- round(vi, digits = digits)
+      vs <- round(vs, digits = digits)
+      # Find the frequency of each class
+      freq <- function(x, vi, vs, k) {
+        freq <- rep(0, k)
+        for (i in 1:(k - 1)) {
+          freq[i] <- length(x[x >= vi[i] & x < vs[i]])
+        }
+        freq[k] <- length(x[x >= vi[k] & x <= vs[k]])
+        return(freq)
+      }
+
+      # absolute frequency
+      fi <- freq(data, vi, vs, k)
+      # check if any class is empty
+      if(any(fi == 0)){
+        warning("An empty class is not advised. Try to reduce the number of classes with the `k` argument", call. = FALSE)
+      }
+      # building the classes
+      classe <- paste(vi, "|--- ", vs)
+      classe[k] <- paste(vi[k], "|---|", vs[k])
+      freqs <-
+        data.frame(class = classe,
+                   abs_freq = fi) %>%
+        mutate(abs_freq_ac = cumsum(abs_freq),
+               rel_freq = abs_freq / sum(abs_freq),
+               rel_freq_ac = cumsum(rel_freq))
+      freqs[nrow(freqs) + 1, ] <- c("Total", sum(freqs[, 2]), sum(freqs[, 2]), 1, 1)
+      freqs <-
+        freqs %>%
+        as_numeric(2:5) %>%
+        round_cols(digits = digits)
+
+      breaks <- sort(c(vi, vs))
+      return(
+        structure(
+          list(freqs = freqs,
+               LL = vi,
+               UL = vs,
+               vartype = "continuous"),
+          class = "freq_table"
+        )
+      )
+    }
+
+    #check the class of the variable
+    class_data <- .data %>% pull({{var}}) %>% class()
+    # if variable is discrete or categorical
+    if(class_data %in% c("character", "factor", "integer")){
+      df <-
+        .data %>%
+        count({{var}}) %>%
+        as_character(1) %>%
+        mutate(abs_freq = n,
+               abs_freq_ac = cumsum(abs_freq),
+               rel_freq = abs_freq / sum(abs_freq),
+               rel_freq_ac = cumsum(rel_freq)) %>%
+        remove_cols(n) %>%
+        as.data.frame() %>%
+        round_cols(digits = digits)
+      df[nrow(df) + 1, ] <- c("Total", sum(df[, 2]), sum(df[, 2]), 1, 1)
+      df <- df %>% as_numeric(2:5)
+      return(
+        structure(
+          list(freqs = df,
+               vartype = "categorical"),
+          class = "freq_table"
+        )
+      )
+    }
+    # if variable is numeric
+    if(class_data == "numeric"){
+      data <- .data %>% pull({{var}})
+      # apply the function freq_quant in the numeric vector
+      freq_quant(data, k = k, digits = digits)
+    }
   }
-  .data %>%
-    count(...) %>%
-    mutate(rel_freq = n / sum(n),
-           cum_freq = cumsum(rel_freq))
+}
+
+#' @name utils_stats
+#' @export
+#' @importFrom graphics axis barplot grid plot.new plot.window rect title
+freq_hist <- function(table,
+                      xlab = NULL,
+                      ylab = NULL,
+                      fill = "gray",
+                      color = "black",
+                      ygrid = TRUE) {
+  if (!inherits(table, "freq_table")){
+    stop("Class of object `table` is not valid. Please use `freq_table()` to create a valid object.")
+  }
+  if (table$vartype == "categorical") {
+
+    classes <- as.character(table$freqs[[1]])
+    classes <- classes[-length(classes)]
+    freqs <- table$freqs[[2]]
+    freqs <- freqs[-length(freqs)]
+
+    if (is.null(xlab)) {
+      xlab <- gettext("Groups")
+    }
+    if (is.null(ylab)) {
+      ylab <- gettext("Frequency")
+    }
+    barplot(freqs ~ classes, xaxt = "n", xlab = "", ylab = "")
+
+    if(isTRUE(ygrid)){
+      grid(nx = NA, ny = NULL, col = "gray")
+      opar <- par(new = TRUE)
+      on.exit(par(opar))
+    }
+    barplot(freqs ~ classes,
+            xlab = xlab,
+            ylab = ylab)
+  }
+  if (table$vartype == "continuous") {
+    xvar1 <- table$LL
+    xvar2 <- table$UL
+    freqs <- table$freqs$abs_freq
+    yvar <- freqs[-length(freqs)]
+    # Limiares
+    xlim <- c(min(xvar1), max(xvar2))
+    ylim <- c(0, 1.2 * max(yvar))
+
+    # Area de plotagem
+    plot.new()
+    plot.window(xlim, ylim)
+
+    # Labels
+    if (is.null(xlab)) {
+      xlab <- gettext("Classes")
+    }
+    if (is.null(ylab)) {
+      ylab <- gettext("Frequency")
+    }
+
+    title(xlab = xlab, ylab = ylab)
+
+    if(isTRUE(ygrid)){
+      grid(nx = NA, ny = NULL, col = "gray")
+      opar <- par(new = TRUE)
+    }
+
+    rect(xvar1,
+         0,
+         xvar2,
+         yvar,
+         col = fill,
+         border = color)
+    xvar <- c(xvar1, max(xvar2))
+    axis(1, at = xvar)
+    axis(2)
+  }
 }
 #' @name utils_stats
 #' @export
@@ -1372,6 +1644,32 @@ sum_dev <- function(.data, ..., na.rm = FALSE) {
 }
 #' @name utils_stats
 #' @export
+ave_dev <- function(.data, ..., na.rm = FALSE) {
+  funct <- function(df){
+    if(na.rm == FALSE & has_na(df)){
+      warning("NA values removed to compute the function. Use 'na.rm = TRUE' to suppress this warning.", call. = FALSE)
+      message("To remove rows with NA use `remove_rows_na()'. \nTo remove columns with NA use `remove_cols_na()'.")
+      na.rm <- TRUE
+    }
+    mean(abs(df - mean(df, na.rm = na.rm)), na.rm = na.rm)
+  }
+  if(is.null(nrow(.data))){
+    funct(.data)
+  } else{
+    if(missing(...)){
+      .data %>%
+        summarise(across(where(is.numeric), funct)) %>%
+        ungroup()
+    } else{
+      .data %>%
+        select_cols(group_vars(.), ...) %>%
+        summarise(across(where(is.numeric), funct)) %>%
+        ungroup()
+    }
+  }
+}
+#' @name utils_stats
+#' @export
 sum_sq_dev <- function(.data, ..., na.rm = FALSE) {
   funct <- function(df){
     if(na.rm == FALSE & has_na(df)){
@@ -1396,6 +1694,7 @@ sum_sq_dev <- function(.data, ..., na.rm = FALSE) {
     }
   }
 }
+
 #' @name utils_stats
 #' @export
 sum_sq <- function(.data, ..., na.rm = FALSE) {
@@ -1478,91 +1777,156 @@ var_amo <- function(.data, ..., na.rm = FALSE) {
 # main statistics, possible by one or more factors
 #' @name utils_stats
 #' @export
-cv_by <- function(.data, ..., na.rm = FALSE){
+cv_by <- function(.data,
+                  ...,
+                  .vars = everything(),
+                  na.rm = FALSE){
   if(na.rm == FALSE & has_na(.data)){
     warning("NA values removed to compute the function. Use 'na.rm = TRUE' to suppress this warning.", call. = FALSE)
     message("To remove rows with NA use `remove_rows_na()'. \nTo remove columns with NA use `remove_cols_na()'.")
     na.rm <- TRUE
   }
-  group_by(.data, ...) %>%
-    summarise(across(where(is.numeric), cv, na.rm = na.rm), .groups = "drop")
+  dfg <- group_by(.data, ...)
+  dfg %>%
+    summarise(across(where(is.numeric), cv, na.rm = na.rm), .groups = "drop") %>%
+    select(group_vars(dfg), {{.vars}}) %>%
+    ungroup()
 }
 #' @name utils_stats
 #' @export
-max_by <- function(.data, ..., na.rm = FALSE){
+max_by <- function(.data,
+                   ...,
+                   .vars = everything(),
+                   na.rm = FALSE){
   if(na.rm == FALSE & has_na(.data)){
     warning("NA values removed to compute the function. Use 'na.rm = TRUE' to suppress this warning.", call. = FALSE)
     message("To remove rows with NA use `remove_rows_na()'. \nTo remove columns with NA use `remove_cols_na()'.")
     na.rm <- TRUE
   }
-  group_by(.data, ...) %>%
-    summarise(across(where(is.numeric), max, na.rm = na.rm), .groups = "drop")
+  dfg <- group_by(.data, ...)
+  dfg %>%
+    summarise(across(where(is.numeric), max, na.rm = na.rm), .groups = "drop") %>%
+    select(group_vars(dfg), {{.vars}}) %>%
+    ungroup()
 }
 #' @name utils_stats
 #' @export
-means_by <- function(.data, ..., na.rm = FALSE){
+means_by <- function(.data,
+                     ...,
+                     .vars = everything(),
+                     na.rm = FALSE){
   if(na.rm == FALSE & has_na(.data)){
     warning("NA values removed to compute the function. Use 'na.rm = TRUE' to suppress this warning.", call. = FALSE)
     message("To remove rows with NA use `remove_rows_na()'. \nTo remove columns with NA use `remove_cols_na()'.")
     na.rm <- TRUE
   }
-  group_by(.data, ...) %>%
-    summarise(across(where(is.numeric), mean, na.rm = na.rm), .groups = "drop")
+  dfg <- group_by(.data, ...)
+  dfg %>%
+    summarise(across(where(is.numeric), mean, na.rm = na.rm), .groups = "drop") %>%
+    select(group_vars(dfg), {{.vars}}) %>%
+    ungroup()
 }
 #' @name utils_stats
 #' @export
-min_by <- function(.data, ..., na.rm = FALSE){
+min_by <- function(.data,
+                   ...,
+                   .vars = everything(),
+                   na.rm = FALSE){
   if(na.rm == FALSE & has_na(.data)){
     warning("NA values removed to compute the function. Use 'na.rm = TRUE' to suppress this warning.", call. = FALSE)
     message("To remove rows with NA use `remove_rows_na()'. \nTo remove columns with NA use `remove_cols_na()'.")
     na.rm <- TRUE
   }
-  group_by(.data, ...) %>%
-    summarise(across(where(is.numeric), min, na.rm = na.rm), .groups = "drop")
+  dfg <- group_by(.data, ...)
+  dfg %>%
+    summarise(across(where(is.numeric), min, na.rm = na.rm), .groups = "drop") %>%
+    select(group_vars(dfg), {{.vars}}) %>%
+    ungroup()
 }
 #' @name utils_stats
 #' @export
-n_by <- function(.data, ..., na.rm = FALSE){
+n_by <- function(.data,
+                 ...,
+                 .vars = everything(),
+                 na.rm = FALSE){
   if(na.rm == FALSE & has_na(.data)){
     warning("NA values removed to compute the function. Use 'na.rm = TRUE' to suppress this warning.", call. = FALSE)
     message("To remove rows with NA use `remove_rows_na()'. \nTo remove columns with NA use `remove_cols_na()'.")
     na.rm <- TRUE
   }
-  group_by(.data, ...) %>%
-    summarise(across(everything(), ~sum(!is.na(.))), .groups = "drop")
+  dfg <- group_by(.data, ...)
+  dfg %>%
+    summarise(across(everything(), ~sum(!is.na(.))), .groups = "drop") %>%
+    select(group_vars(dfg), {{.vars}}) %>%
+    ungroup()
 }
 #' @name utils_stats
 #' @export
-sd_by <- function(.data, ..., na.rm = FALSE){
+sd_by <- function(.data,
+                  ...,
+                  .vars = everything(),
+                  na.rm = FALSE){
   if(na.rm == FALSE & has_na(.data)){
     warning("NA values removed to compute the function. Use 'na.rm = TRUE' to suppress this warning.", call. = FALSE)
     message("To remove rows with NA use `remove_rows_na()'. \nTo remove columns with NA use `remove_cols_na()'.")
     na.rm <- TRUE
   }
-  group_by(.data, ...) %>%
-    summarise(across(where(is.numeric), sd, na.rm = na.rm), .groups = "drop")
+  dfg <- group_by(.data, ...)
+  dfg %>%
+    summarise(across(where(is.numeric), sd, na.rm = na.rm), .groups = "drop") %>%
+    select(group_vars(dfg), {{.vars}}) %>%
+    ungroup()
 }
 #' @name utils_stats
 #' @export
-sem_by <- function(.data, ..., na.rm = FALSE){
+var_by <- function(.data,
+                   ...,
+                   .vars = everything(),
+                   na.rm = FALSE){
   if(na.rm == FALSE & has_na(.data)){
     warning("NA values removed to compute the function. Use 'na.rm = TRUE' to suppress this warning.", call. = FALSE)
     message("To remove rows with NA use `remove_rows_na()'. \nTo remove columns with NA use `remove_cols_na()'.")
     na.rm <- TRUE
   }
-  group_by(.data, ...) %>%
-    summarise(across(where(is.numeric), sem, na.rm = na.rm), .groups = "drop")
+  dfg <- group_by(.data, ...)
+  dfg %>%
+    summarise(across(where(is.numeric), var, na.rm = na.rm), .groups = "drop") %>%
+    select(group_vars(dfg), {{.vars}}) %>%
+    ungroup()
 }
 #' @name utils_stats
 #' @export
-sum_by <- function(.data, ..., na.rm = FALSE){
+sem_by <- function(.data,
+                   ...,
+                   .vars = everything(),
+                   na.rm = FALSE){
   if(na.rm == FALSE & has_na(.data)){
     warning("NA values removed to compute the function. Use 'na.rm = TRUE' to suppress this warning.", call. = FALSE)
     message("To remove rows with NA use `remove_rows_na()'. \nTo remove columns with NA use `remove_cols_na()'.")
     na.rm <- TRUE
   }
-  group_by(.data, ...) %>%
-    summarise(across(where(is.numeric), sum, na.rm = na.rm), .groups = "drop")
+  dfg <- group_by(.data, ...)
+  dfg %>%
+    summarise(across(where(is.numeric), sem, na.rm = na.rm), .groups = "drop") %>%
+    select(group_vars(dfg), {{.vars}}) %>%
+    ungroup()
+}
+#' @name utils_stats
+#' @export
+sum_by <- function(.data,
+                   ...,
+                   .vars = everything(),
+                   na.rm = FALSE){
+  if(na.rm == FALSE & has_na(.data)){
+    warning("NA values removed to compute the function. Use 'na.rm = TRUE' to suppress this warning.", call. = FALSE)
+    message("To remove rows with NA use `remove_rows_na()'. \nTo remove columns with NA use `remove_cols_na()'.")
+    na.rm <- TRUE
+  }
+  dfg <- group_by(.data, ...)
+  dfg %>%
+    summarise(across(where(is.numeric), sum, na.rm = na.rm), .groups = "drop") %>%
+    select(group_vars(dfg), {{.vars}}) %>%
+    ungroup()
 }
 
 #' @title Utilities for handling with matrices
@@ -2067,14 +2431,14 @@ build_msg <- function(when, what, with, message){
       if(!grepl("\\(", with) && !grepl("\\)", with)){
         stop("'with' must have function call syntax", call. = FALSE)
       }
-    pkg_with <- ifelse(grepl("::", with), sub("::.*", "", with), ".")
-    funct_with <- paste(sub("\\(.*", "", sub(".*::", "", with)), "()", sep = "")
-    with_mesg <-
-      case_when(pkg_with == pkg & funct_with ==  funct ~ paste0("Please use the `", get_arg(with), "` argument instead."),
-                pkg_with == pkg & funct_with !=  funct ~ paste0("Please use the `", get_arg(with), "` argument of `", funct_with, "` instead." ),
-                pkg_with != pkg  & pkg_with == "." ~ paste0("Please use the `", get_arg(with), "` argument of `", funct_with, "` instead."),
-                pkg_with != pkg ~ paste0("Please use the `", get_arg(with), "` argument of `", paste0(pkg_with, "::", funct_with), "` instead."))
-    msge <- paste0(msge, "\n", with_mesg)
+      pkg_with <- ifelse(grepl("::", with), sub("::.*", "", with), ".")
+      funct_with <- paste(sub("\\(.*", "", sub(".*::", "", with)), "()", sep = "")
+      with_mesg <-
+        case_when(pkg_with == pkg & funct_with ==  funct ~ paste0("Please use the `", get_arg(with), "` argument instead."),
+                  pkg_with == pkg & funct_with !=  funct ~ paste0("Please use the `", get_arg(with), "` argument of `", funct_with, "` instead." ),
+                  pkg_with != pkg  & pkg_with == "." ~ paste0("Please use the `", get_arg(with), "` argument of `", funct_with, "` instead."),
+                  pkg_with != pkg ~ paste0("Please use the `", get_arg(with), "` argument of `", paste0(pkg_with, "::", funct_with), "` instead."))
+      msge <- paste0(msge, "\n", with_mesg)
     }
     msge <- ifelse(is.null(message), msge, paste0(msge, "\n", message))
   } else{
@@ -2106,4 +2470,56 @@ deprecated <- function(){
 }
 is_present <- function(x){
   x != "missing_arg"
+}
+
+
+
+
+#' Set the Working Directory quicky
+#' @description
+#' `r badge('experimental')`
+#' It sets the working directory to the path of the current script.
+#'
+#' @param path Path components below the project root. Defaults to `NULL`. This means that
+#'   the directory will be set to the path of the file. If the path doesn't exist, the
+#'   user will be asked if he wants to create such a folder.
+#' @return A message showing the current working directory
+#' @export
+#' @importFrom utils install.packages menu
+#' @examples
+#'
+#' \dontrun{
+#' set_wd_here()
+#' }
+set_wd_here <- function(path = NULL){
+  if(!requireNamespace("rstudioapi", quietly = TRUE)) {
+    if(interactive() == TRUE){
+      inst <-
+        switch(menu(c("Yes", "No"), title = "Package {rstudioapi} required but not installed.\nDo you want to install it now?"),
+               "yes", "no")
+      if(inst == "yes"){
+        install.packages("rstudioapi", quiet = TRUE)
+      } else{
+        message("To use `set_wd_here()`, first install {rstudioapi}.")
+      }
+    }
+  } else{
+    dir_path <- dirname(rstudioapi::documentPath())
+    if(!is.null(path)){
+      dir_path <- paste0(dir_path, "/", path)
+    }
+    d <- try(setwd(dir_path), TRUE)
+    if(inherits(d, "try-error")){
+      cat(paste0("Cannot change working directory to '", dir_path, "'."))
+      done <- readline(prompt = "Do you want to create this folder now? (y/n) ")
+      if(done == "y"){
+        dir.create(dir_path)
+        message("Directory '", dir_path, "' created.")
+        setwd(dir_path)
+        message("Working directory set to '", dir_path, "'")
+      }
+    } else{
+      message("Working directory set to '", dir_path, "'")
+    }
+  }
 }

@@ -137,7 +137,7 @@ mtsi <- function(.data,
       data <- gmd(.data, "WAASY", verbose = FALSE) %>% as.data.frame()
     }
   }
-  if (class(.data) == "waasb") {
+  if (inherits(.data, "waasb")) {
     if (index == "waasb") {
       data <- gmd(.data, "WAASB", verbose = FALSE) %>% as.data.frame()
     }
@@ -261,7 +261,7 @@ mtsi <- function(.data,
                       SD = Xs - Xo,
                       SDperc = (Xs - Xo) / Xo * 100)
     stat_dif_mps <-
-      desc_stat(sel_dif, SDperc, stats = c("min, mean, ci, sd.amo, max, sum"))
+      desc_stat(sel_dif, SDperc, stats = c("min, mean, ci.t, sd.amo, max, sum"))
     sel_dif_mean <-
       tibble(VAR = names(pos.var.factor[, 2]),
              Factor = paste("FA", as.numeric(pos.var.factor[, 2])),
@@ -293,7 +293,7 @@ mtsi <- function(.data,
                sense == "average" & SDperc == 0 ~ 100,
                TRUE ~ 0
              ))
-    if (class(.data) == "waasb") {
+    if (inherits(.data, "waasb")) {
       h2 <- gmd(.data, "h2", verbose = FALSE)
       sel_dif_mean <-
         left_join(sel_dif_mean, h2, by = "VAR") %>%
@@ -306,20 +306,20 @@ mtsi <- function(.data,
       desc_stat(sel_dif_mean,
                 by = sense,
                 any_of(c("SDperc", "SGperc")),
-                stats = c("min, mean, ci, sd.amo, max, sum"))
+                stats = c("min, mean, ci.t, sd.amo, max, sum"))
     what <- ifelse(has_class(.data, "waasb"), "WAASB", "WAAS")
     waasb_index <- gmd(.data, what, verbose = FALSE)
     waasb_selected <- colMeans(subset(waasb_index, GEN %in% selected) %>% select_numeric_cols())
     sel_dif_stab <-
       tibble(
-        TRAIT = names(waasb_selected),
+        VAR = names(waasb_selected),
         Xo = colMeans(waasb_index %>% select_numeric_cols()),
         Xs = waasb_selected,
         SD = Xs - Xo,
         SDperc = (Xs - Xo) / Xo * 100)
     stat_dif_stab <-
       desc_stat(sel_dif_stab, SDperc,
-                stats = c("min, mean, ci, sd.amo, max, sum"))
+                stats = c("min, mean, ci.t, sd.amo, max, sum"))
     contri_fac_rank_sel <-
       contri_long %>%
       subset(GEN %in% selected) %>%
@@ -482,9 +482,6 @@ plot.mtsi <- function(x,
                       col.nonsel = "black",
                       legend.position = "bottom",
                       ...) {
-  if (!class(x) == "mtsi") {
-    stop("The object 'x' is not of class 'mtsi'")
-  }
   if(!type %in% c("index", "contribution")){
     stop("The argument index must be one of the 'index' or 'contribution'", call. = FALSE)
   }
@@ -644,9 +641,6 @@ plot.mtsi <- function(x,
 #' print(MTSI_index)
 #' }
 print.mtsi <- function(x, export = FALSE, file.name = NULL, digits = 4, ...) {
-  if (!class(x) == "mtsi") {
-    stop("The object must be of class 'mtsi'")
-  }
   if (export == TRUE) {
     file.name <- ifelse(is.null(file.name) == TRUE, "mtsi print", file.name)
     sink(paste0(file.name, ".txt"))

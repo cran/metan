@@ -42,7 +42,8 @@ show all the statistics, \code{"robust"} to show robust statistics,
 following:
 \itemize{
 \item \code{"av.dev"}: average deviation.
-\item \code{"ci"}: 95 percent confidence interval of the mean.
+\item \code{"ci.t"}: t-interval (95\% confidence interval) of the mean.
+\item \code{"ci.z"}: z-interval (95\% confidence interval) of the mean.
 \item \code{"cv"}: coefficient of variation.
 \item \code{"iqr"}: interquartile range.
 \item \code{"gmean"}: geometric mean.
@@ -66,6 +67,7 @@ quartile, third quartile, and percentile 97.5\\%, respectively.
 \item \code{"skew"}: skewness.
 \item \code{"sum"}. the sum of the values.
 \item \code{"sum.dev"}: the sum of the absolute deviations.
+\item \code{"ave.sq.dev"}: the average of the squared deviations.
 \item \code{"sum.sq.dev"}: the sum of the squared deviations.
 \item \code{"n.valid"}: The size of sample with valid number (not NA).
 \item \verb{"var.amo", "var.pop"}: the sample and population variance.

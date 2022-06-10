@@ -152,7 +152,7 @@ NULL
 NULL
 
 .onAttach <- function(libname, pkgname) {
-  vers <-  "v1.16.0"
+  vers <-  "v1.17.0"
   packageStartupMessage("|=========================================================|")
   packageStartupMessage("| Multi-Environment Trial Analysis (metan) ", vers, "        |")
   packageStartupMessage("| Author: Tiago Olivoto                                   |")
@@ -190,5 +190,6 @@ if (getRversion() >= "2.15.1") {
       "data.y", "sense", "win", "where", "test", "FG", "SI", "ACV", "SDperc", "MEGA_ENV",
       "group", "hjust", "theta", "vjust", "x_raw", "y_raw", "row_id", "b0", "b1", "s2di",
       "TRAIT", "Parcela", "distinct", "obs", "repeticao", "mper", "mstab", "mps_ind",
-      "h2", "PROJECTION"))
+      "h2", "PROJECTION", "R", "VIF", "lwid", "residual", "total", "abs_freq", "Color",
+      "alpha.col", "alpha.col.line", "ci.t", "size.shape", "size.text", "type2"))
   }

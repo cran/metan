@@ -3,9 +3,11 @@
 \name{utils_stats}
 \alias{utils_stats}
 \alias{av_dev}
-\alias{ci_mean}
+\alias{ci_mean_t}
+\alias{ci_mean_z}
 \alias{cv}
 \alias{freq_table}
+\alias{freq_hist}
 \alias{hmean}
 \alias{gmean}
 \alias{kurt}
@@ -21,6 +23,7 @@
 \alias{sem}
 \alias{skew}
 \alias{sum_dev}
+\alias{ave_dev}
 \alias{sum_sq_dev}
 \alias{sum_sq}
 \alias{var_pop}
@@ -31,17 +34,29 @@
 \alias{min_by}
 \alias{n_by}
 \alias{sd_by}
+\alias{var_by}
 \alias{sem_by}
 \alias{sum_by}
 \title{Useful functions for computing descriptive statistics}
 \usage{
 av_dev(.data, ..., na.rm = FALSE)
 
-ci_mean(.data, ..., na.rm = FALSE, level = 0.95)
+ci_mean_t(.data, ..., na.rm = FALSE, level = 0.95)
+
+ci_mean_z(.data, ..., na.rm = FALSE, level = 0.95)
 
 cv(.data, ..., na.rm = FALSE)
 
-freq_table(.data, ...)
+freq_table(.data, var, k = NULL, digits = 3)
+
+freq_hist(
+  table,
+  xlab = NULL,
+  ylab = NULL,
+  fill = "gray",
+  color = "black",
+  ygrid = TRUE
+)
 
 hmean(.data, ..., na.rm = FALSE)
 
@@ -73,6 +88,8 @@ skew(.data, ..., na.rm = FALSE)
 
 sum_dev(.data, ..., na.rm = FALSE)
 
+ave_dev(.data, ..., na.rm = FALSE)
+
 sum_sq_dev(.data, ..., na.rm = FALSE)
 
 sum_sq(.data, ..., na.rm = FALSE)
@@ -81,21 +98,23 @@ var_pop(.data, ..., na.rm = FALSE)
 
 var_amo(.data, ..., na.rm = FALSE)
 
-cv_by(.data, ..., na.rm = FALSE)
+cv_by(.data, ..., .vars = everything(), na.rm = FALSE)
 
-max_by(.data, ..., na.rm = FALSE)
+max_by(.data, ..., .vars = everything(), na.rm = FALSE)
 
-means_by(.data, ..., na.rm = FALSE)
+means_by(.data, ..., .vars = everything(), na.rm = FALSE)
 
-min_by(.data, ..., na.rm = FALSE)
+min_by(.data, ..., .vars = everything(), na.rm = FALSE)
 
-n_by(.data, ..., na.rm = FALSE)
+n_by(.data, ..., .vars = everything(), na.rm = FALSE)
 
-sd_by(.data, ..., na.rm = FALSE)
+sd_by(.data, ..., .vars = everything(), na.rm = FALSE)
 
-sem_by(.data, ..., na.rm = FALSE)
+var_by(.data, ..., .vars = everything(), na.rm = FALSE)
 
-sum_by(.data, ..., na.rm = FALSE)
+sem_by(.data, ..., .vars = everything(), na.rm = FALSE)
+
+sum_by(.data, ..., .vars = everything(), na.rm = FALSE)
 }
 \arguments{
 \item{.data}{A data frame or a numeric vector.}
@@ -118,13 +137,39 @@ warning. If \code{TRUE}, missing values are silently removed.}
 
 \item{level}{The confidence level for the confidence interval of the mean.
 Defaults to 0.95.}
+
+\item{var}{The variable to compute the frequency table. See \code{Details} for
+more details.}
+
+\item{k}{The number of classes to be created. See \code{Details} for
+more details.}
+
+\item{digits}{The number of significant figures to show. Defaults to 2.}
+
+\item{table}{A frequency table computed with \code{\link[=freq_table]{freq_table()}}.}
+
+\item{xlab, ylab}{The \code{x} and \code{y} labels.}
+
+\item{fill, color}{The color to fill the bars and color the border of the bar,
+respectively.}
+
+\item{ygrid}{Shows a grid line on the \code{y} axis? Defaults to \code{TRUE}.
+freq_hist <- function(table,}
+
+\item{.vars}{Used to select variables in the \verb{*_by()} functions. One or more
+unquoted expressions separated by commas. Variable names can be used as if
+they were positions in the data frame, so expressions like \code{x:y} can be
+used to select a range of variables. Defaults to \code{everything()}.}
 }
 \value{
 \itemize{
-\item Functions \verb{*_by()} returns a tbl_df with the computed statistics by
+\item Functions \verb{*_by()} returns a \code{tbl_df} with the computed statistics by
 each level of the factor(s) declared in \code{...}.
-\item All other functions return a nammed integer if the input is a data frame
+\item All other functions return a named integer if the input is a data frame
 or a numeric value if the input is a numeric vector.
+\item \code{freq_table()} Returns a list with the frequency table and the breaks used
+for class definition. These breaks can be used to construct an histogram of
+the variable.
 }
 }
 \description{
@@ -139,6 +184,7 @@ a factor or combination of factors quickly.}
 \item \code{min_by()} For compuing minimum values.
 \item \code{n_by()} For getting the length.
 \item \code{sd_by()} For computing sample standard deviation.
+\item \code{var_by()} For computing sample variance.
 \item \code{sem_by()} For computing standard error of the mean.
 }
 \item \strong{Useful functions for descriptive statistics. All of them work
@@ -146,9 +192,12 @@ naturally with \verb{\\\%>\\\%}, handle grouped data and multiple variables (all
 numeric variables from \code{.data} by default).}
 \itemize{
 \item \code{av_dev()} computes the average absolute deviation.
-\item \code{ci_mean()} computes the confidence interval for the mean.
+\item \code{ci_mean_t()} computes the t-interval for the mean.
+\item \code{ci_mean_z()} computes the z-interval for the mean.
 \item \code{cv()} computes the coefficient of variation.
-\item \code{freq_table()} Computes frequency fable. Handles grouped data.
+\item \code{freq_table()} Computes a frequency table for either numeric and
+categorical/discrete data. For numeric data, it is possible to define the
+number of classes to be generated.
 \item \verb{hmean(), gmean()} computes the harmonic and geometric means,
 respectively. The harmonic mean is the reciprocal of the arithmetic mean of
 the reciprocals. The geometric mean is the \emph{n}th root of \emph{n}
@@ -164,6 +213,7 @@ each variable and a column with the the mean/sum for each row of the data.
 deviation, respectively.
 \item \code{sem()} computes the standard error of the mean.
 \item \code{skew()} computes the skewness like used in SAS and SPSS.
+\item \code{ave_dev()} computes the average of the absolute deviations.
 \item \code{sum_dev()} computes the sum of the absolute deviations.
 \item \code{sum_sq()} computes the sum of the squared values.
 \item \code{sum_sq_dev()} computes the sum of the squared deviations.
@@ -173,6 +223,27 @@ deviation, respectively.
 
 \code{\link[=desc_stat]{desc_stat()}} is wrapper function around the above ones and can be
 used to compute quickly all these statistics at once.
+}
+\details{
+The function \code{freq_table()} computes a frequency table for either
+numerical or categorical variables. If a variable is categorical or
+discrete (integer values), the number of classes will be the number of
+levels that the variable contains.
+
+If a variable (say, data) is continuous, the number of classes (k) is given by
+the square root of the number of samples (n) if \verb{n =< 100} or \code{5 * log10(n)}
+if \code{n > 100}.
+
+The amplitude (\mjseqn{A}) of the data is used to define the size of the class (\mjseqn{c}),
+given by
+
+\loadmathjax
+\mjsdeqn{c = \frac{A}{n - 1}}
+
+The lower limit of the first class (LL1) is given by min(data) - c / 2. The
+upper limit is given by LL1 + c. The limits of the other classes are given in
+the same way. After the creation of the classes, the absolute and relative
+frequencies within each class are computed.
 }
 \examples{
 \donttest{
@@ -194,7 +265,7 @@ skew(nvec)
 # Grouped by levels of ENV
 data_ge2 \%>\%
   group_by(ENV) \%>\%
-  ci_mean()
+  ci_mean_t()
 
 # standard error of the mean
 # Variable PH and EH
@@ -205,6 +276,10 @@ data_ge2 \%>\%
   freq_table(NR)
 }
 
+}
+\references{
+Ferreira, Daniel Furtado. 2009. Estatistica Basica. 2 ed. Vicosa,
+MG: UFLA.
 }
 \author{
 Tiago Olivoto \email{tiagoolivoto@gmail.com}

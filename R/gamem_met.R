@@ -304,7 +304,6 @@ gamem_met <- function(.data,
     Nenv <- nlevels(data$ENV)
     Ngen <- nlevels(data$GEN)
     Nrep <- nlevels(data$REP)
-    minimo <- min(Nenv, Ngen) - 1
     vin <- vin + 1
     ovmean <- mean(data$Y)
     fixed_mod <- lm(model_fixed, data = data)
@@ -340,7 +339,7 @@ gamem_met <- function(.data,
       CVr <- (sqrt(RV)/ovmean) * 100
       CVratio <- CVg/CVr
       PROB <- ((1 - (1 - prob))/2) + (1 - prob)
-      t <- qt(PROB, 100)
+      t <- qt(PROB, Nrep)
       Limits <- t * sqrt(((1 - AccuGen) * GV))
       genpar <- tibble(Parameters = c("Phenotypic variance", "Heritability", "GEIr2", "h2mg",
                                       "Accuracy", "rge", "CVg", "CVr", "CV ratio"),
@@ -459,10 +458,11 @@ gamem_met <- function(.data,
         separate(Names, into = c("BLOCK", "REP", "ENV"), sep = ":") %>%
         add_cols(BLUPbre = bups$`BLOCK:(REP:ENV)`[[1]]) %>%
         as_factor(1:3)
-      genCOEF <- summary(Complete)[["coefficients"]] %>%
-        as_tibble(rownames = NA) %>%
+      genCOEF <-
+        summary(Complete)[["coefficients"]] %>%
+        as.data.frame() %>%
         rownames_to_column("GEN") %>%
-        replace_string(GEN, pattern = "GEN", new_var = GEN) %>%
+        replace_string(GEN, pattern = "GEN") %>%
         rename(Y = Estimate) %>%
         as_factor(1)
       BLUPint <-

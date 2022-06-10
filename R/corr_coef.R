@@ -116,9 +116,6 @@ NULL
 #' print(sel)
 #' }
 print.corr_coef <- function(x, export = FALSE, file.name = NULL, digits = 3, ...) {
-  if (!class(x) == "corr_coef") {
-    stop("The object must be of class 'corr_coef'")
-  }
   if (export == TRUE) {
     file.name <- ifelse(is.null(file.name) == TRUE, "corr_coef print", file.name)
     sink(paste0(file.name, ".txt"))
@@ -183,9 +180,9 @@ NULL
 #' \donttest{
 #' library(metan)
 #' # All numeric variables
-#' all <- corr_coef(data_ge2)
-#' plot(all)
-#' plot(all, reorder = FALSE)
+#' x <- corr_coef(data_ge2)
+#' plot(x)
+#' plot(x, reorder = FALSE)
 #'
 #' # Select variables
 #' sel <- corr_coef(data_ge2, EP, EL, CD, CL)
@@ -240,8 +237,7 @@ plot.corr_coef <- function(x,
                pval < 0.001 ~ "***",
                between(pval, 0.001, 0.01) ~ "**",
                between(pval, 0.01, 0.05) ~ "*",
-               pval == NA ~ "",
-               FALSE  ~ ""
+               pval >= 0.05 ~ "ns"
              )) %>%
       set_names("v1", "v2", "cor", "pval", "pval_star") %>%
       dplyr::filter(!is.na(pval))
@@ -249,9 +245,9 @@ plot.corr_coef <- function(x,
     bind_data <-
       expand.grid(dimnames(correl)) %>%
       mutate(cor = as.vector(correl),
-             pval_star = as.vector(signif(pval, digits = digits.pval))) %>%
+             pval_star = as.vector(format(signif(pval, digits = digits.pval), nsmall = digits.pval))) %>%
       set_names("v1", "v2", "cor", "pval_star") %>%
-      dplyr::filter(!is.na(pval_star))
+      dplyr::filter(!is.na(cor))
   }
 
   if(diag == FALSE){
@@ -279,7 +275,7 @@ plot.corr_coef <- function(x,
     ggplot(bind_data, aes(v1, v2, fill = cor)) +
     geom_tile(aes(fill = cor),
               colour = "white") +
-    geom_text(aes(label = round(cor, digits.cor)),
+    geom_text(aes(label = format(round(cor, digits.cor), nsmall = digits.cor)),
               vjust = 0,
               size = size.text.cor) +
     geom_text(aes(label = pval_star),
@@ -291,6 +287,7 @@ plot.corr_coef <- function(x,
                          midpoint = 0,
                          limit = c(-1, 1),
                          space = "Lab",
+                         na.value = "transparent",
                          name = legend.title)+
     theme_bw() +
     xlab(NULL) +
@@ -316,7 +313,8 @@ plot.corr_coef <- function(x,
                                  title.hjust = 0.5))
   if(signif == "stars" & caption == TRUE){
     p <-
-      p + labs(caption = c("* p < 0.05; ** p < 0.01; and *** p < 0.001"))
+      p + labs(caption = c("ns p >= 0.05; * p < 0.05; ** p < 0.01; and *** p < 0.001"))
   }
   suppressWarnings(return(p))
 }
+

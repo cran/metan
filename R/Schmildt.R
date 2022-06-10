@@ -28,8 +28,7 @@
 #' Avaliacao de metodologias de adaptabilidade e estabilidade de cultivares
 #' milho. Acta Sci. - Agron. 33:51-58. \doi{10.4025/actasciagron.v33i1.5817}
 #'
-#' @return
-#' A list where each element is the result for one variable and contains the
+#' @return A list where each element is the result for one variable and contains the
 #' following data frames:
 #' * **environments** Contains the mean, environmental index and
 #' classification as favorables and unfavorables environments.
@@ -151,9 +150,6 @@ NULL
 #' print(Sch)
 #' }
 print.Schmildt <- function(x, export = FALSE, file.name = NULL, digits = 3, ...) {
-  if (!class(x) == "Schmildt") {
-    stop("The object must be of class 'Schmildt'")
-  }
   opar <- options(pillar.sigfig = digits)
   on.exit(options(opar))
   if (export == TRUE) {

@@ -94,7 +94,7 @@ wsmp <- function(model,
            increment, "). Please, consider changing the values.")
     }
     datain <- model
-    if (class(model) == "waasb") {
+    if (inherits(model, "waasb")) {
       dfs <- list()
       for (k in 1:length(model)) {
         PesoWAAS <- 100
@@ -247,7 +247,7 @@ wsmp <- function(model,
                                        class = "wsmp")
       }
     }
-    if (class(model) == "waas") {
+    if (inherits(model, "waas")) {
       dfs <- list()
       for (k in 1:length(model)) {
         PesoWAAS <- 100
@@ -455,9 +455,6 @@ plot.wsmp <- function(x,
                       x.lab = NULL,
                       size.lab = 12,
                       ...) {
-  if(class(x) != "wsmp"){
-    stop("x must be of class `wsmp`.")
-  }
   nam_dat <- ifelse(type == 1, "hetdata", "hetcomb")
   dat <- x[[var]][[nam_dat]]
   if(is.null(dat)){
