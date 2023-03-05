@@ -99,7 +99,7 @@ fai_blup <- function(.data,
   if(has_class(.data, c("gamem", "waasb"))){
     means <-
       gmd(.data, ifelse(use_data == "blup", "blupg", "data"), verbose = FALSE) %>%
-      means_by(GEN) %>%
+      mean_by(GEN) %>%
       column_to_rownames("GEN")
   } else {
     if(has_class(.data, c("data.frame", "matrix")) & !has_rownames(.data)){
@@ -241,7 +241,7 @@ fai_blup <- function(.data,
                        Xo = colMeans(means.factor),
                        Xs = colMeans(means.factor[names(ideotype.rank[[i]])[1:ngs],]),
                        SD = colMeans(means.factor[names(ideotype.rank[[i]])[1:ngs],]) - colMeans(means.factor),
-                       SDperc = (colMeans(means.factor[names(ideotype.rank[[i]])[1:ngs], ]) - colMeans(means.factor))/colMeans(means.factor) * 100)) %>%
+                       SDperc = (colMeans(means.factor[names(ideotype.rank[[i]])[1:ngs], ]) - colMeans(means.factor))/abs(colMeans(means.factor)) * 100)) %>%
         rownames_to_column("VAR")
     })
     names(selection.diferential) <- paste("ID", 1:IN, sep = "")

@@ -1,3 +1,24 @@
+# metan 1.18.0
+## New features
+* New functions `*_wd_here()` to set and get the Working Directory (wd) quicky.
+  - `get_wd_here()` gets the working directory to the path of the current script.
+  - `set_wd_here()` sets the working directory to the path of the current script.
+  - `open_wd_here()` open the File Explorer at the directory path of the current script.
+  - `open_wd()` open the File Explorer at the current working directory.
+* `corr_coef()` now can compute both linear and partial correlation, controled by the argument `type`.
+* New function `network_plot()` to produce a network plot of a correlation matrix or an object computed with `corr_coef()`. 
+* New functions `sample_random()` and `sample_systematic()` for random and systematic sampling, respectively.
+
+
+## Minor improvements
+
+* `plot.waasb()` now has new arguments to control whether to show the percentage values within bars and the order of variables on the x-axis.
+* `corr_coef()` now handles grouped data passed from `group_by()`
+* New arguments `size.varnames` and `col.varnames` added in `corr_plot()`.
+* Fix bug in `gmd(mod, "h2")`, when `mod` is computed with `random = "env"`.
+* Include the argument `repel` in `plot.gge()`.
+
+
 # metan 1.17.0
 ## New features
 * Implement a `plot` method for `path_coeff_*()` functions.
@@ -111,7 +132,7 @@ by levels of a factor variable.
 * `mtsi()` and `mgidi()` now returns the ranks for the contribution of each factor and understand models fitted with `gamem()` and `waasb()` using the `by` argument.
 * `plot.mtsi()` and `plot.mgidi()` now returns a radar plot by default when using `type = "contribution"`.
 * `get_model_data()` now returns the genotypic and phenotypic correlation matrices from objects of class `waasb` and `gamem`.
-* `replace_string()`, `replace_number()`, `extract_string()`, and `extract_number()` now accepts [tidy evaluation](https://tidyeval.tidyverse.org/index.html) in the new `...` argument.
+* `replace_string()`, `replace_number()`, `extract_string()`, and `extract_number()` now accepts [tidy evaluation](https://tidyselect.r-lib.org/articles/syntax.html) in the new `...` argument.
 
 # metan 1.9.0
 * New functions `add_prefix()` and `add_suffix()` to add prefixes and suffixes to variable names, respectively.

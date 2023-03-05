@@ -769,8 +769,8 @@ get_model_data <- function(x,
         unnest(bind) %>%
         remove_cols(data)
     } else{
-      if(is.null(x[[1]][["ESTIMATES"]]) == TRUE && what == "genpar"){
-        warning("Using what = 'genpar' is only possible for models fitted with random = 'gen' or random = 'all'\nSetting what to 'vcomp'.", call. = FALSE)
+      if(is.null(x[[1]][["ESTIMATES"]]) == TRUE && what  %in%  c("genpar", "gcov", "gcor", "h2")){
+        warning("Using what = '",what, "' is only possible for models fitted with random = 'gen' or random = 'all'\nSetting what to 'vcomp'.", call. = FALSE)
         what <- "vcomp"
       }
       if(has_class(x,  "gamem") && !what %in% check3.1){
@@ -876,7 +876,7 @@ get_model_data <- function(x,
         }
         bind <-
           data %>%
-          means_by(GEN) %>%
+          mean_by(GEN) %>%
           remove_cols(GEN) %>%
           cov()
       }
@@ -954,7 +954,7 @@ get_model_data <- function(x,
         }
         if (what == "blupge") {
           list <- lapply(x, function(x){
-            x[["residuals"]] %>% means_by(ENV, GEN) %>% select_cols(ENV, GEN, .fitted)
+            x[["residuals"]] %>% mean_by(ENV, GEN) %>% select_cols(ENV, GEN, .fitted)
           })
           bind <-  suppressWarnings(
             lapply(seq_along(list),
@@ -967,7 +967,7 @@ get_model_data <- function(x,
         }
         if (what == "blueg") {
           list <- lapply(x, function(x){
-            x[["residuals_lm"]] %>% select(GEN, .fitted) %>% means_by(GEN)
+            x[["residuals_lm"]] %>% select(GEN, .fitted) %>% mean_by(GEN)
           })
           bind <-  suppressWarnings(
             lapply(seq_along(list),
@@ -980,7 +980,7 @@ get_model_data <- function(x,
         }
         if (what == "bluege") {
           list <- lapply(x, function(x){
-            x[["residuals_lm"]] %>% select(ENV, GEN, .fitted) %>% means_by(ENV, GEN)
+            x[["residuals_lm"]] %>% select(ENV, GEN, .fitted) %>% mean_by(ENV, GEN)
           })
           bind <-  suppressWarnings(
             lapply(seq_along(list),

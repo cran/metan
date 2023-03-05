@@ -153,7 +153,8 @@ mgidi <- function(.data,
                                 mineval = mineval,
                                 ideotype = ideotype,
                                 use = use,
-                                verbose = verbose)))
+                                verbose = verbose,
+                                weights = weights)))
     return(set_class(bind, c("tbl_df",  "mgidi_group", "mgidi", "tbl",  "data.frame")))
   } else{
     d <- match.call()
@@ -163,12 +164,12 @@ mgidi <- function(.data,
     if(has_class(.data, c("gamem", "waasb"))){
       data <-
         gmd(.data, ifelse(use_data == "blup", "blupg", "data"), verbose = FALSE) %>%
-        means_by(GEN) %>%
+        mean_by(GEN) %>%
         column_to_rownames("GEN")
     } else if(has_class(.data, "gafem")){
       data <-
         gmd(.data, "Y", verbose = FALSE) %>%
-        means_by(GEN) %>%
+        mean_by(GEN) %>%
         column_to_rownames("GEN")
     } else{
       if(has_class(.data, c("data.frame", "matrix")) & !has_rownames(.data)){
@@ -219,7 +220,7 @@ mgidi <- function(.data,
     if(has_na(means)){
       warning("Missing values observed in the table of means. Using complete observations to compute the correlation matrix.", call. = FALSE)
     }
-    if(missing(weights)){
+    if(is.null(weights)){
       weights <- rep(1, ncol(data))
     }
     cor.means <- cor(means, use = use)
@@ -298,7 +299,7 @@ mgidi <- function(.data,
                Xo = colMeans(data_order, na.rm = TRUE),
                Xs = colMeans(data_order[selected, ], na.rm = TRUE),
                SD = Xs - colMeans(data_order, na.rm = TRUE),
-               SDperc = (Xs - colMeans(data_order, na.rm = TRUE)) / colMeans(data_order, na.rm = TRUE) * 100)
+               SDperc = (Xs - colMeans(data_order, na.rm = TRUE)) / abs(colMeans(data_order, na.rm = TRUE)) * 100)
 
       if(has_class(.data, c("gamem", "gafem"))){
         h2 <- gmd(.data, "h2", verbose = FALSE)

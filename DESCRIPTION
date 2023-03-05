@@ -1,7 +1,7 @@
 Type: Package
 Package: metan
 Title: Multi Environment Trials Analysis
-Version: 1.17.0
+Version: 1.18.0
 Authors@R: 
     person("Tiago", "Olivoto", , "tiagoolivoto@gmail.com", role = c("aut", "cre", "cph"),
            comment = c(ORCID = "0000-0002-0241-9636"))
@@ -47,9 +47,9 @@ Encoding: UTF-8
 Language: en-US
 LazyData: true
 LazyLoad: true
-RoxygenNote: 7.2.0
+RoxygenNote: 7.2.3
 NeedsCompilation: no
-Packaged: 2022-06-10 00:59:26 UTC; tiago
+Packaged: 2023-03-05 13:27:54 UTC; tiago
 Author: Tiago Olivoto [aut, cre, cph] (<https://orcid.org/0000-0002-0241-9636>)
 Repository: CRAN
-Date/Publication: 2022-06-10 06:40:16 UTC
+Date/Publication: 2023-03-05 22:00:15 UTC

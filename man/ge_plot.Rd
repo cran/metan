@@ -10,6 +10,16 @@ ge_plot(
   gen,
   resp,
   type = 1,
+  values = TRUE,
+  text_col_pos = c("top", "bottom"),
+  text_row_pos = c("left", "right"),
+  average = TRUE,
+  order_g = NULL,
+  order_e = NULL,
+  xlab = NULL,
+  ylab = NULL,
+  width_bar = 1.5,
+  heigth_bar = 15,
   plot_theme = theme_metan(),
   colour = TRUE
 )
@@ -27,6 +37,23 @@ environments}
 
 \item{type}{The type of plot \code{type = 1} for a heatmap or \code{type = 2}
 for a line plot.}
+
+\item{values}{Show the values in the plot? Defaults to \code{TRUE}.}
+
+\item{text_row_pos, text_col_pos}{The position of the text in the
+rows and columns. The defaults show the text at left and top.}
+
+\item{average}{Show the average values for environments and genotypes?
+Defaults to \code{TRUE}.}
+
+\item{order_g, order_e}{A charactere vector indicating the order of the levels
+for genotypes and environments, respectively. This can be used to change
+the default ordering of rows and columns.}
+
+\item{xlab, ylab}{The labels for x and y axis, respectively.}
+
+\item{width_bar, heigth_bar}{The width and heigth of the legend bar,
+respectively.}
 
 \item{plot_theme}{The graphical theme of the plot. Default is
 \code{plot_theme = theme_metan()}. For more details,see
