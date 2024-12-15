@@ -1,3 +1,8 @@
+# metan 1.19.0
+## New features
+* New "complementarity" object returned in the function `mgidi()`.
+
+
 # metan 1.18.0
 ## New features
 * New functions `*_wd_here()` to set and get the Working Directory (wd) quicky.
@@ -78,7 +83,7 @@
 * Improved outputs in `plot_scores` that now has a `highlight` argument to highlight genotypes or environments by hand. Thanks to [Ibrahim Elbasyoni](https://scholar.google.com/citations?user=zPJjnSEAAAAJ&hl=en&authuser=1) for his suggestions.
 * [Licecycle badges](https://lifecycle.r-lib.org/articles/stages.html) added to the functions' documentation.
 * Fix bug in `clustering()` when using  with `by` argument and defacult `nclust` argument.
-* `get_model_data()` now extract BLUEs from objects computed with `gamem()` and `gamem_met()`. Thanks to [@MdFarhad](https://www.researchgate.net/profile/Md-Farhad) for suggesting me this improvement.
+* `get_model_data()` now extract BLUEs from objects computed with `gamem()` and `gamem_met()`. Thanks to [@MdFarhad](https://www.researchgate.net/profile/Md-Farhad-2) for suggesting me this improvement.
 * `g_simula()` and `ge_simula()` now have a `res_eff` to control the residual effect.
 * `mgidi()` now have an optional `weights` argument to assign different weights for each trait in the selection process. Thanks to [@MichelSouza](https://www.escavador.com/sobre/6363700/michel-henriques-de-souza) for his suggestion.
 

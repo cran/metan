@@ -289,9 +289,10 @@ clustering <- function(.data,
   } else {
     TabResgroups <- NULL
     Tab <- NULL
+    Mgroups <- NULL
   }
   Sqt <- sum(sweep(data, 2, apply(data, 2, mean))^2)
-  return(list(data = data,
+  return(list(data = Mgroups,
               cutpoint = pcorte,
               distance = mat,
               de = de,

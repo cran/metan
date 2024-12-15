@@ -1,7 +1,7 @@
 ## ----global_options, include = FALSE------------------------------------------
 knitr::opts_chunk$set(comment = "#", collapse = TRUE)
 
-## ---- message=FALSE, warning=FALSE--------------------------------------------
+## ----message=FALSE, warning=FALSE---------------------------------------------
 library(metan)
 inspect(data_ge)
 
@@ -30,7 +30,7 @@ get_model_data(mge, what = "gen_means") %>% round_cols()
 ammi_model <- performs_ammi(data_ge, ENV, GEN, REP, resp = c(GY, HM))
 waas_index <- waas(data_ge, ENV, GEN, REP, GY, verbose = FALSE)
 
-## ---- fig.height=12, fig.width=5,  message=FALSE, warning=FALSE---------------
+## ----fig.height=12, fig.width=5,  message=FALSE, warning=FALSE----------------
 a <- plot_scores(ammi_model)
 b <- plot_scores(ammi_model,
                  type = 2,
@@ -64,7 +64,7 @@ plot(model2, type = "re", nrow = 3)
 get_model_data(model2) %>% round_cols(digits = 3)
 
 
-## ---- fig.height=8, fig.width=4-----------------------------------------------
+## ----fig.height=8, fig.width=4------------------------------------------------
 library(ggplot2)
 d <- plot_blup(model2)
 e <- plot_blup(model2,

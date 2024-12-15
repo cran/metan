@@ -125,7 +125,6 @@
 #' Workshop on Adaptation of Plants to Soil Stress. 1-4 August, 1993. INTSORMIL
 #' Publication 94-2, 80–99. Institute of Agriculture and Natural Resources,
 #' University of Nebraska-Lincoln.
-#' @name ammi_indexes
 #' @export
 #'
 #' @examples
@@ -169,7 +168,7 @@ ammi_indexes <- function(.data, order.y = NULL, level = 0.95) {
     for (var in 1:length(.data)) {
         model <- .data[[var]]
         n <- sum(model$PCA$`Pr(>F)` <= (1 - level), na.rm = TRUE)
-        n <- ifelse(n == 0, 1, n)
+        n <- ifelse(n < 2, 2, n)
         meange <- model$MeansGxE
         effects <- residuals(lm(Y ~ ENV + GEN, data = meange))
         meange$residual <- effects
@@ -351,13 +350,6 @@ ammi_indexes <- function(.data, order.y = NULL, level = 0.95) {
         listres[[paste(names(.data[var]))]] <- temp
     }
     invisible(structure(listres, class = "ammi_indexes"))
-}
-
-#' @name ammi_indexes
-#' @export
-AMMI_indexes <- function(.data, order.y = NULL, level = 0.95) {
-    warning("`AMMI_indexes()` is deprecated as of metan 1.16.0. use `ammi_indexes()` instead.")
-    ammi_indexes(.data, order.y, level)
 }
 
 

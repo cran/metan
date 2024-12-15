@@ -17,10 +17,10 @@
 #' closer to the ideotype and therefore should presents desired values for all
 #' the analyzed traits.
 #'
-#' @param .data An object fitted with the function [gafem()],
-#'   [gamem()] or a two-way table with BLUPs for genotypes in each
-#'   trait (genotypes in rows and traits in columns). In the last case, row
-#'   names must contain the genotypes names.
+#' @param .data An object fitted with the function [gafem()], [gamem()] or a
+#'   two-way table with BLUPs for genotypes in each trait (genotypes in rows and
+#'   traits in columns). In the last case, the first column is assumed to have
+#'   the genotype's name.
 #' @param use_data Define which data to use if `.data` is an object of
 #'   class `gamem`. Defaults to `"blup"` (the BLUPs for genotypes).
 #'   Use `"pheno"` to use phenotypic means instead BLUPs for computing the
@@ -29,15 +29,20 @@
 #' total number of genotypes.
 #' @param mineval The minimum value so that an eigenvector is retained in the
 #' factor analysis.
-#' @param ideotype A vector of length `nvar` where `nvar` is the
-#'   number of variables used to plan the ideotype. Use `'h'` to indicate
-#'   the traits in which higher values are desired or `'l'` to indicate the
-#'   variables in which lower values are desired. For example, `ideotype =
-#'   c("h, h, h, h, l")` will consider that the ideotype has higher values for
-#'   the first four traits and lower values for the last trait. If `.data`
-#'   is a model fitted with the functions [gafem()] or
-#'   [gamem()], the order of the traits will be the declared in the
-#'   argument `resp` in those functions.
+#' @param ideotype A vector of length `nvar` where `nvar` is the number of
+#'   traits used to plan the ideotype. Use `'h'` to indicate the traits in which
+#'   higher values are desired or `'l'` to indicate the traits in which lower
+#'   values are desired. For example, `ideotype = c("h, h, h, h, l")` will
+#'   consider that the ideotype has higher values for the first four traits and
+#'   lower values for the last trait. ALternatively, one can use a mixed vector,
+#'   indicating both h/l values and a numeric value for the target trait(s),
+#'   eg., `ideotype = c("120, h, 30, h, l")`. In this scenario, a numeric value
+#'   to define the ideotype is declared for the first and third traits. For this
+#'   traits, the absolute difference between the observed value and the numeric
+#'   ideotype will be computed, and after the rescaling procedure, the genotype
+#'   with the smallest difference will have 100. If `.data`is a model fitted
+#'   with the functions [gafem()] or [gamem()], the order of the traits will be
+#'   the declared in the argument `resp` in those functions.
 #' @param weights Optional weights to assign for each trait in the selection
 #'   process. It must be a numeric vector of length equal to the number of
 #'   traits in `.data`. By default (`NULL`) a numeric vector of weights equal to
@@ -72,6 +77,9 @@
 #' variables in such factor are.
 #' * **contri_fac_rank, contri_fac_rank_sel** The rank for the contribution
 #' of each factor for all genotypes and selected genotypes, respectively.
+#' * **complementarity** The complementarity matrix, which is the Euclidean
+#' distance between selected genotypes based on the contribution of each factor
+#'  on the MGIDI index (waiting reference).
 #' * **sel_dif** The selection differential for the variables.
 #' * **stat_gain** A descriptive statistic for the selection gains. The
 #' minimum, mean, confidence interval, standard deviation, maximum, and sum of
@@ -129,11 +137,27 @@
 #'p2 <- plot(mgidi_ind2, type = "contribution")
 #'p1 + p2
 #'
-#'# Positive desired gains for V1, V2 and V3
-#'# Negative desired gains for V4
+#'# Negative desired gains for V1
+#'# Positive desired gains for V2, V3 and V4
 #'mgidi_ind3 <-
 #'   mgidi(mod,
 #'        ideotype = c("h, h, h, l"))
+#'
+#'
+#' # Extract the BLUPs for each genotype
+#' (blupsg <- gmd(mod, "blupg"))
+#'
+#' # Consider the following ideotype that will be close to H4
+#' # Define a numeric ideotype for the first three traits, and the lower values
+#' # for the last trait
+#' ideotype <- c("129.46, 76.8, 89.7, l")
+#'
+#'mgidi_ind4 <-
+#'   mgidi(mod,
+#'        ideotype = ideotype)
+#'
+#' # Note how the strenghts of H4 are related to FA1 (V1 and V2)
+#' plot(mgidi_ind4, type = "contribution", genotypes = "all")
 #'
 #'}
 mgidi <- function(.data,
@@ -144,6 +168,20 @@ mgidi <- function(.data,
                   weights = NULL,
                   use = "complete.obs",
                   verbose = TRUE) {
+  if(is_grouped_df(.data)){
+    bind <-
+      .data %>%
+      doo(mgidi,
+          use_data = use_data,
+          SI = SI,
+          mineval = mineval,
+          ideotype = ideotype,
+          use = use,
+          verbose = verbose,
+          weights = weights)
+    return(set_class(bind, c("tbl_df",  "mgidi_group", "mgidi", "tbl",  "data.frame")))
+  }
+
   if(has_class(.data, c("gamem_group", "gafem_group", "waasb_group"))){
     bind <-
       .data %>%
@@ -164,64 +202,78 @@ mgidi <- function(.data,
     if(has_class(.data, c("gamem", "waasb"))){
       data <-
         gmd(.data, ifelse(use_data == "blup", "blupg", "data"), verbose = FALSE) %>%
-        mean_by(GEN) %>%
-        column_to_rownames("GEN")
+        mean_by(GEN)
     } else if(has_class(.data, "gafem")){
       data <-
         gmd(.data, "Y", verbose = FALSE) %>%
-        mean_by(GEN) %>%
-        column_to_rownames("GEN")
+        mean_by(GEN)
     } else{
-      if(has_class(.data, c("data.frame", "matrix")) & !has_rownames(.data)){
-        stop("object '", d[[".data"]], "' must have rownames.", call. = FALSE)
-      }
-      if(any(sapply(.data, function(x){is.numeric(x)})== FALSE)){
-        stop("All variables in '", d[[".data"]], "' must be numeric.",call. = FALSE)
-      }
       data <- .data
+      cols_class <- sapply(data, function(x) !is.numeric(x))
+      if(all(cols_class == FALSE)){
+        warning("All columns are numeric. A sequential id will be used as genotype name.", call. = FALSE)
+        data <- data |> mutate(gen = paste0("G", 1:nrow(data)), .before = 1)
+      } else{
+        nonn_cols <- which(cols_class == TRUE)
+        if(length(nonn_cols) > 1){
+          stop("More than one non-numeric column. Please, verify.", call. = FALSE)
+        }
+        if(nonn_cols != 1){
+          warning("The genotype column seems to be in the wrong location. Relocating it to the first position.", call. = FALSE)
+          data <- column_to_first(data, all_of(nonn_cols))
+        }
+      }
     }
-    if (length(data) == 1) {
+    nvar <- length(data) - 1
+    gen_name <- data |> pull(1)
+    data <- as.data.frame(data[, -1])
+    rownames(data) <- gen_name
+    var_name <- colnames(data)
+    if (nvar == 1) {
       stop("The multi-trait stability index cannot be computed with one single variable.", call. = FALSE)
     }
     if(is.null(ideotype)){
-      rescaled <- rep(100, length(data))
-      ideotype.D <- rep(100, length(data))
-      names(ideotype.D) <- names(data)
+      rescaled <- rep(100, nvar)
+      rescaled2 <- rep("h", nvar)
+      ideotype.D <- rep(100, nvar)
+      names(ideotype.D) <- var_name
     } else{
       rescaled <- unlist(strsplit(ideotype, split="\\s*(\\s|,)\\s*")) %>%
         all_lower_case()
-      if(length(rescaled) != length(data)){
-        stop("Ideotype must have length ", ncol(data), ", the number of columns in data")
-      }
-      if(!all(rescaled %in% c("h", "l", "m"))){
-        stop("argument 'ideotype' must have 'h', 'l', or 'm' only", call. = FALSE)
+      if(length(rescaled) != nvar){
+        stop("Ideotype must have length ", nvar, ", the number of columns in data")
       }
       ideotype.D <- ifelse(rescaled == "m", 50, 100)
-      names(ideotype.D) <- names(data)
-      rescaled <- case_when(
-        rescaled == "h" ~ 100,
-        rescaled == "l" ~ 0,
-        TRUE ~ 100)
+      names(ideotype.D) <- var_name
+      rescaled2 <- rescaled
+      rescaled <- suppressWarnings(ifelse(rescaled == "l" | !is.na(as.numeric(rescaled)), 0, 100))
     }
+
     if (is.null(SI)) {
       ngs <- NULL
     } else {
       ngs <- round(nrow(data) * (SI/100), 0)
     }
-    means <- data.frame(matrix(ncol = ncol(data), nrow = nrow(data)))
-    rownames(means) <- rownames(data)
-    vars <- tibble(VAR = colnames(data),
+    means <- data.frame(matrix(ncol = nvar, nrow = nrow(data)))
+    rownames(means) <- gen_name
+    vars <- tibble(VAR = var_name,
                    sense = rescaled) %>%
       mutate(sense = ifelse(sense == 0, "decrease", "increase"))
-    for (i in 1:ncol(data)) {
+    data2 <- data
+    for (i in 1:nvar) {
+      num_ide <- suppressWarnings(as.numeric(rescaled2[i]))
+      if(!is.na(num_ide)){
+        data[i] <- abs(data[i] - num_ide)
+      }
       means[i] <- resca(values = data[i], new_max = rescaled[i], new_min = 100 - rescaled[i])
       colnames(means) <- colnames(data)
     }
+    data <- data2
     if(has_na(means)){
       warning("Missing values observed in the table of means. Using complete observations to compute the correlation matrix.", call. = FALSE)
     }
     if(is.null(weights)){
-      weights <- rep(1, ncol(data))
+      weights <- rep(1, nvar)
     }
     cor.means <- cor(means, use = use)
     eigen.decomposition <- eigen(cor.means)
@@ -277,11 +329,16 @@ mgidi <- function(.data,
     rownames(ideotypes.matrix) <- "ID1"
     ideotypes.scores <- ideotypes.matrix %*% canonical_loadings
     gen_ide <- sweep(scores, 2, ideotypes.scores, "-")
+    for (col in 1:ncol(gen_ide)) {
+      # Avoid NAs
+      gen_ide[, col][gen_ide[, col] == 0] <- 1e-10
+    }
     MGIDI <- apply(gen_ide, 1, function(x){sqrt(sum(x^2))}) %>% sort(decreasing = FALSE)
     contr.factor <-
       data.frame((sqrt(gen_ide^2)/apply(gen_ide, 1, function(x) sum(sqrt(x^2)))) * 100) %>%
       rownames_to_column("GEN") %>%
       as_tibble()
+
     means.factor <- means[, names.pos.var.factor]
     observed <- means[, names.pos.var.factor]
     contri_long <- pivot_longer(contr.factor, -GEN)
@@ -335,6 +392,13 @@ mgidi <- function(.data,
         ge_winners(name, GEN, value, type = "ranks", better = "l") %>%
         split_factors(ENV) %>%
         map_dfc(~.x %>% pull())
+
+      # Complementarity matrix
+      compl_sel_gen <-
+        contr.factor |>
+        subset(GEN %in% selected) |>
+        column_to_rownames("GEN")
+      compl_mat <- dist(compl_sel_gen) |> as.matrix()
     } else{
       sel_dif_mean <- NULL
       contri_fac_rank_sel <- NULL
@@ -363,7 +427,7 @@ mgidi <- function(.data,
       }
     }
 
-    return(structure(list(data = rownames_to_column(data, "GEN"),
+    return(structure(list(data = data,
                           cormat = as.matrix(cor.means),
                           PCA = pca,
                           FA = fa,
@@ -381,6 +445,7 @@ mgidi <- function(.data,
                           contri_fac = contr.factor,
                           contri_fac_rank = contri_fac_rank,
                           contri_fac_rank_sel = contri_fac_rank_sel,
+                          complementarity = compl_mat,
                           sel_dif = sel_dif_mean,
                           stat_gain = stat_gain,
                           sel_gen = selected),
@@ -422,9 +487,6 @@ mgidi <- function(.data,
 #' @param x.lab,y.lab The labels for the axes x and y, respectively. x label is
 #'   set to null when a radar plot is produced.
 #' @param title The plot title when `type = "contribution"`.
-#' @param arrange.label Logical argument. If `TRUE`, the labels are
-#'   arranged to avoid text overlapping. This becomes useful when the number of
-#'   genotypes is large, say, more than 30.
 #' @param size.point The size of the point in graphic. Defaults to 2.5.
 #' @param size.line The size of the line in graphic. Defaults to 0.7.
 #' @param size.text The size for the text in the plot. Defaults to 10.
@@ -462,10 +524,9 @@ plot.mgidi <- function(x,
                        x.lab = NULL,
                        y.lab = NULL,
                        title = NULL,
-                       arrange.label = FALSE,
                        size.point = 2.5,
                        size.line = 0.7,
-                       size.text = 10,
+                       size.text = 3.5,
                        width.bar = 0.75,
                        col.sel = "red",
                        col.nonsel = "gray",
@@ -483,42 +544,69 @@ plot.mgidi <- function(x,
     data <- x$MGIDI %>% add_cols(sel = "Selected")
     data[["sel"]][(round(nrow(data) * (SI/100), 0) + 1):nrow(data)] <- "Nonselected"
     cutpoint <- max(subset(data, sel == "Selected")$MGIDI)
-    p <-
-      ggplot(data = data, aes(x = reorder(Genotype, -MGIDI), y = MGIDI)) +
-      geom_hline(yintercept = cutpoint, col = col.sel, size = size.line) +
-      geom_path(colour = "black", group = 1, size = size.line) +
-      geom_point(size = size.point,
-                 aes(fill = sel),
-                 shape = 21,
-                 colour = "black",
-                 stroke  = size.point / 10) +
-      scale_x_discrete() +
-      scale_y_reverse() +
-      theme_minimal() +
-      theme(legend.position = legend.position,
-            legend.title = element_blank(),
-            panel.grid = element_line(size = size.line / 2),
-            panel.border = element_blank(),
-            axis.text = element_text(colour = "black"),
-            text = element_text(size = size.text),
-            ...) +
-      labs(y = y.lab,
-           x = x.lab) +
-      scale_fill_manual(values = c(col.nonsel, col.sel))
-    if (radar == TRUE) {
+    if (radar == FALSE) {
       p <-
-        p +
+        ggplot(data = data, aes(x = reorder(Genotype, -MGIDI), y = MGIDI)) +
+        geom_hline(yintercept = cutpoint, col = col.sel, size = size.line) +
+        geom_path(colour = "black", group = 1, size = size.line) +
+        geom_point(size = size.point,
+                   aes(fill = sel),
+                   shape = 21,
+                   colour = "black",
+                   stroke  = size.point / 10) +
+        scale_x_discrete() +
+        scale_y_reverse() +
+        theme_minimal() +
+        theme(legend.position = legend.position,
+              legend.title = element_blank(),
+              panel.grid = element_line(linewidth = size.line / 2),
+              panel.border = element_blank(),
+              axis.text = element_text(colour = "black"),
+              text = element_text(size = size.text / .35),
+              ...) +
+        labs(y = y.lab,
+             x = x.lab) +
+        scale_fill_manual(values = c(col.nonsel, col.sel))
+
+    } else{
+      data <- data |> add_row_id()
+      ngens <- nrow(data)
+      angle_1 <-  90 - 360 * (data$row_id-0.5) /ngens
+      data$hjust<-ifelse( angle_1 < -90, 2.8, -2)
+      data$angle<-ifelse(angle_1 < -90, angle_1+180, angle_1)
+      p <-
+        ggplot(data = data, aes(x = reorder(Genotype, -MGIDI), y = MGIDI)) +
+        geom_hline(yintercept = cutpoint, col = col.sel, size = size.line) +
+        geom_path(colour = "black", group = 1, size = size.line) +
+        geom_point(size = size.point,
+                   aes(fill = sel),
+                   shape = 21,
+                   colour = "black",
+                   stroke  = size.point / 10) +
+        geom_text(data=data,
+                  aes(x = row_id,
+                      y = min(MGIDI) * .95,
+                      label = rev(Genotype),
+                      hjust = "outward"),
+                  color = "black",
+                  size = size.text,
+                  angle = data$angle,
+                  inherit.aes = FALSE) +
         coord_polar() +
-        theme(axis.title.x = element_blank(), ...)
-      if(arrange.label == TRUE){
-        tot_gen <- length(unique(data$Genotype))
-        fseq <- c(1:(tot_gen/2))
-        sseq <- c((tot_gen/2 + 1):tot_gen)
-        fang <- c(90 - 180/length(fseq) * fseq)
-        sang <- c(-90 - 180/length(sseq) * sseq)
-        p <- p +
-          theme(axis.text.x = suppressMessages(suppressWarnings(element_text(angle = c(fang, sang)))), ...)
-      }
+        scale_x_discrete() +
+        scale_y_reverse() +
+        theme_minimal()  +
+        theme(legend.position = legend.position,
+              legend.title = element_blank(),
+              # axis.title.x = element_blank(),
+              panel.border = element_blank(),
+              panel.grid = element_line(linewidth = size.line / 2),
+              panel.grid.major.y = element_blank(),
+              axis.text.x = element_blank()) +
+        labs(y = y.lab,
+             x = x.lab) +
+        scale_fill_manual(values = c(col.nonsel, col.sel))
+
     }
   } else{
     if(genotypes == "selected"){
@@ -547,11 +635,11 @@ plot.mgidi <- function(x,
                      show.legend = FALSE) +
         geom_line(aes(group = name, color = name), size = size.line) +
         theme_minimal() +
-        theme(strip.text.x = element_text(size = size.text),
-              axis.text.x = element_text(color = "black", size = size.text),
+        theme(strip.text.x = element_text(size = size.text / .35),
+              axis.text.x = element_text(color = "black", size = size.text / .35),
               axis.ticks.y = element_blank(),
-              panel.grid = element_line(size = size.line / 2),
-              axis.text.y = element_text(size = size.text, color = "black"),
+              panel.grid = element_line(linewidth = size.line / 2),
+              axis.text.y = element_text(size = size.text / .35, color = "black"),
               legend.position = legend.position,
               legend.title = element_blank(),
               ...) +
@@ -561,15 +649,6 @@ plot.mgidi <- function(x,
         scale_y_reverse() +
         guides(color = guide_legend(nrow = 1)) +
         coord_radar()
-      if(arrange.label == TRUE){
-        tot_gen <- length(unique(data$GEN))
-        fseq <- c(1:(tot_gen/2))
-        sseq <- c((tot_gen/2 + 1):tot_gen)
-        fang <- c(90 - 180/length(fseq) * fseq)
-        sang <- c(-90 - 180/length(sseq) * sseq)
-        p <- p +
-          theme(axis.text.x = suppressMessages(suppressWarnings(element_text(angle = c(fang, sang)))), ...)
-      }
     } else{
       x.lab <- ifelse(!missing(x.lab), x.lab, "Selected genotypes")
       y.lab <- ifelse(!missing(y.lab), y.lab, "Proportion")
@@ -583,7 +662,7 @@ plot.mgidi <- function(x,
         scale_y_continuous(expand = expansion(c(0, ifelse(position == "fill", 0, 0.05))))+
         theme_metan() +
         theme(legend.position = legend.position,
-              axis.ticks = element_line(size = size.line),
+              axis.ticks = element_line(linewidth = size.line),
               plot.margin = margin(0.5, 0.5, 0, 0, "cm"),
               panel.border = element_rect(size = size.line),
               ...)+
@@ -599,6 +678,7 @@ plot.mgidi <- function(x,
   }
   return(p)
 }
+
 
 
 #' Print an object of class mgidi

@@ -30,9 +30,9 @@ path_coeff_seq(.data, resp, chain_1, chain_2, by = NULL, verbose = TRUE, ...)
 \item{.data}{The data. Must be a data frame or a grouped data passed from
 \code{\link[dplyr:group_by]{dplyr::group_by()}}}
 
-\item{resp}{<\code{\link[=dplyr_tidy_select]{tidy-select}}> The dependent trait.}
+\item{resp}{The dependent trait.}
 
-\item{pred}{<\code{\link[=dplyr_tidy_select]{tidy-select}}> The predictor traits. set to
+\item{pred}{The predictor traits. set to
 \code{everything()}, i.e., the predictor traits are all the numeric traits in
 the data except that in \code{resp}. To select multiple traits, use a
 comma-separated vector of names, (e.g., \code{pred = c(V1, V2, V2)}), an
@@ -82,7 +82,7 @@ console.}
 \item{cor_mat}{Matrix of correlations containing both dependent and
 independent traits.}
 
-\item{chain_1, chain_2}{<\code{\link[=dplyr_tidy_select]{tidy-select}}> The traits used
+\item{chain_1, chain_2}{The traits used
 in the first (primary) and second (secondary) chain.}
 }
 \value{
@@ -169,31 +169,17 @@ pcoeff3<- path_coeff(data_ge2,
                       resp = KW,
                       pred = c(PH, EH, NKE, TKW),
                       plot_res = TRUE)
-
-# Selecting a set of predictors with minimal multicollinearity
-# Maximum variance Inflation factor of 5
-pcoeff4 <- path_coeff(data_ge2,
-                     resp = KW,
-                     brutstep = TRUE,
-                     maxvif = 5)
-
-
-# When one analysis should be carried out for each environment
-# Using the forward-pipe operator \%>\%
-pcoeff5 <- path_coeff(data_ge2, resp = KW, by = ENV)
-
-
 # sequential path analysis
 # KW as dependent trait
 # NKE and TKW as primary predictors
 # PH, EH, EP, and EL as secondary traits
-pcoeff6 <-
+pcoeff4 <-
  path_coeff_seq(data_ge2,
-               resp = KW,
-               chain_1 = c(NKE, TKW),
-               chain_2 = c(PH, EH, EP, EL))
-pcoeff6$resp_sc$Coefficients
-pcoeff6$resp_sc2
+                resp = KW,
+                chain_1 = c(NKE, TKW),
+                chain_2 = c(PH, EH, EP, EL))
+pcoeff4$resp_sc$Coefficients
+pcoeff4$resp_sc2
 
 
 }

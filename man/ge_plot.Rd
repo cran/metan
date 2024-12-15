@@ -14,6 +14,8 @@ ge_plot(
   text_col_pos = c("top", "bottom"),
   text_row_pos = c("left", "right"),
   average = TRUE,
+  row_col = TRUE,
+  row_col_type = c("average", "sum"),
   order_g = NULL,
   order_e = NULL,
   xlab = NULL,
@@ -45,6 +47,9 @@ rows and columns. The defaults show the text at left and top.}
 
 \item{average}{Show the average values for environments and genotypes?
 Defaults to \code{TRUE}.}
+
+\item{row_col, row_col_type}{Shows row/column and defines what to show.
+Defaults to 'average'.}
 
 \item{order_g, order_e}{A charactere vector indicating the order of the levels
 for genotypes and environments, respectively. This can be used to change

@@ -140,7 +140,7 @@ Lin, C.S., and M.R. Binns. 1988. A superiority measure of cultivar
 performance for cultivar x location data. Can. J. Plant Sci. 68:193-198.
 \doi{10.4141/cjps88-018}
 
-Olivoto, T., A.D.C. L{\'{u}}cio, J.A.G. da silva, V.S. Marchioro, V.Q. de
+Olivoto, T., A.D.C. Lúcio, J.A.G. da silva, V.S. Marchioro, V.Q. de
 Souza, and E. Jost. 2019a. Mean performance and stability in
 multi-environment trials I: Combining features of AMMI and BLUP techniques.
 Agron. J. 111:2949-2960. \doi{10.2134/agronj2019.03.0220}
@@ -173,7 +173,7 @@ Z. Pflanzenzuchtg 52:127-138.
 }
 \seealso{
 \code{\link[=acv]{acv()}}, \code{\link[=ammi_indexes]{ammi_indexes()}}, \code{\link[=ecovalence]{ecovalence()}}, \code{\link[=Fox]{Fox()}}, \code{\link[=gai]{gai()}},
-\code{\link[=ge_reg]{ge_reg()}}, \code{\link[=hmgv]{hmgv()}}, \code{\link[=hmrpgv]{hmrpgv()}}, \code{\link[=rpgv]{rpgv()}}, \code{\link[=Huehn]{Huehn()}}, \code{\link[=polar]{polar()}},
+\code{\link[=ge_reg]{ge_reg()}}, \code{\link[=hmgv]{hmgv()}}, \code{\link[=hmrpgv]{hmrpgv()}}, \code{\link[=rpgv]{rpgv()}}, \code{\link[=Huehn]{Huehn()}}, \code{\link[=ge_polar]{ge_polar()}},
 \code{\link[=Shukla]{Shukla()}}, \code{\link[=superiority]{superiority()}}, \code{\link[=Thennarasu]{Thennarasu()}}, \code{\link[=waas]{waas()}}, \code{\link[=waasb]{waasb()}}
 }
 \author{
